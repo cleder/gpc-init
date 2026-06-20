@@ -15,23 +15,28 @@ _DEFAULT_PRESETS_BASE = Path(__file__).parent.parent
 def _load_yaml_file(path: Path) -> dict[str, Any]:
     """Load and parse a YAML file, raising structured errors on failure."""
     if not path.exists():
-        raise PresetNotFoundError(f"Preset file not found: {path}")
+        msg = f"Preset file not found: {path}"
+        raise PresetNotFoundError(msg)
     try:
         with path.open(encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
     except yaml.YAMLError as exc:
-        raise PresetParseError(f"Failed to parse preset YAML '{path}': {exc}") from exc
+        msg = f"Failed to parse preset YAML '{path}': {exc}"
+        raise PresetParseError(msg) from exc
     if data is None:
         data = {}
     if not isinstance(data, dict):
-        raise PresetParseError(
-            f"Preset file '{path}' must contain a YAML mapping, got {type(data).__name__}"
+        msg = (
+            f"Preset file '{path}' must contain a YAML mapping,"
+            f" got {type(data).__name__}"
         )
+        raise PresetParseError(msg)
     return data
 
 
 def load_common_preset(base_dir: Path | None = None) -> dict[str, Any]:
-    """Load the common baseline preset (lang/common/default.yaml).
+    """
+    Load the common baseline preset (lang/common/default.yaml).
 
     Returns an empty dict if the file does not exist.
     """
@@ -43,7 +48,8 @@ def load_common_preset(base_dir: Path | None = None) -> dict[str, Any]:
 
 
 def load_language_preset(lang_id: str, base_dir: Path | None = None) -> dict[str, Any]:
-    """Load the baseline preset for a language (lang/<lang_id>/baseline.yaml).
+    """
+    Load the baseline preset for a language (lang/<lang_id>/baseline.yaml).
 
     Args:
         lang_id: Canonical language identifier (e.g. 'py', 'js', 'go', 'ru').
@@ -55,6 +61,7 @@ def load_language_preset(lang_id: str, base_dir: Path | None = None) -> dict[str
     Raises:
         PresetNotFoundError: If the preset file does not exist.
         PresetParseError: If the YAML is invalid or not a mapping.
+
     """
     base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
     path = base / "lang" / lang_id / "baseline.yaml"
@@ -64,7 +71,8 @@ def load_language_preset(lang_id: str, base_dir: Path | None = None) -> dict[str
 def load_framework_preset(
     framework_id: str, base_dir: Path | None = None
 ) -> dict[str, Any]:
-    """Load the preset for a framework (framework/<framework_id>/preset.yaml).
+    """
+    Load the preset for a framework (framework/<framework_id>/preset.yaml).
 
     Args:
         framework_id: Canonical framework identifier (e.g. 'react', 'bevy').
@@ -76,6 +84,7 @@ def load_framework_preset(
     Raises:
         PresetNotFoundError: If the preset file does not exist.
         PresetParseError: If the YAML is invalid or not a mapping.
+
     """
     base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
     path = base / "framework" / framework_id / "preset.yaml"

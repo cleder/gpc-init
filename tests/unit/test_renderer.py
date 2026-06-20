@@ -70,7 +70,10 @@ class TestRenderYaml:
         }
         output = render_yaml(data)
         parsed = yaml.safe_load(output)
-        assert "prettier@3.0.0" in parsed["repos"][0]["hooks"][0]["additional_dependencies"]
+        assert (
+            "prettier@3.0.0"
+            in parsed["repos"][0]["hooks"][0]["additional_dependencies"]
+        )
 
     def test_empty_dict_renders_to_yaml(self) -> None:
         output = render_yaml({})

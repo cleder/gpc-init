@@ -2,13 +2,11 @@
 
 from typing import Any
 
-import pytest
-
 from gpc_init.merger import _merge_hooks_list, _merge_repos, merge_presets
 
 
-def make_hook(id: str, **kwargs: Any) -> dict[str, Any]:
-    return {"id": id, **kwargs}
+def make_hook(hook_id: str, **kwargs: Any) -> dict[str, Any]:
+    return {"id": hook_id, **kwargs}
 
 
 def make_repo(
@@ -97,7 +95,9 @@ class TestMergePresets:
         assert repos[1]["repo"] == "https://b.com"
 
     def test_framework_appended_after_langs(self) -> None:
-        lang = {"repos": [make_repo("https://lang.com", "v1", [make_hook("lang-hook")])]}
+        lang = {
+            "repos": [make_repo("https://lang.com", "v1", [make_hook("lang-hook")])]
+        }
         fw = {"repos": [make_repo("https://fw.com", "v1", [make_hook("fw-hook")])]}
         result = merge_presets({}, [lang], [fw])
         repos = result["repos"]

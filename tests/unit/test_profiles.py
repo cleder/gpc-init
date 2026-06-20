@@ -2,7 +2,12 @@
 
 import pytest
 
-from gpc_init.profiles import GenerationRequest, GenerationResult, HookConfig, RepoConfig
+from gpc_init.profiles import (
+    GenerationRequest,
+    GenerationResult,
+    HookConfig,
+    RepoConfig,
+)
 
 
 class TestHookConfig:

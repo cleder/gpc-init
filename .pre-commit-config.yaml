@@ -15,6 +15,7 @@ repos:
   - id: end-of-file-fixer
   - id: mixed-line-ending
   - id: name-tests-test
+    args: ['--django']
   - id: no-commit-to-branch
   - id: pretty-format-json
   - id: requirements-txt-fixer
@@ -31,14 +32,6 @@ repos:
   repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.15.18
 - hooks:
-  - additional_dependencies:
-    - pytest
-    args:
-    - --strict
-    id: mypy
-  repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v2.1.0
-- hooks:
   - id: validate-pyproject
   repo: https://github.com/abravalheri/validate-pyproject
   rev: v0.25
@@ -54,6 +47,17 @@ repos:
   - id: typos
   repo: https://github.com/crate-ci/typos
   rev: v1.47.2
+  exclude: |
+          (?x)^(
+                .specify/scripts/.**
+            )$
+- hooks:
+  - id: pyrefly-check
+    additional_dependencies:
+    - pyyaml>=6.0
+    - typer>=0.26.7
+  repo: https://github.com/facebook/pyrefly-pre-commit
+  rev: 1.1.1
 - hooks:
   - id: rumdl-fmt
   repo: https://github.com/rvben/rumdl-pre-commit

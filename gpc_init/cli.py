@@ -1,19 +1,21 @@
 """pc-init CLI: Generate .pre-commit-config.yaml from language and framework presets."""
 
-import sys
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
 from gpc_init.exceptions import (
     PresetNotFoundError,
     PresetParseError,
-    TargetFileExistsError,
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
 )
-from gpc_init.loader import load_common_preset, load_framework_preset, load_language_preset
+from gpc_init.loader import (
+    load_common_preset,
+    load_framework_preset,
+    load_language_preset,
+)
 from gpc_init.merger import merge_presets
 from gpc_init.renderer import render_yaml
 from gpc_init.resolver import (
@@ -39,7 +41,9 @@ def _normalize_langs(raw_langs: list[str]) -> list[str]:
 
 def _normalize_frameworks(raw_frameworks: list[str]) -> list[str]:
     """Lowercase and deduplicate framework values."""
-    return deduplicate_preserving_order([normalize_framework(v) for v in raw_frameworks])
+    return deduplicate_preserving_order(
+        [normalize_framework(v) for v in raw_frameworks]
+    )
 
 
 @app.command()
@@ -53,7 +57,7 @@ def main(
         ),
     ],
     framework: Annotated[
-        Optional[list[str]],
+        list[str] | None,
         typer.Option(
             "--framework",
             help="Framework preset to layer on top of language baselines (repeatable). "
@@ -75,7 +79,8 @@ def main(
         ),
     ] = ".pre-commit-config.yaml",
 ) -> None:
-    """Generate a .pre-commit-config.yaml from language and optional framework presets.
+    """
+    Generate a .pre-commit-config.yaml from language and optional framework presets.
 
     At least one --lang value is required. --framework values are optional.
     Use --force to overwrite an existing config file.
@@ -86,15 +91,18 @@ def main(
     langs = _normalize_langs(lang)
     frameworks = _normalize_frameworks(raw_frameworks)
 
+    # Check existing file before any I/O
+    target = Path(output)
+    if target.exists() and not force:
+        typer.echo(
+            f"Error: '{target}' already exists. Use --force to overwrite.", err=True
+        )
+        raise typer.Exit(code=1)
+
     try:
         # Validate
         validate_langs(langs)
         validate_frameworks(frameworks)
-
-        # Check existing file
-        target = Path(output)
-        if target.exists() and not force:
-            raise TargetFileExistsError(str(target))
 
         # Load presets
         common = load_common_preset()
@@ -112,9 +120,7 @@ def main(
         try:
             target.write_text(content, encoding="utf-8")
         except (PermissionError, OSError) as exc:
-            typer.echo(
-                f"Error: cannot write to '{target}': {exc}", err=True
-            )
+            typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
             raise typer.Exit(code=1) from exc
 
         # Report informational primary_languages notes
@@ -129,10 +135,6 @@ def main(
         typer.echo(
             f"{action} {target} with languages: {lang_str} and frameworks: {fw_str}"
         )
-
-    except TargetFileExistsError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
 
     except UnsupportedLanguageError as exc:
         typer.echo(f"Error: {exc}", err=True)

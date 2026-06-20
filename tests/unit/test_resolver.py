@@ -106,10 +106,9 @@ class TestValidateLangs:
         assert "Supported:" in str(exc_info.value)
 
     def test_error_lists_supported(self, tmp_preset_dir: Path) -> None:
-        try:
+        with pytest.raises(UnsupportedLanguageError) as exc_info:
             validate_langs(["nope"], base_dir=tmp_preset_dir)
-        except UnsupportedLanguageError as exc:
-            assert len(exc.supported) > 0
+        assert len(exc_info.value.supported) > 0
 
 
 class TestValidateFrameworks:

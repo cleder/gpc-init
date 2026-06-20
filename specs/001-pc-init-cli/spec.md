@@ -6,15 +6,19 @@
 
 **Status**: Draft
 
-**Input**: User description: "I want to build the pc-int command line tool as layed out in the README.md"
+**Input**: User description: "I want to build the pc-int command line tool as laid out in the README.md"
 
 ## Clarifications
 
 ### Session 2026-06-20
 
-- Q: How should existing `.pre-commit-config.yaml` overwrite behavior work? → A: Use `--force` to overwrite existing `.pre-commit-config.yaml`; without it, command exits with error and keeps file unchanged.
-- Q: Should frameworks be tied to language profiles? → A: Frameworks are language-agnostic with optional primary language recommendations.
-- Q: Can a repository specify multiple languages and frameworks? → A: Yes. `--lang` and `--framework` are repeatable flags; merge order follows CLI input order.
+- Q: How should existing `.pre-commit-config.yaml` overwrite behavior work?
+  → A: Use `--force` to overwrite existing `.pre-commit-config.yaml`; without it, command exits with error and keeps file unchanged.
+- Q: Should frameworks be tied to language profiles?
+  → A: Frameworks are language-agnostic with optional primary language recommendations.
+- Q: Can a repository specify multiple languages and frameworks?
+  → A: Yes.
+  `--lang` and `--framework` are repeatable flags; merge order follows CLI input order.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -87,7 +91,8 @@ As a developer, I want clear error messages and predictable overwrite behavior s
 - **FR-004b**: System MUST load framework presets from `framework/<framework>/` folders.
 - **FR-005**: System MUST include production-ready baseline hook sets for at least Python, JavaScript, Go, and Rust.
 - **FR-006**: System MUST include framework-specific augmentations for at least React and Bevy, with optional primary language recommendations per framework.
-- **FR-007**: System MUST reject unsupported language or framework inputs with actionable error messages. Framework primary language recommendations are informational only and do not block framework selection.
+- **FR-007**: System MUST reject unsupported language or framework inputs with actionable error messages.
+  Framework primary language recommendations are informational only and do not block framework selection.
 - **FR-008**: System MUST define behavior-level tests in `pytest` for every new or changed behavior before implementation begins.
 - **FR-009**: System MUST pass strict static type checking (`pyrefly` strictest settings) for all changed Python code.
 - **FR-010**: System MUST preserve existing config by default when a target file already exists, returning a non-zero exit with guidance to use `--force`.

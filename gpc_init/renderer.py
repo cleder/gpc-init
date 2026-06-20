@@ -6,7 +6,8 @@ import yaml
 
 
 def render_yaml(merged_dict: dict[str, Any]) -> str:
-    """Render a merged configuration dict to a deterministic YAML string.
+    """
+    Render a merged configuration dict to a deterministic YAML string.
 
     Uses yaml.dump with stable key ordering and block style for readability.
     The output is compatible with pre-commit's expected .pre-commit-config.yaml format.
@@ -16,6 +17,7 @@ def render_yaml(merged_dict: dict[str, Any]) -> str:
 
     Returns:
         UTF-8 YAML string suitable for writing to .pre-commit-config.yaml.
+
     """
     return yaml.dump(
         merged_dict,

@@ -43,7 +43,83 @@ testpaths = [
     "tests",
 ]
 
+[tool.ruff]
+fix = true
+line-length = 88
+
+[tool.ruff.lint]
+extend-fixable = [
+    "D",
+]
+extend-safe-fixes = [
+    "D",
+    "UP047",
+]
+ignore = [
+    "ANN401",
+    "COM812",
+    "D203",
+    "D212",
+]
+select = [
+    "ALL",
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"gpc_init/cli.py" = [
+    "FBT002",
+]
+"tests/**" = [
+    "ANN001",
+    "ANN401",
+    "D1",
+    "PLR0913",
+    "PLR2004",
+    "S101",
+    "S105",
+    "S106",
+    "SLF001",
+    "TC003",
+]
+"tests/services/data/sync_job_data.py" = [
+    "E501",
+]
+"tests/services/data/webhooks_data.py" = [
+    "E501",
+]
+
+[tool.rumdl]
+exclude = [
+    ".git",
+    ".github",
+    "build",
+    "dist",
+    "node_modules",
+    "vendor",
+]
+respect-gitignore = true
+
+[tool.rumdl.MD013]
+line-length = 0
+reflow = true
+reflow-mode = "sentence-per-line"
+
 [tool.setuptools.packages.find]
 include = [
     "gpc_init*",
 ]
+
+[tool.uv]
+add-bounds = "major"
+
+[tool.uv.sources.oomnitza-jinja]
+git = "ssh://git@bitbucket.org/oomnitza/oomnitza-jinja2-lib"
+tag = "0.1.0"
+
+[tool.uv.sources.oomnitza-sentry-client]
+git = "ssh://git@bitbucket.org/oomnitza/oomnitza-sentry-client"
+rev = "1.0.0"
+
+[tool.uv.sources.shared-schemas]
+git = "ssh://git@bitbucket.org/oomnitza/shared-schemas"
+rev = "0.6.0"
