@@ -1,0 +1,14 @@
+repos:
+  - repo: local
+    hooks:
+      - id: prettier
+        name: run prettier
+        description: format files with prettier
+        entry: prettier --write '**/*.js' '**/*.yaml' '**/*.yml'
+        files: \.(js|ya?ml)$
+        language: node
+        additional_dependencies: ['prettier@3.6.2']
+  - repo: https://github.com/crate-ci/typos
+    rev: v1
+    hooks:
+      - id: typos

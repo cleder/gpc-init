@@ -1,0 +1,28 @@
+[dependency-groups]
+dev = [
+    "deptry>=0.24.0",
+    "pre-commit>=4.2.0",
+    "typer>=0.12.0",
+    { include-group = "lint" },
+    { include-group = "test" },
+]
+lint = [
+    "complexipy",
+    "pyrefly>=1.1.1",    
+    "ruff",
+    "rumdl>=0.0.129",
+]
+test = [
+    "coverage[toml]",
+    "pytest",
+    "pytest-cov",
+]
+[project]
+name = "gpc-init"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "typer>=0.26.7",
+]

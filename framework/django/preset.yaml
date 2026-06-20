@@ -1,0 +1,8 @@
+primary_languages:
+  - py
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: name-tests-test
+        args: ['--django']
