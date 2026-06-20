@@ -2,13 +2,11 @@
 
 from typing import Any
 
-import pytest
-
 from gpc_init.merger import _merge_hooks_list, _merge_repos, merge_presets
 
 
-def make_hook(id: str, **kwargs: Any) -> dict[str, Any]:
-    return {"id": id, **kwargs}
+def make_hook(hook_id: str, **kwargs: Any) -> dict[str, Any]:
+    return {"id": hook_id, **kwargs}
 
 
 def make_repo(

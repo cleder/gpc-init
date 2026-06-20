@@ -14,8 +14,10 @@ class HookConfig:
     extra_fields: dict[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Validate hook fields."""
         if not self.id:
-            raise ValueError("HookConfig.id must be non-empty")
+            msg = "HookConfig.id must be non-empty"
+            raise ValueError(msg)
 
 
 @dataclass(frozen=True)
@@ -27,10 +29,13 @@ class RepoConfig:
     rev: str = ""
 
     def __post_init__(self) -> None:
+        """Validate repo fields."""
         if not self.repo:
-            raise ValueError("RepoConfig.repo must be non-empty")
+            msg = "RepoConfig.repo must be non-empty"
+            raise ValueError(msg)
         if not self.hooks:
-            raise ValueError("RepoConfig.hooks must contain at least one hook")
+            msg = "RepoConfig.hooks must contain at least one hook"
+            raise ValueError(msg)
 
 
 @dataclass(frozen=True)
@@ -43,8 +48,10 @@ class GenerationRequest:
     target_path: str = ".pre-commit-config.yaml"
 
     def __post_init__(self) -> None:
+        """Validate generation request fields."""
         if not self.langs:
-            raise ValueError("GenerationRequest.langs must be non-empty")
+            msg = "GenerationRequest.langs must be non-empty"
+            raise ValueError(msg)
 
 
 @dataclass(frozen=True)

@@ -62,27 +62,32 @@ def deduplicate_preserving_order(values: list[str]) -> list[str]:
 
 
 def get_supported_languages(base_dir: Path | None = None) -> list[str]:
-    """Return sorted list of supported language ids discovered from the filesystem.
+    """
+    Return sorted list of supported language ids discovered from the filesystem.
 
     Args:
         base_dir: Override base directory for preset discovery (used in tests).
+
     """
     base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
     return _discover_languages(base)
 
 
 def get_supported_frameworks(base_dir: Path | None = None) -> list[str]:
-    """Return sorted list of supported framework ids discovered from the filesystem.
+    """
+    Return sorted list of supported framework ids discovered from the filesystem.
 
     Args:
         base_dir: Override base directory for preset discovery (used in tests).
+
     """
     base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
     return _discover_frameworks(base)
 
 
 def validate_langs(langs: list[str], base_dir: Path | None = None) -> None:
-    """Validate that all requested language ids are supported.
+    """
+    Validate that all requested language ids are supported.
 
     Args:
         langs: Normalized language ids to validate.
@@ -90,6 +95,7 @@ def validate_langs(langs: list[str], base_dir: Path | None = None) -> None:
 
     Raises:
         UnsupportedLanguageError: If any language is not in the catalog.
+
     """
     supported = get_supported_languages(base_dir)
     for lang in langs:
@@ -98,7 +104,8 @@ def validate_langs(langs: list[str], base_dir: Path | None = None) -> None:
 
 
 def validate_frameworks(frameworks: list[str], base_dir: Path | None = None) -> None:
-    """Validate that all requested framework ids are supported.
+    """
+    Validate that all requested framework ids are supported.
 
     Args:
         frameworks: Normalized framework ids to validate.
@@ -106,6 +113,7 @@ def validate_frameworks(frameworks: list[str], base_dir: Path | None = None) -> 
 
     Raises:
         UnsupportedFrameworkError: If any framework is not in the catalog.
+
     """
     supported = get_supported_frameworks(base_dir)
     for fw in frameworks:
@@ -118,7 +126,8 @@ def get_primary_languages_info(
     framework_presets: list[dict[str, Any]],
     selected_langs: list[str],
 ) -> str | None:
-    """Return an informational message if selected langs don't match any framework's primary_languages.
+    """
+    Return a message if selected langs don't match a framework's primary_languages.
 
     This is purely informational and non-blocking.
 
@@ -129,9 +138,10 @@ def get_primary_languages_info(
 
     Returns:
         Informational message string, or None if no mismatch.
+
     """
     messages: list[str] = []
-    for fw_id, fw_preset in zip(frameworks, framework_presets):
+    for fw_id, fw_preset in zip(frameworks, framework_presets, strict=True):
         primary = fw_preset.get("primary_languages", [])
         if primary and not any(lang in primary for lang in selected_langs):
             primary_str = ", ".join(primary)

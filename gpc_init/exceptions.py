@@ -13,6 +13,7 @@ class UnsupportedLanguageError(Exception):
     """Raised when a requested language is not in the language catalog."""
 
     def __init__(self, lang: str, supported: list[str]) -> None:
+        """Initialize with the unsupported language and supported language list."""
         self.lang = lang
         self.supported = supported
         supported_str = ", ".join(sorted(supported))
@@ -23,6 +24,7 @@ class UnsupportedFrameworkError(Exception):
     """Raised when a requested framework is not in the framework catalog."""
 
     def __init__(self, fw: str, supported: list[str]) -> None:
+        """Initialize with the unsupported framework and supported framework list."""
         self.fw = fw
         self.supported = supported
         supported_str = ", ".join(sorted(supported))
@@ -33,5 +35,6 @@ class TargetFileExistsError(Exception):
     """Raised when target file already exists and --force was not provided."""
 
     def __init__(self, path: str) -> None:
+        """Initialize with the path that already exists."""
         self.path = path
         super().__init__(f"'{path}' already exists. Use --force to overwrite.")
