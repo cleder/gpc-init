@@ -61,7 +61,6 @@ jobs:
           uv run pyrefly check gcp_init tests
       - name: Linting
         run: |
-          uv run flake8 gcp_init tests --max-line-length=88
           uv run ruff check --no-fix gcp_init tests
           uv run ruff format --check gcp_init tests
           uv run yamllint .github/workflows/
