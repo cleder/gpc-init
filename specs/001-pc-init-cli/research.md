@@ -15,8 +15,8 @@
   - Dynamic remote metadata fetch: flexible but introduces nondeterminism and network dependency.
 
 ## Decision 3: Framework Modeling
-- Decision: Model frameworks independently from languages and validate framework language constraints at request resolution time.
-- Rationale: Matches clarified product behavior where frameworks may support multiple languages or require one specific language.
+- Decision: Model frameworks independently from languages; framework primary_languages are informational recommendations and are not validation gates.
+- Rationale: Matches clarified behavior where frameworks can be combined with any selected languages while still documenting intended pairings.
 - Alternatives considered:
   - Nest frameworks under language profiles: simpler lookup but cannot express cross-language frameworks cleanly.
 

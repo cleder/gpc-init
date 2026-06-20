@@ -24,16 +24,16 @@ uv run pyrefly --help
 
 ### Scenario A: Generate baseline config (MVP)
 ```bash
-uv run pc-init --lang=python
+uv run pc-init --lang=py
 ```
 Expected outcome:
 - `.pre-commit-config.yaml` exists in current directory.
 - Exit code is `0`.
-- Output indicates language `python` and generated path.
+- Output indicates language `py` and generated path.
 
 ### Scenario B: Generate framework-augmented config
 ```bash
-uv run pc-init --lang=javascript --framework=react
+uv run pc-init --lang=js --framework=react
 ```
 Expected outcome:
 - Output contains JavaScript baseline plus React-specific additions.
@@ -59,8 +59,8 @@ Expected outcome:
 
 ### Scenario D: Existing file without overwrite intent
 ```bash
-uv run pc-init --lang=python
-uv run pc-init --lang=python
+uv run pc-init --lang=py
+uv run pc-init --lang=py
 ```
 Expected outcome:
 - Second run fails with non-zero exit.
@@ -69,7 +69,7 @@ Expected outcome:
 
 ### Scenario E: Overwrite with force
 ```bash
-uv run pc-init --lang=python --force
+uv run pc-init --lang=py --force
 ```
 Expected outcome:
 - Existing `.pre-commit-config.yaml` is overwritten.

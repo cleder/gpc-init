@@ -5,9 +5,10 @@
 
 ## Inputs
 - `--lang` (required, repeatable)
-  - Canonical language id.
+  - Canonical language ids: `py`, `js`, `go`, `ru`.
+  - Accepted aliases: `python` -> `py`, `javascript` -> `js`, `rust` -> `ru`.
   - At least one value is required.
-  - Values must exist in language profile catalog.
+  - Values must exist in language profile catalog after normalization.
 - `--framework` (optional, repeatable)
   - Canonical framework id.
   - Values must exist in framework catalog.
@@ -38,13 +39,11 @@
 - Condition: `--framework` not in framework catalog.
 - Message includes supported framework ids.
 
-3. (Removed - frameworks no longer validate against language constraints)
-
-4. Existing target without force
+3. Existing target without force
 - Condition: `.pre-commit-config.yaml` already exists and `--force` absent.
 - Message tells user to rerun with `--force` to overwrite.
 
-5. Write failure
+4. Write failure
 - Condition: permission/path or IO error while writing output file.
 - Message includes target path and OS error summary.
 

@@ -28,7 +28,7 @@ As a developer creating a new repository, I want a single command that generates
 
 **Acceptance Scenarios**:
 
-1. **Given** a new repository with no existing pre-commit config, **When** the user runs `pc-init --lang=python`, **Then** a `.pre-commit-config.yaml` file is created with a production-ready Python baseline profile.
+1. **Given** a new repository with no existing pre-commit config, **When** the user runs `pc-init --lang=py`, **Then** a `.pre-commit-config.yaml` file is created with a production-ready Python baseline profile.
 2. **Given** a supported language, **When** the user runs `pc-init --lang=<language>`, **Then** the generated file includes only the hooks relevant to that language baseline.
 3. **Given** multiple supported languages, **When** the user runs `pc-init --lang=py --lang=js`, **Then** the generated file includes merged baselines for both languages in deterministic order.
 
@@ -44,7 +44,7 @@ As a developer using a framework, I want optional framework tuning on top of lan
 
 **Acceptance Scenarios**:
 
-1. **Given** a supported language and framework pair, **When** the user runs `pc-init --lang=javascript --framework=react`, **Then** the output includes JavaScript baseline hooks plus React-specific linting additions.
+1. **Given** a supported language and framework pair, **When** the user runs `pc-init --lang=js --framework=react`, **Then** the output includes JavaScript baseline hooks plus React-specific linting additions.
 2. **Given** a supported language and framework pair, **When** config is generated, **Then** framework additions do not remove required baseline language checks.
 3. **Given** multiple selected languages, **When** the user runs `pc-init --lang=py --lang=js --framework=react`, **Then** the framework is accepted regardless of language selection.
 

@@ -74,7 +74,7 @@
 
 ### CLI Interface with typer
 
-- [ ] T023 [P] Write `tests/integration/test_cli_generation.py` with tests for: `pc-init --lang=python` in clean directory creates `.pre-commit-config.yaml`; exit code is 0; file is valid YAML
+- [ ] T023 [P] Write `tests/integration/test_cli_generation.py` with tests for: `pc-init --lang=py` in clean directory creates `.pre-commit-config.yaml`; exit code is 0; file is valid YAML
 - [ ] T024 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --lang=js` merges both baselines in correct order; exit code is 0
 - [ ] T025 [P] Write `tests/integration/test_cli_generation.py` tests for: help text shows `--lang` as required, repeatable; shows `--framework` as optional; shows `--force` as optional flag
 - [ ] T026 Implement `gpc_init/cli.py` as typer app with `@typer.command()` on `main()` function accepting `lang: list[str]` (required), `framework: list[str] = None`, `force: bool = False`, `target_path: str = ".pre-commit-config.yaml"`
@@ -90,7 +90,7 @@
 
 ### Generation Flow Integration
 
-- [ ] T033 Write `tests/integration/test_cli_generation.py` end-to-end test: `pc-init --lang=python` in temp dir → produces file → is valid pre-commit YAML → contains Python hooks
+- [ ] T033 Write `tests/integration/test_cli_generation.py` end-to-end test: `pc-init --lang=py` in temp dir → produces file → is valid pre-commit YAML → contains Python hooks
 - [ ] T034 [P] [US1] Implement `gpc_init/cli.py` main function to: parse args → validate with resolver → load common + lang presets → merge → render → write to file → report success
 - [ ] T035 [P] [US1] Implement `gpc_init/cli.py` to invoke loader, merger, resolver, renderer in sequence with error propagation; catch exceptions and output actionable error messages to stderr
 
@@ -103,11 +103,11 @@
 ### Framework Support
 
 - [ ] T036 [P] Write `tests/unit/test_merger.py` additional tests for: merging framework presets on top of language baselines; framework hooks appended after language hooks; framework args override language args for same hook id
-- [ ] T037 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=javascript --framework=react` produces output with JS hooks + React hooks; exit code is 0
+- [ ] T037 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=js --framework=react` produces output with JS hooks + React hooks; exit code is 0
 - [ ] T038 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --lang=js --framework=django --framework=react` merges in deterministic order (common → py → js → django → react)
 - [ ] T039 Write `tests/integration/test_cli_generation.py` test for Scenario B2 from quickstart: `pc-init --lang=py --lang=js --framework=django --framework=react` produces valid config with all four contributions
-- [ ] T040 [P] [US2] Populate `framework/react/preset.yaml` with React-specific hooks and `primary_languages: [javascript]` metadata (informational only)
-- [ ] T041 [P] [US2] Populate `framework/bevy/preset.yaml` with Bevy-specific hooks and `primary_languages: [rust]` metadata (informational only)
+- [ ] T040 [P] [US2] Populate `framework/react/preset.yaml` with React-specific hooks and `primary_languages: [js]` metadata (informational only)
+- [ ] T041 [P] [US2] Populate `framework/bevy/preset.yaml` with Bevy-specific hooks and `primary_languages: [ru]` metadata (informational only)
 - [ ] T042 [P] [US2] Implement framework merging in `gpc_init/merger.py` to handle optional frameworks; framework presets are purely additive
 
 ### Framework Validation (Informational Only)
@@ -124,22 +124,22 @@
 ### Error Handling
 
 - [ ] T045 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=unsupported-lang` fails with exit code non-zero; stderr includes list of supported languages
-- [ ] T046 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=python --framework=unsupported-fw` fails with exit code non-zero; stderr includes list of supported frameworks
+- [ ] T046 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --framework=unsupported-fw` fails with exit code non-zero; stderr includes list of supported frameworks
 - [ ] T047 [P] Implement `gpc_init/cli.py` error handling to catch `UnsupportedLanguageError` and `UnsupportedFrameworkError`; format as `"Error: unsupported language 'xxx'. Supported: py, js, go, ru"` and similar for frameworks
 - [ ] T048 [P] Implement `gpc_init/cli.py` error handling for YAML parse errors; output `"Error: failed to parse preset YAML: <detail>"`
 
 ### Overwrite Behavior
 
-- [ ] T049 [P] Write `tests/integration/test_cli_generation.py` tests for: file exists, `pc-init --lang=python` (no force) exits non-zero; file unchanged; stderr tells user to use `--force`
-- [ ] T050 [P] Write `tests/integration/test_cli_generation.py` tests for: file exists, `pc-init --lang=python --force` exits 0; file overwritten; stdout confirms overwrite
+- [ ] T049 [P] Write `tests/integration/test_cli_generation.py` tests for: file exists, `pc-init --lang=py` (no force) exits non-zero; file unchanged; stderr tells user to use `--force`
+- [ ] T050 [P] Write `tests/integration/test_cli_generation.py` tests for: file exists, `pc-init --lang=py --force` exits 0; file overwritten; stdout confirms overwrite
 - [ ] T051 [P] Implement `gpc_init/cli.py` to check file existence before write; if exists and not `force`, raise `FileExistsError` with guidance; if `force`, proceed with write
 - [ ] T052 [P] Implement `gpc_init/cli.py` to track and report `overwritten: True` in success message when `--force` used and file existed
 
 ### Argument Normalization
 
-- [ ] T053 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --lang=python` deduplicates to first occurrence; `pc-init --lang=py --lang=py` single result
-- [ ] T054 [P] Write `tests/integration/test_cli_generation.py` tests for: mixed case `--lang=Python` normalized to lowercase `python`
-- [ ] T055 [P] [US3] Implement `gpc_init/cli.py` argument normalization in resolver: deduplicate `--lang` and `--framework` values preserving first occurrence; convert to lowercase; validate after normalization
+- [ ] T053 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --lang=python` normalizes alias and deduplicates to a single `py`; `pc-init --lang=py --lang=py` single result
+- [ ] T054 [P] Write `tests/integration/test_cli_generation.py` tests for: mixed case `--lang=Python` normalized to canonical `py`
+- [ ] T055 [P] [US3] Implement `gpc_init/cli.py` argument normalization in resolver: deduplicate `--lang` and `--framework` values preserving first occurrence; convert to lowercase; resolve aliases to canonical ids; validate after normalization
 
 ### File Permission Handling
 
@@ -170,7 +170,7 @@
 
 - [ ] T066 Update `main.py` or add entry point to `pyproject.toml` to invoke `gpc_init.cli.main()` when running `pc-init` command
 - [ ] T067 Test `uv run pc-init --help` displays typer help with all flags and examples
-- [ ] T068 Update `README.md` with usage examples: `pc-init --lang=python`, `pc-init --lang=javascript --framework=react`, error case explanations
+- [ ] T068 Update `README.md` with usage examples: `pc-init --lang=py`, `pc-init --lang=js --framework=react`, error case explanations
 - [ ] T069 Add quickstart validation script or CI check to run all Scenario A-E tests from `specs/001-pc-init-cli/quickstart.md`
 
 ### Code Review & Documentation
