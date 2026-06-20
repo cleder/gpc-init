@@ -89,7 +89,7 @@ get_current_branch() {
 
 # Safely read .specify/feature.json's "feature_directory" value.
 # Prints the raw value (possibly relative) to stdout, or empty string if the file
-# is missing, unparseable, or does not contain the key. Always returns 0 so callers
+# is missing, unparsable, or does not contain the key. Always returns 0 so callers
 # under `set -e` cannot be aborted by parser failure.
 # Parser order mirrors the historical get_feature_paths behavior: jq -> python3 -> grep/sed.
 read_feature_json_feature_directory() {

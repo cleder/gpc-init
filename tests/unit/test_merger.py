@@ -97,7 +97,9 @@ class TestMergePresets:
         assert repos[1]["repo"] == "https://b.com"
 
     def test_framework_appended_after_langs(self) -> None:
-        lang = {"repos": [make_repo("https://lang.com", "v1", [make_hook("lang-hook")])]}
+        lang = {
+            "repos": [make_repo("https://lang.com", "v1", [make_hook("lang-hook")])]
+        }
         fw = {"repos": [make_repo("https://fw.com", "v1", [make_hook("fw-hook")])]}
         result = merge_presets({}, [lang], [fw])
         repos = result["repos"]

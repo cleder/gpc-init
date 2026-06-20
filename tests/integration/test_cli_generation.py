@@ -110,11 +110,16 @@ class TestFrameworkGeneration:
         result = runner.invoke(
             app,
             [
-                "--lang", "py",
-                "--lang", "js",
-                "--framework", "django",
-                "--framework", "react",
-                "--output", str(output),
+                "--lang",
+                "py",
+                "--lang",
+                "js",
+                "--framework",
+                "django",
+                "--framework",
+                "react",
+                "--output",
+                str(output),
             ],
         )
         assert result.exit_code == 0, result.output
@@ -125,18 +130,14 @@ class TestFrameworkGeneration:
 class TestErrorHandling:
     def test_unsupported_lang_exits_nonzero(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
-        result = runner.invoke(
-            app, ["--lang", "cobol", "--output", str(output)]
-        )
+        result = runner.invoke(app, ["--lang", "cobol", "--output", str(output)])
         assert result.exit_code != 0
 
     def test_unsupported_lang_error_message_includes_supported(
         self, tmp_path: Path
     ) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
-        result = runner.invoke(
-            app, ["--lang", "cobol", "--output", str(output)]
-        )
+        result = runner.invoke(app, ["--lang", "cobol", "--output", str(output)])
         # Error should mention supported options
         assert "cobol" in result.output or "Error" in result.output
 
@@ -244,12 +245,8 @@ class TestDeterminism:
     def test_lang_order_matters(self, tmp_path: Path) -> None:
         out1 = tmp_path / "py_js.yaml"
         out2 = tmp_path / "js_py.yaml"
-        runner.invoke(
-            app, ["--lang", "py", "--lang", "js", "--output", str(out1)]
-        )
-        runner.invoke(
-            app, ["--lang", "js", "--lang", "py", "--output", str(out2)]
-        )
+        runner.invoke(app, ["--lang", "py", "--lang", "js", "--output", str(out1)])
+        runner.invoke(app, ["--lang", "js", "--lang", "py", "--output", str(out2)])
         # Different order may produce different file; both should be valid YAML
         parsed1 = yaml.safe_load(out1.read_text(encoding="utf-8"))
         parsed2 = yaml.safe_load(out2.read_text(encoding="utf-8"))

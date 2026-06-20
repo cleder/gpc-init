@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "I want to build the pc-int command line tool as layed out in the README.md"
+**Input**: User description: "I want to build the pc-int command line tool as laid out in the README.md"
 
 ## Clarifications
 

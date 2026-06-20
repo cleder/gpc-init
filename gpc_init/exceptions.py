@@ -16,9 +16,7 @@ class UnsupportedLanguageError(Exception):
         self.lang = lang
         self.supported = supported
         supported_str = ", ".join(sorted(supported))
-        super().__init__(
-            f"Unsupported language '{lang}'. Supported: {supported_str}"
-        )
+        super().__init__(f"Unsupported language '{lang}'. Supported: {supported_str}")
 
 
 class UnsupportedFrameworkError(Exception):
@@ -28,9 +26,7 @@ class UnsupportedFrameworkError(Exception):
         self.fw = fw
         self.supported = supported
         supported_str = ", ".join(sorted(supported))
-        super().__init__(
-            f"Unsupported framework '{fw}'. Supported: {supported_str}"
-        )
+        super().__init__(f"Unsupported framework '{fw}'. Supported: {supported_str}")
 
 
 class TargetFileExistsError(Exception):
@@ -38,6 +34,4 @@ class TargetFileExistsError(Exception):
 
     def __init__(self, path: str) -> None:
         self.path = path
-        super().__init__(
-            f"'{path}' already exists. Use --force to overwrite."
-        )
+        super().__init__(f"'{path}' already exists. Use --force to overwrite.")

@@ -35,9 +35,7 @@ def _discover_frameworks(base_dir: Path) -> list[str]:
     if not fw_dir.is_dir():
         return []
     return sorted(
-        d.name
-        for d in fw_dir.iterdir()
-        if d.is_dir() and (d / "preset.yaml").exists()
+        d.name for d in fw_dir.iterdir() if d.is_dir() and (d / "preset.yaml").exists()
     )
 
 
@@ -83,9 +81,7 @@ def get_supported_frameworks(base_dir: Path | None = None) -> list[str]:
     return _discover_frameworks(base)
 
 
-def validate_langs(
-    langs: list[str], base_dir: Path | None = None
-) -> None:
+def validate_langs(langs: list[str], base_dir: Path | None = None) -> None:
     """Validate that all requested language ids are supported.
 
     Args:
@@ -101,9 +97,7 @@ def validate_langs(
             raise UnsupportedLanguageError(lang, supported)
 
 
-def validate_frameworks(
-    frameworks: list[str], base_dir: Path | None = None
-) -> None:
+def validate_frameworks(frameworks: list[str], base_dir: Path | None = None) -> None:
     """Validate that all requested framework ids are supported.
 
     Args:

@@ -13,7 +13,11 @@ from gpc_init.exceptions import (
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
 )
-from gpc_init.loader import load_common_preset, load_framework_preset, load_language_preset
+from gpc_init.loader import (
+    load_common_preset,
+    load_framework_preset,
+    load_language_preset,
+)
 from gpc_init.merger import merge_presets
 from gpc_init.renderer import render_yaml
 from gpc_init.resolver import (
@@ -39,7 +43,9 @@ def _normalize_langs(raw_langs: list[str]) -> list[str]:
 
 def _normalize_frameworks(raw_frameworks: list[str]) -> list[str]:
     """Lowercase and deduplicate framework values."""
-    return deduplicate_preserving_order([normalize_framework(v) for v in raw_frameworks])
+    return deduplicate_preserving_order(
+        [normalize_framework(v) for v in raw_frameworks]
+    )
 
 
 @app.command()
@@ -112,9 +118,7 @@ def main(
         try:
             target.write_text(content, encoding="utf-8")
         except (PermissionError, OSError) as exc:
-            typer.echo(
-                f"Error: cannot write to '{target}': {exc}", err=True
-            )
+            typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
             raise typer.Exit(code=1) from exc
 
         # Report informational primary_languages notes

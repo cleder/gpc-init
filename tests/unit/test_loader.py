@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 from gpc_init.exceptions import PresetNotFoundError, PresetParseError
-from gpc_init.loader import load_common_preset, load_framework_preset, load_language_preset
+from gpc_init.loader import (
+    load_common_preset,
+    load_framework_preset,
+    load_language_preset,
+)
 
 
 class TestLoadCommonPreset:
@@ -39,14 +43,18 @@ class TestLoadLanguagePreset:
         result = load_language_preset("js", base_dir=tmp_preset_dir)
         assert "repos" in result
 
-    def test_missing_language_raises_preset_not_found(self, tmp_preset_dir: Path) -> None:
+    def test_missing_language_raises_preset_not_found(
+        self, tmp_preset_dir: Path
+    ) -> None:
         with pytest.raises(PresetNotFoundError, match="not found"):
             load_language_preset("unknown_lang", base_dir=tmp_preset_dir)
 
     def test_invalid_yaml_raises_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "bad"
         lang_dir.mkdir(parents=True)
-        (lang_dir / "baseline.yaml").write_text("key: [unclosed bracket", encoding="utf-8")
+        (lang_dir / "baseline.yaml").write_text(
+            "key: [unclosed bracket", encoding="utf-8"
+        )
         with pytest.raises(PresetParseError, match="Failed to parse"):
             load_language_preset("bad", base_dir=tmp_path)
 
@@ -69,11 +77,15 @@ class TestLoadFrameworkPreset:
         result = load_framework_preset("react", base_dir=tmp_preset_dir)
         assert "repos" in result
 
-    def test_missing_framework_raises_preset_not_found(self, tmp_preset_dir: Path) -> None:
+    def test_missing_framework_raises_preset_not_found(
+        self, tmp_preset_dir: Path
+    ) -> None:
         with pytest.raises(PresetNotFoundError, match="not found"):
             load_framework_preset("unknown_fw", base_dir=tmp_preset_dir)
 
-    def test_framework_preset_includes_primary_languages(self, tmp_preset_dir: Path) -> None:
+    def test_framework_preset_includes_primary_languages(
+        self, tmp_preset_dir: Path
+    ) -> None:
         result = load_framework_preset("react", base_dir=tmp_preset_dir)
         assert "primary_languages" in result
         assert "js" in result["primary_languages"]
