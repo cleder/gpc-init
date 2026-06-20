@@ -1,11 +1,14 @@
 """Integration tests for pc-init CLI generation."""
 
+from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 from typer.testing import CliRunner
 
-from gpc_init.cli import app
+from gpc_init.cli import app, entry_point
+from gpc_init.exceptions import PresetFetchError, PresetNotFoundError
 
 runner = CliRunner()
 
@@ -252,3 +255,125 @@ class TestDeterminism:
         parsed2 = yaml.safe_load(out2.read_text(encoding="utf-8"))
         assert isinstance(parsed1, dict)
         assert isinstance(parsed2, dict)
+
+
+class TestPresetsOption:
+    def test_local_presets_dir_success(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--presets", str(tmp_preset_dir), "--output", str(output)],
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_local_presets_dir_nonexistent(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--presets",
+                "/no/such/dir/for/presets",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "does not exist" in result.output
+
+    def test_git_url_success(self, tmp_path: Path, tmp_preset_dir: Path) -> None:
+        output = tmp_path / "out.yaml"
+
+        @contextmanager
+        def fake_fetch(_url: str):
+            yield tmp_preset_dir
+
+        with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
+            result = runner.invoke(
+                app,
+                [
+                    "--lang",
+                    "py",
+                    "--presets",
+                    "https://example.com/repo",
+                    "--output",
+                    str(output),
+                ],
+            )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_git_url_fetch_error(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        with patch(
+            "gpc_init.fetcher.fetch_preset_repo",
+            side_effect=PresetFetchError("https://x", "connection refused"),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "--lang",
+                    "py",
+                    "--presets",
+                    "https://x",
+                    "--output",
+                    str(output),
+                ],
+            )
+        assert result.exit_code == 1
+        assert "Failed to fetch" in result.output
+
+
+class TestErrorPaths:
+    def test_write_permission_error(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        output.write_text("", encoding="utf-8")
+        output.chmod(0o444)
+        try:
+            result = runner.invoke(
+                app, ["--lang", "py", "--force", "--output", str(output)]
+            )
+        finally:
+            output.chmod(0o644)
+        assert result.exit_code == 1
+        assert "cannot write to" in result.output
+
+    def test_preset_not_found_error(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        with patch(
+            "gpc_init.cli.load_language_preset",
+            side_effect=PresetNotFoundError("preset not found"),
+        ):
+            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 1
+        assert "preset not found" in result.output
+
+    def test_preset_parse_error(self, tmp_path: Path) -> None:
+        lang_dir = tmp_path / "lang" / "bad"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "baseline.yaml").write_text(": bad: [", encoding="utf-8")
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "bad",
+                "--presets",
+                str(tmp_path),
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 1
+        assert "failed to parse" in result.output
+
+
+class TestEntryPoint:
+    def test_entry_point_calls_app(self) -> None:
+        with patch("gpc_init.cli.app") as mock_app:
+            entry_point()
+        mock_app.assert_called_once_with()
