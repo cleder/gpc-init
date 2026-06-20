@@ -4,12 +4,11 @@ I use pre-commit (and now are beginning to migrate to prek) extensively in all m
 
 Whenever I create a new repo, I have to cut and paste the .pre-commit-config.yaml into the new project - which requires remembering what other project has the most appropriate and up-to-date configuration.
 
-
 ## Summary
 
 pc-init
 
-The `pc-init` command (init) accepts optional --lang (language) and --framework parameters. 
+The `pc-init` command (init) accepts optional --lang (language) and --framework parameters.
 
 This would allow the tool to automatically scaffold a more relevant and production-ready initial configuration file (.pre-commit-config.yaml) based on the project's primary technology stack.
 
@@ -23,7 +22,7 @@ Currently, setting up a new project requires the user to manually:
 2. Look up the corresponding pre-commit hook repository URLs, revisions, and arguments.
 3. Manually edit the `.pre-commit-config.yaml` file.
 
-`pc-init`s  `--lang` and `--framework` parameters drastically simplify onboarding, encourage the adoption of best practices, and reduce boilerplate, allowing developers to set up a comprehensive quality gate with a single command.
+`pc-init`s `--lang` and `--framework` parameters drastically simplify onboarding, encourage the adoption of best practices, and reduce boilerplate, allowing developers to set up a comprehensive quality gate with a single command.
 
 ## Example Commands
 
@@ -42,6 +41,3 @@ Currently, setting up a new project requires the user to manually:
 ### rust with bevy game engine (cargo fmt, clippy, bevy cli)
 
 `pc-init --lang=rust --framework=bevy`
-
-
-

@@ -1,6 +1,7 @@
 # Data Model: pc-init CLI Scaffold
 
 ## Entity: LanguageProfile
+
 - Purpose: Baseline hook configuration for a programming language.
 - Fields:
   - `id` (string): canonical language key (e.g., `python`, `javascript`, `go`, `rust`).
@@ -12,6 +13,7 @@
   - Hook order must be stable.
 
 ## Entity: FrameworkProfile
+
 - Purpose: Optional additive configuration independent from language profiles.
 - Fields:
   - `id` (string): canonical framework key (e.g., `react`, `bevy`).
@@ -24,6 +26,7 @@
   - Additive hooks must not delete baseline hooks.
 
 ## Entity: RepoConfig
+
 - Purpose: A pre-commit repository entry.
 - Fields:
   - `repo` (string): repository URL.
@@ -35,6 +38,7 @@
   - `hooks` must contain at least one hook.
 
 ## Entity: HookConfig
+
 - Purpose: Individual pre-commit hook item.
 - Fields:
   - `id` (string): hook id.
@@ -46,6 +50,7 @@
   - Optional lists must preserve order for deterministic output.
 
 ## Entity: GenerationRequest
+
 - Purpose: User request parsed from CLI.
 - Fields:
   - `langs` (list[string]): requested languages in CLI order.
@@ -59,6 +64,7 @@
   - `primary_languages` in framework presets are informational; they do not block framework selection.
 
 ## Entity: GenerationResult
+
 - Purpose: Deterministic rendering and write outcome.
 - Fields:
   - `content` (string): rendered YAML.
@@ -69,6 +75,7 @@
   - identical requests must yield semantically equivalent `content`.
 
 ## State Transitions
+
 1. `GenerationRequest` parsed from CLI input.
 2. Request validated against language and framework catalogs.
 3. Effective config assembled: common baseline + ordered `LanguageProfile[]` + ordered `FrameworkProfile[]`.

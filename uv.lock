@@ -162,6 +162,7 @@ name = "gpc-init"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "pyyaml" },
     { name = "typer" },
 ]
 
@@ -191,7 +192,10 @@ test = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "typer", specifier = ">=0.26.7" }]
+requires-dist = [
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "typer", specifier = ">=0.26.7" },
+]
 
 [package.metadata.requires-dev]
 dev = [

@@ -198,17 +198,21 @@
 ### Parallel Execution Opportunities
 
 **Phase 2 Parallelization** (after Phase 1):
+
 - T007-T009 (profiles) can run in parallel with T010-T013 (loader)
 - T014-T018 (merger tests + impl) can run in parallel with T019-T022 (renderer) once profiles are done
 
 **Phase 3 Parallelization** (after Phase 2):
+
 - T023-T025 (CLI tests) can run in parallel with T029-T032 (resolver)
 - T026-T028 (CLI impl) depends on both CLI tests and resolver; proceed after both are drafted
 
 **Phase 4 Parallelization** (after Phase 3):
+
 - T036-T044 (framework tests + impl) can all run in parallel; no inter-dependencies
 
 **Phase 5 Parallelization** (after Phase 3):
+
 - T045-T048 (error handling) and T049-T057 (overwrite + file ops) can run in parallel
 
 ---
@@ -238,6 +242,7 @@
 ## Files to Create/Modify
 
 ### Created
+
 - `gpc_init/__init__.py`
 - `gpc_init/profiles.py`
 - `gpc_init/loader.py`
@@ -262,6 +267,7 @@
 - `PRESET_DEVELOPMENT.md`
 
 ### Modified
+
 - `main.py` (add entry point)
 - `pyproject.toml` (ensure pytest, pyrefly configured)
 - `README.md` (add usage examples)

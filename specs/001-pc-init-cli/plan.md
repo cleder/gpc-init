@@ -31,10 +31,12 @@ framework profiles.
 **Project Type**: Single-project CLI utility
 
 **Performance Goals**:
+
 - Generate output for any supported profile in < 200 ms on a developer machine
 - Keep runtime memory under 50 MB for generation path
 
 **Constraints**:
+
 - Deterministic output for identical inputs and version
 - No network dependency at generation time
 - Non-interactive overwrite policy (`--force`)
@@ -42,6 +44,7 @@ framework profiles.
 - Preset resolution must use local filesystem folders under `lang/` and `framework/`
 
 **Scale/Scope**:
+
 - Initial language profiles: Python, JavaScript, Go, Rust
 - Initial framework profiles: React, Bevy
 - Extensible profile catalogs for future additions
@@ -83,9 +86,9 @@ framework profiles.
 
 - Top-level `repos` entries merge by `(repo, rev)` key.
 - If a `(repo, rev)` pair exists in multiple layers, hooks are merged by hook `id`:
-    - preserve first-seen order from lower-precedence layer
-    - append new hook ids from higher-precedence layer
-    - when same hook id appears again, higher-precedence definition replaces fields while retaining position
+  - preserve first-seen order from lower-precedence layer
+  - append new hook ids from higher-precedence layer
+  - when same hook id appears again, higher-precedence definition replaces fields while retaining position
 - Top-level mapping keys (for example `default_language_version`) are deep-merged with higher-precedence values overriding lower-precedence values on key conflicts.
 - Unknown top-level keys are preserved and merged deterministically using the same precedence order.
 

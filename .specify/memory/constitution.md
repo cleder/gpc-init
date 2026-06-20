@@ -24,6 +24,7 @@ Sync Impact Report
 ## Core Principles
 
 ### I. Purpose-Driven CLI Output
+
 The project MUST prioritize generating practical, production-ready
 `.pre-commit-config.yaml` files from clear CLI inputs (`--lang`, optional
 `--framework`). Every feature MUST directly improve initialization quality,
@@ -33,6 +34,7 @@ Rationale: The tool exists to eliminate repetitive copy-paste setup and provide
 reliable first-commit quality gates.
 
 ### II. Deterministic Configuration Generation
+
 Given the same inputs and version, the generator MUST produce semantically
 equivalent output every time. Default profiles, hook ordering, and revisions
 MUST be explicitly encoded and test-covered.
@@ -41,6 +43,7 @@ Rationale: Deterministic output enables trust, easier review, and stable CI
 behavior across environments.
 
 ### III. Test-First Delivery (NON-NEGOTIABLE)
+
 All behavior changes MUST follow red-green-refactor with `pytest`.
 Implementation code MUST NOT be merged unless tests for the new or changed
 behavior were written first, observed failing, and then passing.
@@ -49,6 +52,7 @@ Rationale: TDD reduces regressions and keeps behavior specification close to the
 user-facing contract.
 
 ### IV. Strict Static Typing with Pyrefly
+
 All Python code MUST satisfy `pyrefly` under the strictest available settings.
 Type errors MUST block merge, and new public functions MUST include explicit
 type signatures.
@@ -57,6 +61,7 @@ Rationale: Strong static guarantees improve maintainability and reduce runtime
 configuration bugs.
 
 ### V. Minimal, Extensible Hook Profiles
+
 Generated configurations MUST remain minimal for each stack while preserving a
 clear path for extension. Stack-specific additions are allowed only when they
 provide concrete quality value and do not degrade baseline usability.
@@ -75,13 +80,13 @@ explicit extension points balance simplicity and power.
 ## Workflow & Quality Gates
 
 - Every change proposal MUST define expected CLI behavior and generated config
-	deltas before implementation.
+  deltas before implementation.
 - Pull requests MUST include:
-	- Failing-then-passing test evidence for behavior changes.
-	- `pytest` results for affected scope.
-	- strict `pyrefly` results.
+  - Failing-then-passing test evidence for behavior changes.
+  - `pytest` results for affected scope.
+  - strict `pyrefly` results.
 - Reviews MUST reject changes that violate deterministic output, TDD sequence,
-	or strict typing requirements.
+  or strict typing requirements.
 
 ## Governance
 
@@ -90,11 +95,13 @@ documentation of impact, explicit approval by project maintainers, and updates
 to affected templates in `.specify/templates/`.
 
 Versioning policy:
+
 - MAJOR for principle removals or incompatible governance changes.
 - MINOR for new principles or materially expanded mandatory guidance.
 - PATCH for clarifications, wording, and non-semantic edits.
 
 Compliance review expectations:
+
 - Every plan MUST pass a constitution check before implementation starts.
 - Every task list MUST include work for tests and strict type checking.
 - Every merge review MUST verify constitution adherence explicitly.

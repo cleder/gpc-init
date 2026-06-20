@@ -2,7 +2,6 @@
 description: Refresh the managed Spec Kit section in the coding agent context file
 ---
 
-
 <!-- Extension: agent-context -->
 <!-- Config: .specify/extensions/agent-context/ -->
 # Update Coding Agent Context
