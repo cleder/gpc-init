@@ -1,0 +1,12 @@
+primary_languages:
+  - js
+repos:
+  - repo: local
+    hooks:
+      - id: eslint-react
+        name: eslint (react)
+        entry: npx eslint --fix
+        language: node
+        additional_dependencies:
+          - eslint@9.0.0
+          - eslint-plugin-react@7.0.0

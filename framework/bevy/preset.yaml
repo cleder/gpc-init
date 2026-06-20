@@ -1,0 +1,13 @@
+primary_languages:
+  - ru
+repos:
+  - repo: https://github.com/nickel-lang/nickel-pre-commit
+    rev: v0.1.0
+    hooks:
+      - id: bevy-lint
+        name: bevy-lint
+        description: run bevy-lint to check Bevy ECS usage patterns
+        entry: bevy-lint
+        language: rust
+        types:
+          - rust

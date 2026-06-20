@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: prettier
+        name: run prettier
+        entry: prettier --write
+        language: node
+        additional_dependencies:
+          - prettier@3.0.0

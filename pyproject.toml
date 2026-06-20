@@ -20,9 +20,19 @@ test = [
 [project]
 name = "gpc-init"
 version = "0.1.0"
-description = "Add your description here"
+description = "Generate .pre-commit-config.yaml from language and framework presets"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "pyyaml>=6.0",
     "typer>=0.26.7",
 ]
+
+[project.scripts]
+pc-init = "gpc_init.cli:entry_point"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.pyrefly]
+project_excludes = ["tests/**", "specs/**"]

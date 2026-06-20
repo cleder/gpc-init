@@ -1,0 +1,15 @@
+primary_languages:
+  - js
+repos:
+  - repo: local
+    hooks:
+      - id: eslint-react
+        name: eslint (react)
+        description: lint JavaScript/React files with eslint and react-hooks plugin
+        entry: npx eslint --fix
+        files: \.(jsx?|tsx?)$
+        language: node
+        additional_dependencies:
+          - eslint@9.28.0
+          - eslint-plugin-react@7.37.5
+          - eslint-plugin-react-hooks@5.2.0
