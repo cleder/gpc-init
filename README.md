@@ -109,4 +109,5 @@ pc-init --lang py --presets https://github.com/org/my-presets
 
 Every new repository needs a `.pre-commit-config.yaml`.
 Each language and framework has its own recommended linters, formatters, and quality tools, each with its own hook URL and revision.
-`pc-init` encodes those choices in version-controlled presets so you run one command instead of copying configs, looking up hook URLs, and hoping the versions are still current.
+`pc-init` encodes those choices in version-controlled presets so you run one command instead of copying configs and looking up hook URLs.
+The bundled presets pin specific hook revisions — run `pre-commit autoupdate` or `prek autoupdate` after generation to pull in the latest versions.
