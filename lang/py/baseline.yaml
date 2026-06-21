@@ -28,11 +28,11 @@ repos:
     rev: v0.42.0
     hooks:
       - id: pyrefly-check
-  - hooks:
-    - id: ty
-    repo: https://github.com/astral-sh/ty-pre-commit
+  - repo: https://github.com/astral-sh/ty-pre-commit
     rev: v0.0.51
-  - hooks:
-    - id: complexipy
-    repo: https://github.com/rohaquinlop/complexipy-pre-commit
+    hooks:
+      - id: ty
+  - repo: https://github.com/rohaquinlop/complexipy-pre-commit
     rev: v5.1.0
+    hooks:
+      - id: complexipy

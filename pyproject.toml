@@ -19,21 +19,49 @@ test = [
     "pytest",
     "pytest-cov",
     "radon>=6.0.1,<7.0.0",
+    "ty>=0.0.51,<0.0.52",
 ]
 
 [project]
+authors = [
+    { email = "christian.ledermann@gmail.com", name = "Christian Ledermann" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
 dependencies = [
     "pyyaml>=6.0",
     "typer>=0.26.7",
 ]
 description = "Generate .pre-commit-config.yaml from language and framework presets"
+keywords = [
+    "cli",
+    "code-quality",
+    "linting",
+    "pre-commit",
+    "presets",
+]
 name = "gpc-init"
 readme = "README.md"
 requires-python = ">=3.13"
 version = "0.1.0"
 
+[project.license]
+file = "LICENSE"
+
 [project.scripts]
 pc-init = "gpc_init.cli:entry_point"
+
+[project.urls]
+"Bug Tracker" = "https://github.com/cleder/gpc-init/issues"
+Homepage = "https://github.com/cleder/gpc-init"
+Repository = "https://github.com/cleder/gpc-init"
 
 [tool.pyrefly]
 project_excludes = [
