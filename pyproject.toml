@@ -148,15 +148,3 @@ include = [
 
 [tool.uv]
 add-bounds = "major"
-
-[tool.uv.sources.oomnitza-jinja]
-git = "ssh://git@bitbucket.org/oomnitza/oomnitza-jinja2-lib"
-tag = "0.1.0"
-
-[tool.uv.sources.oomnitza-sentry-client]
-git = "ssh://git@bitbucket.org/oomnitza/oomnitza-sentry-client"
-rev = "1.0.0"
-
-[tool.uv.sources.shared-schemas]
-git = "ssh://git@bitbucket.org/oomnitza/shared-schemas"
-rev = "0.6.0"
