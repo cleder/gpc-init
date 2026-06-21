@@ -13,6 +13,10 @@ from gpc_init.exceptions import PresetNotFoundError, PresetParseError
 _DEFAULT_PRESETS_BASE = Path(__file__).parent
 
 
+def _resolve_base(base_dir: Path | None) -> Path:
+    return base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
+
+
 def _load_yaml_file(path: Path) -> dict[str, Any]:
     """Load and parse a YAML file, raising structured errors on failure."""
     if not path.exists():
@@ -41,8 +45,7 @@ def load_common_preset(base_dir: Path | None = None) -> dict[str, Any]:
 
     Returns an empty dict if the file does not exist.
     """
-    base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
-    path = base / "lang" / "common" / "default.yaml"
+    path = _resolve_base(base_dir) / "lang" / "common" / "default.yaml"
     if not path.exists():
         return {}
     return _load_yaml_file(path)
@@ -64,9 +67,7 @@ def load_language_preset(lang_id: str, base_dir: Path | None = None) -> dict[str
         PresetParseError: If the YAML is invalid or not a mapping.
 
     """
-    base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
-    path = base / "lang" / lang_id / "baseline.yaml"
-    return _load_yaml_file(path)
+    return _load_yaml_file(_resolve_base(base_dir) / "lang" / lang_id / "baseline.yaml")
 
 
 def load_framework_preset(
@@ -87,6 +88,6 @@ def load_framework_preset(
         PresetParseError: If the YAML is invalid or not a mapping.
 
     """
-    base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
-    path = base / "framework" / framework_id / "preset.yaml"
-    return _load_yaml_file(path)
+    return _load_yaml_file(
+        _resolve_base(base_dir) / "framework" / framework_id / "preset.yaml"
+    )

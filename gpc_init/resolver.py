@@ -19,6 +19,10 @@ _LANG_ALIASES: dict[str, str] = {
 _DEFAULT_PRESETS_BASE = Path(__file__).parent
 
 
+def _resolve_base(base_dir: Path | None) -> Path:
+    return base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
+
+
 def _discover_languages(base_dir: Path) -> list[str]:
     """Scan lang/<lang>/baseline.yaml and return sorted list of language ids."""
     lang_dir = base_dir / "lang"
@@ -71,8 +75,7 @@ def get_supported_languages(base_dir: Path | None = None) -> list[str]:
         base_dir: Override base directory for preset discovery (used in tests).
 
     """
-    base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
-    return _discover_languages(base)
+    return _discover_languages(_resolve_base(base_dir))
 
 
 def get_supported_frameworks(base_dir: Path | None = None) -> list[str]:
@@ -83,8 +86,7 @@ def get_supported_frameworks(base_dir: Path | None = None) -> list[str]:
         base_dir: Override base directory for preset discovery (used in tests).
 
     """
-    base = base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
-    return _discover_frameworks(base)
+    return _discover_frameworks(_resolve_base(base_dir))
 
 
 def validate_langs(langs: list[str], base_dir: Path | None = None) -> None:
