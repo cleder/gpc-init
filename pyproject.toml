@@ -13,9 +13,12 @@ lint = [
     "rumdl>=0.0.129",
 ]
 test = [
+    "complexipy>=5.6.1,<6.0.0",
     "coverage[toml]",
+    "lizard>=1.23.0,<2.0.0",
     "pytest",
     "pytest-cov",
+    "radon>=6.0.1,<7.0.0",
 ]
 
 [project]
