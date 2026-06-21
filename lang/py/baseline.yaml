@@ -25,6 +25,14 @@ repos:
     hooks:
       - id: typos
   - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: v0.42.0  # Use the latest available release version
+    rev: v0.42.0
     hooks:
       - id: pyrefly-check
+  - hooks:
+    - id: ty
+    repo: https://github.com/astral-sh/ty-pre-commit
+    rev: v0.0.51
+  - hooks:
+    - id: complexipy
+    repo: https://github.com/rohaquinlop/complexipy-pre-commit
+    rev: v5.1.0
