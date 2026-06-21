@@ -24,14 +24,14 @@ def _resolve_base(base_dir: Path | None) -> Path:
 
 
 def _discover_languages(base_dir: Path) -> list[str]:
-    """Scan lang/<lang>/baseline.yaml and return sorted list of language ids."""
+    """Scan lang/<lang>/preset.yaml and return sorted list of language ids."""
     lang_dir = base_dir / "lang"
     if not lang_dir.is_dir():
         return []
     return sorted(
         d.name
         for d in lang_dir.iterdir()
-        if d.is_dir() and d.name != "common" and (d / "baseline.yaml").exists()
+        if d.is_dir() and d.name != "common" and (d / "preset.yaml").exists()
     )
 
 

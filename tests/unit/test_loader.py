@@ -20,7 +20,7 @@ class TestLoadCommonPreset:
         assert len(repos) > 0
 
     def test_returns_empty_dict_when_missing(self, tmp_path: Path) -> None:
-        # No lang/common/default.yaml in tmp_path
+        # No lang/common/preset.yaml in tmp_path
         result = load_common_preset(base_dir=tmp_path)
         assert result == {}
 
@@ -52,7 +52,7 @@ class TestLoadLanguagePreset:
     def test_invalid_yaml_raises_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "bad"
         lang_dir.mkdir(parents=True)
-        (lang_dir / "baseline.yaml").write_text(
+        (lang_dir / "preset.yaml").write_text(
             "key: [unclosed bracket", encoding="utf-8"
         )
         with pytest.raises(PresetParseError, match="Failed to parse"):
@@ -61,7 +61,7 @@ class TestLoadLanguagePreset:
     def test_non_mapping_yaml_raises_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "list_preset"
         lang_dir.mkdir(parents=True)
-        (lang_dir / "baseline.yaml").write_text("- item1\n- item2\n", encoding="utf-8")
+        (lang_dir / "preset.yaml").write_text("- item1\n- item2\n", encoding="utf-8")
         with pytest.raises(PresetParseError, match="must contain a YAML mapping"):
             load_language_preset("list_preset", base_dir=tmp_path)
 
@@ -74,7 +74,7 @@ class TestLoadLanguagePreset:
     def test_empty_yaml_returns_empty_dict(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "empty"
         lang_dir.mkdir(parents=True)
-        (lang_dir / "baseline.yaml").write_text("", encoding="utf-8")
+        (lang_dir / "preset.yaml").write_text("", encoding="utf-8")
         result = load_language_preset("empty", base_dir=tmp_path)
         assert result == {}
 

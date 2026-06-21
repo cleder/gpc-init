@@ -362,7 +362,7 @@ class TestErrorPaths:
     def test_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "bad"
         lang_dir.mkdir(parents=True)
-        (lang_dir / "baseline.yaml").write_text(": bad: [", encoding="utf-8")
+        (lang_dir / "preset.yaml").write_text(": bad: [", encoding="utf-8")
         output = tmp_path / "out.yaml"
         result = runner.invoke(
             app,
