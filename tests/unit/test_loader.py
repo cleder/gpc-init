@@ -71,6 +71,13 @@ class TestLoadLanguagePreset:
         assert "repos" in result
         assert isinstance(result["repos"], list)
 
+    def test_empty_yaml_returns_empty_dict(self, tmp_path: Path) -> None:
+        lang_dir = tmp_path / "lang" / "empty"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "baseline.yaml").write_text("", encoding="utf-8")
+        result = load_language_preset("empty", base_dir=tmp_path)
+        assert result == {}
+
 
 class TestLoadFrameworkPreset:
     def test_loads_react_preset(self, tmp_preset_dir: Path) -> None:

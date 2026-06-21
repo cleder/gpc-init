@@ -13,9 +13,12 @@ lint = [
     "rumdl>=0.0.129",
 ]
 test = [
+    "complexipy>=5.6.1,<6.0.0",
     "coverage[toml]",
+    "lizard>=1.23.0,<2.0.0",
     "pytest",
     "pytest-cov",
+    "radon>=6.0.1,<7.0.0",
 ]
 
 [project]
@@ -26,7 +29,7 @@ dependencies = [
 description = "Generate .pre-commit-config.yaml from language and framework presets"
 name = "gpc-init"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 version = "0.1.0"
 
 [project.scripts]
@@ -35,7 +38,6 @@ pc-init = "gpc_init.cli:entry_point"
 [tool.pyrefly]
 project_excludes = [
     "specs/**",
-    "tests/**",
 ]
 
 [tool.pytest.ini_options]
@@ -71,6 +73,7 @@ select = [
 ]
 "tests/**" = [
     "ANN001",
+    "ANN202",
     "ANN401",
     "D1",
     "PLR0913",
@@ -103,6 +106,12 @@ respect-gitignore = true
 line-length = 0
 reflow = true
 reflow-mode = "sentence-per-line"
+
+[tool.setuptools.package-data]
+gpc_init = [
+    "framework/**/*.yaml",
+    "lang/**/*.yaml",
+]
 
 [tool.setuptools.packages.find]
 include = [

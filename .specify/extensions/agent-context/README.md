@@ -6,7 +6,8 @@ It owns the lifecycle of the managed section delimited by the configurable start
 
 ## Why an extension?
 
-Not every Spec Kit user wants Spec Kit to write into the coding agent's context file. Extracting this behavior into a dedicated extension lets users:
+Not every Spec Kit user wants Spec Kit to write into the coding agent's context file.
+Extracting this behavior into a dedicated extension lets users:
 
 - **Opt out** entirely with `specify extension disable agent-context` — Spec Kit will then never create or modify the agent context file.
 - **Customize the markers** by editing `.specify/extensions/agent-context/agent-context-config.yml` — both the Python layer and the bundled scripts honor the same `context_markers` value.
@@ -20,8 +21,7 @@ Not every Spec Kit user wants Spec Kit to write into the coding agent's context 
 
 ## Configuration
 
-All configuration flows through the extension's own config file at
-`.specify/extensions/agent-context/agent-context-config.yml`:
+All configuration flows through the extension's own config file at `.specify/extensions/agent-context/agent-context-config.yml`:
 
 ```yaml
 # Path to the coding agent context file managed by this extension
@@ -34,13 +34,16 @@ context_markers:
 ```
 
 - `context_file` — the project-relative path to the coding agent context file, written by `specify init` and `specify integration install`.
-- `context_markers.start` / `.end` — the delimiters around the managed section. Edit these to use custom markers.
+- `context_markers.start` / `.end` — the delimiters around the managed section.
+  Edit these to use custom markers.
 
 ## Requirements
 
 The bundled update scripts require **Python 3** with **PyYAML** for YAML/upsert processing (PowerShell can also use `ConvertFrom-Yaml` when available).
 
-PyYAML ships with the `specify` CLI and is normally available via the same `python3` interpreter. If a hook reports *"PyYAML is required … not available in the current Python environment"*, it means the system `python3` differs from the one used to install Spec Kit. To resolve, run:
+PyYAML ships with the `specify` CLI and is normally available via the same `python3` interpreter.
+If a hook reports *"PyYAML is required … not available in the current Python environment"*, it means the system `python3` differs from the one used to install Spec Kit.
+To resolve, run:
 
 ```bash
 pip install pyyaml

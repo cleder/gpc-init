@@ -1,5 +1,7 @@
 # pc-init
 
+[![codecov](https://codecov.io/gh/cleder/gpc-init/graph/badge.svg?token=3enkN1Q8JM)](https://codecov.io/gh/cleder/gpc-init)
+
 I use pre-commit (and now are beginning to migrate to prek) extensively in all my projects (work and hobby), and create a lot of repositories (every other month or so, enough for this to be a pain point, but not enough to have the workflow committed to my muscle memory).
 
 Whenever I create a new repo, I have to cut and paste the .pre-commit-config.yaml into the new project - which requires remembering what other project has the most appropriate and up-to-date configuration.

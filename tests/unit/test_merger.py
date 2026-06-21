@@ -2,7 +2,12 @@
 
 from typing import Any
 
-from gpc_init.merger import _merge_hooks_list, _merge_repos, merge_presets
+from gpc_init.merger import (
+    _deep_merge_top_level,
+    _merge_hooks_list,
+    _merge_repos,
+    merge_presets,
+)
 
 
 def make_hook(hook_id: str, **kwargs: Any) -> dict[str, Any]:
@@ -138,6 +143,29 @@ class TestMergePresets:
         result = merge_presets({}, [], [])
         assert result == {}
 
+
+class TestDeepMergeTopLevel:
+    def test_new_key_in_higher_added_to_result(self) -> None:
+        result = _deep_merge_top_level({"a": 1}, {"b": 2})
+        assert result == {"a": 1, "b": 2}
+
+    def test_scalar_in_higher_overwrites_scalar_in_lower(self) -> None:
+        result = _deep_merge_top_level({"a": 1}, {"a": 99})
+        assert result["a"] == 99
+
+    def test_repos_key_skipped(self) -> None:
+        result = _deep_merge_top_level({"a": 1}, {"repos": ["should be ignored"]})
+        assert "repos" not in result
+
+    def test_nested_dict_recursively_merged(self) -> None:
+        lower = {"versions": {"python": "3.10"}}
+        higher = {"versions": {"python": "3.12", "node": "18"}}
+        result = _deep_merge_top_level(lower, higher)
+        assert result["versions"]["python"] == "3.12"
+        assert result["versions"]["node"] == "18"
+
+
+class TestMergePresetsHigherHookReplaces:
     def test_higher_layer_hook_replaces_lower_fields(self) -> None:
         lang1 = {
             "repos": [

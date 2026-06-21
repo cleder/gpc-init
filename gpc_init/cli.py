@@ -5,7 +5,9 @@ from typing import Annotated
 
 import typer
 
+from gpc_init import fetcher
 from gpc_init.exceptions import (
+    PresetFetchError,
     PresetNotFoundError,
     PresetParseError,
     UnsupportedFrameworkError,
@@ -26,6 +28,68 @@ from gpc_init.resolver import (
     validate_frameworks,
     validate_langs,
 )
+
+
+def _run(
+    langs: list[str],
+    frameworks: list[str],
+    target: Path,
+    base_dir: Path | None,
+) -> None:
+    """Validate, load, merge, render, and write the preset config."""
+    if base_dir is not None and not (base_dir / "lang").is_dir():
+        typer.echo(f"Error: '{base_dir}' must contain a 'lang' subdirectory.", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        validate_langs(langs, base_dir=base_dir)
+        validate_frameworks(frameworks, base_dir=base_dir)
+
+        common = load_common_preset(base_dir=base_dir)
+        lang_presets = [
+            load_language_preset(lang_id, base_dir=base_dir) for lang_id in langs
+        ]
+        fw_presets = [
+            load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
+        ]
+
+        merged = merge_presets(common, lang_presets, fw_presets)
+        content = render_yaml(merged)
+
+        overwritten = target.exists()
+        try:
+            target.write_text(content, encoding="utf-8")
+        except (PermissionError, OSError) as exc:
+            typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+
+        info = get_primary_languages_info(frameworks, fw_presets, langs)
+        if info:
+            typer.echo(info)
+
+        lang_str = ", ".join(langs)
+        fw_str = (", ".join(frameworks)) if frameworks else "none"
+        action = "Overwrote" if overwritten else "Generated"
+        typer.echo(
+            f"{action} {target} with languages: {lang_str} and frameworks: {fw_str}"
+        )
+
+    except UnsupportedLanguageError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    except UnsupportedFrameworkError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    except PresetNotFoundError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    except PresetParseError as exc:
+        typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
 
 app = typer.Typer(
     name="pc-init",
@@ -53,7 +117,7 @@ def main(
         typer.Option(
             "--lang",
             help="Language preset to include (repeatable). "
-            "Supported: py, js, go, ru. Aliases: python, javascript, rust.",
+            "Run without --lang to see supported values from the active catalog.",
         ),
     ],
     framework: Annotated[
@@ -61,7 +125,7 @@ def main(
         typer.Option(
             "--framework",
             help="Framework preset to layer on top of language baselines (repeatable). "
-            "Supported: react, bevy, django.",
+            "Run without --framework to see supported values from the active catalog.",
         ),
     ] = None,
     force: Annotated[
@@ -78,6 +142,18 @@ def main(
             help="Output file path. Defaults to .pre-commit-config.yaml.",
         ),
     ] = ".pre-commit-config.yaml",
+    presets: Annotated[
+        str | None,
+        typer.Option(
+            "--presets",
+            help=(
+                "Preset catalog to use. Accepts a local directory path or a git "
+                "repository URL (https://, git@, git://, ssh://). The directory / "
+                "repo root must contain lang/ and framework/ subdirectories. "
+                "Defaults to the bundled presets."
+            ),
+        ),
+    ] = None,
 ) -> None:
     """
     Generate a .pre-commit-config.yaml from language and optional framework presets.
@@ -99,58 +175,24 @@ def main(
         )
         raise typer.Exit(code=1)
 
-    try:
-        # Validate
-        validate_langs(langs)
-        validate_frameworks(frameworks)
-
-        # Load presets
-        common = load_common_preset()
-        lang_presets = [load_language_preset(lang_id) for lang_id in langs]
-        fw_presets = [load_framework_preset(fw_id) for fw_id in frameworks]
-
-        # Merge
-        merged = merge_presets(common, lang_presets, fw_presets)
-
-        # Render
-        content = render_yaml(merged)
-
-        # Write
-        overwritten = target.exists()
+    # Resolve preset catalog
+    if presets is not None and not fetcher.is_git_url(presets):
+        local_dir = Path(presets)
+        if not local_dir.is_dir():
+            typer.echo(
+                f"Error: presets directory '{local_dir}' does not exist.", err=True
+            )
+            raise typer.Exit(code=1)
+        _run(langs, frameworks, target, local_dir)
+    elif presets is not None:
         try:
-            target.write_text(content, encoding="utf-8")
-        except (PermissionError, OSError) as exc:
-            typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
+            with fetcher.fetch_preset_repo(presets) as cloned:
+                _run(langs, frameworks, target, cloned)
+        except PresetFetchError as exc:
+            typer.echo(f"Error: {exc}", err=True)
             raise typer.Exit(code=1) from exc
-
-        # Report informational primary_languages notes
-        info = get_primary_languages_info(frameworks, fw_presets, langs)
-        if info:
-            typer.echo(info)
-
-        # Success message
-        lang_str = ", ".join(langs)
-        fw_str = (", ".join(frameworks)) if frameworks else "none"
-        action = "Overwrote" if overwritten else "Generated"
-        typer.echo(
-            f"{action} {target} with languages: {lang_str} and frameworks: {fw_str}"
-        )
-
-    except UnsupportedLanguageError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except UnsupportedFrameworkError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except PresetNotFoundError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except PresetParseError as exc:
-        typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
+    else:
+        _run(langs, frameworks, target, None)
 
 
 def entry_point() -> None:
@@ -158,5 +200,5 @@ def entry_point() -> None:
     app()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     app()

@@ -13,8 +13,10 @@ _LANG_ALIASES: dict[str, str] = {
     "golang": "go",
 }
 
-# Default base directory for preset discovery
-_DEFAULT_PRESETS_BASE = Path(__file__).parent.parent
+# Default base directory for preset discovery.
+# In development the symlinks gpc_init/lang -> ../lang resolve here; when installed
+# from a wheel the real copies are present at the same location.
+_DEFAULT_PRESETS_BASE = Path(__file__).parent
 
 
 def _discover_languages(base_dir: Path) -> list[str]:

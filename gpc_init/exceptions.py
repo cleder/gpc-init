@@ -38,3 +38,12 @@ class TargetFileExistsError(Exception):
         """Initialize with the path that already exists."""
         self.path = path
         super().__init__(f"'{path}' already exists. Use --force to overwrite.")
+
+
+class PresetFetchError(Exception):
+    """Raised when a remote preset repository cannot be fetched."""
+
+    def __init__(self, url: str, detail: str) -> None:
+        """Initialize with the URL that failed and the reason."""
+        self.url = url
+        super().__init__(f"Failed to fetch presets from '{url}': {detail}")

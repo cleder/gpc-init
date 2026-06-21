@@ -26,7 +26,7 @@ class TestHookConfig:
     def test_hook_immutable(self) -> None:
         hook = HookConfig(id="ruff-check")
         with pytest.raises(AttributeError):
-            hook.id = "other"  # type: ignore[misc]
+            hook.id = "other"  # type: ignore[assignment, ty:invalid-assignment]
 
 
 class TestRepoConfig:

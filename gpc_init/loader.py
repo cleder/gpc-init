@@ -8,8 +8,9 @@ import yaml
 from gpc_init.exceptions import PresetNotFoundError, PresetParseError
 
 # Base directory containing lang/ and framework/ preset folders.
-# Defaults to the repository root (parent of the gpc_init package directory).
-_DEFAULT_PRESETS_BASE = Path(__file__).parent.parent
+# In development the symlinks gpc_init/lang -> ../lang resolve here; when installed
+# from a wheel the real copies are present at the same location.
+_DEFAULT_PRESETS_BASE = Path(__file__).parent
 
 
 def _load_yaml_file(path: Path) -> dict[str, Any]:

@@ -29,12 +29,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          uv sync --extra tests
+          uv sync
       - name: Test with pytest
         run: |
-          uv run pytest tests --cov=tests --cov=gcp_init --cov-report=xml
+          uv run pytest tests --cov=tests --cov=gpc_init --cov-report=xml
       - name: "Upload coverage to Codecov"
-        if: ${{ matrix.python-version==3.12 }}
+        if: ${{ matrix.python-version == '3.13' }}
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
@@ -58,19 +58,18 @@ jobs:
           uv sync --all-extras
       - name: Typecheck
         run: |
-          uv run mypy src/gcp_init tests
+          uv run pyrefly check gpc_init tests
       - name: Linting
         run: |
-          uv run flake8 src/gcp_init tests --max-line-length=88
-          uv run ruff check --no-fix src/gcp_init tests
-          uv run ruff format --check src/gcp_init tests
+          uv run ruff check --no-fix gpc_init tests
+          uv run ruff format --check gpc_init tests
           uv run yamllint .github/workflows/
       - name: Check complexity
         run: |
-          uv run radon cc --min B src/gcp_init
-          uv run radon mi --min B src/gcp_init
-          uv run lizard -l python -w src/gcp_init
-          uv run complexipy src/gcp_init
+          uv run radon cc --min B gpc_init
+          uv run radon mi --min B gpc_init
+          uv run lizard -l python -w gpc_init
+          uv run complexipy gpc_init
 
   build-and-check-package:
     name: Build & inspect our package.
@@ -93,13 +92,13 @@ jobs:
           github.event_name == 'push' &&
           startsWith(github.ref, 'refs/tags')
         run: |
-          uv tool run vercheck $GITHUB_REF_NAME src/gcp_init/about.py
+          uv tool run vercheck $GITHUB_REF_NAME gpc_init/about.py
 
 
   test-publish:
     if: >-
         github.event_name == 'push' &&
-        github.repository == 'PROJECT_OWNER/gcp_init' &&
+        github.repository == 'PROJECT_OWNER/gpc_init' &&
         startsWith(github.ref, 'refs/tags')
     needs: [build-and-check-package, unit-tests, static-tests]
     name: Test install on TestPyPI
@@ -122,7 +121,7 @@ jobs:
   publish:
     if: >-
       github.event_name == 'push' &&
-      github.repository == 'PROJECT_OWNER/gcp_init' &&
+      github.repository == 'PROJECT_OWNER/gpc_init' &&
       github.ref == 'refs/heads/main'
     needs: [build-and-check-package, unit-tests, static-tests]
     name: Publish to PyPI
