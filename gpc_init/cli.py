@@ -37,6 +37,12 @@ def _run(
     base_dir: Path | None,
 ) -> None:
     """Validate, load, merge, render, and write the preset config."""
+    if base_dir is not None and not (base_dir / "lang").is_dir():
+        typer.echo(
+            f"Error: '{base_dir}' must contain a 'lang' subdirectory.", err=True
+        )
+        raise typer.Exit(code=1)
+
     try:
         validate_langs(langs, base_dir=base_dir)
         validate_frameworks(frameworks, base_dir=base_dir)

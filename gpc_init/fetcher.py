@@ -19,6 +19,8 @@ _GIT_URL_PREFIXES = ("https://", "git@", "git://", "ssh://")
 
 def is_git_url(value: str) -> bool:
     """Return True if value looks like a git repository URL rather than a local path."""
+    if Path(value).exists():
+        return False
     return value.startswith(_GIT_URL_PREFIXES) or value.endswith(".git")
 
 
@@ -47,7 +49,7 @@ def fetch_preset_repo(url: str) -> Generator[Path]:
     with tempfile.TemporaryDirectory(prefix="gpc-init-presets-") as tmp:
         try:
             subprocess.run(  # noqa: S603
-                [git, "clone", "--depth=1", url, tmp],
+                [git, "clone", "--depth=1", "--", url, tmp],
                 capture_output=True,
                 text=True,
                 check=True,
@@ -55,4 +57,7 @@ def fetch_preset_repo(url: str) -> Generator[Path]:
         except subprocess.CalledProcessError as exc:
             detail = (exc.stderr or exc.stdout or "unknown error").strip()
             raise PresetFetchError(url, detail) from exc
+        except OSError as exc:
+            msg = f"Failed to execute git: {exc}"
+            raise PresetFetchError(url, msg) from exc
         yield Path(tmp)

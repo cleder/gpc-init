@@ -26,6 +26,11 @@ class TestIsGitUrl:
     def test_dot_git_suffix_only(self) -> None:
         assert is_git_url("../local/bare-repo.git") is True
 
+    def test_existing_local_dot_git_path_returns_false(self, tmp_path: Path) -> None:
+        local_repo = tmp_path / "my-repo.git"
+        local_repo.mkdir()
+        assert is_git_url(str(local_repo)) is False
+
     def test_local_absolute_path(self) -> None:
         assert is_git_url("/path/to/presets") is False
 
@@ -84,6 +89,18 @@ class TestFetchPresetRepo:
         ):
             assert isinstance(path, Path)
             assert path.exists()
+
+    def test_os_error_raises_preset_fetch_error(self) -> None:
+        with (
+            patch("gpc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
+            patch(
+                "gpc_init.fetcher.subprocess.run",
+                side_effect=OSError("permission denied"),
+            ),
+            pytest.raises(PresetFetchError, match="permission denied"),
+            fetch_preset_repo("https://example.com/repo"),
+        ):
+            pass
 
     def test_temp_dir_cleaned_up_after_context(self) -> None:
         captured: list[Path] = []

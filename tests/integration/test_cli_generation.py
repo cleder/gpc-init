@@ -331,16 +331,23 @@ class TestPresetsOption:
 class TestErrorPaths:
     def test_write_permission_error(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
-        output.write_text("", encoding="utf-8")
-        output.chmod(0o444)
-        try:
+        with patch.object(Path, "write_text", side_effect=PermissionError("denied")):
             result = runner.invoke(
                 app, ["--lang", "py", "--force", "--output", str(output)]
             )
-        finally:
-            output.chmod(0o644)
         assert result.exit_code == 1
         assert "cannot write to" in result.output
+
+    def test_local_presets_missing_lang_subdir(self, tmp_path: Path) -> None:
+        presets_dir = tmp_path / "presets"
+        presets_dir.mkdir()
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--presets", str(presets_dir), "--output", str(output)],
+        )
+        assert result.exit_code == 1
+        assert "must contain a 'lang' subdirectory" in result.output
 
     def test_preset_not_found_error(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
