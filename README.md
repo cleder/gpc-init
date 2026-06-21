@@ -21,15 +21,20 @@ Usage: pc-init [OPTIONS]
   Use --force to overwrite an existing config file.
 
 Options:
-  --lang       TEXT  Language preset to include (repeatable).        [required]
+  --lang       TEXT  Language preset to include (repeatable). Run without
+                     --lang to see supported values from the active catalog.
+                     [required]
   --framework  TEXT  Framework preset to layer on top of language baselines
-                     (repeatable).
+                     (repeatable). Run without --framework to see supported
+                     values from the active catalog.
   --force            Overwrite existing .pre-commit-config.yaml without
                      prompting.
   --output     TEXT  Output file path.  [default: .pre-commit-config.yaml]
   --presets    TEXT  Preset catalog to use. Accepts a local directory path or
                      a git repository URL (https://, git@, git://, ssh://).
-                     Defaults to the bundled presets.
+                     The directory / repo root must contain lang/ and
+                     framework/ subdirectories. Defaults to the bundled
+                     presets.
   --help             Show this message and exit.
 ```
 
