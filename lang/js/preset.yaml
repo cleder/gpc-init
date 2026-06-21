@@ -1,3 +1,4 @@
+---
 repos:
   - repo: local
     hooks:
@@ -9,6 +10,6 @@ repos:
         language: node
         additional_dependencies: ['prettier@3.6.2']
   - repo: https://github.com/crate-ci/typos
-    rev: v1
+    rev: v1.47.2
     hooks:
       - id: typos

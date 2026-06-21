@@ -1,3 +1,4 @@
+---
 repos:
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
@@ -14,11 +15,7 @@ repos:
         args:
           - --
           - --check
-  - repo: https://github.com/nim65s/pre-commit-sort
-    rev: v1.0.0
-    hooks:
-      - id: pre-commit-sort
   - repo: https://github.com/crate-ci/typos
-    rev: v1
+    rev: v1.47.2
     hooks:
       - id: typos

@@ -1,3 +1,4 @@
+---
 primary_languages:
   - py
 repos:
@@ -20,11 +21,11 @@ repos:
     hooks:
       - id: django-urlconfchecks
   - repo: https://github.com/browniebroke/django-codemod
-    rev: v1.2.0
+    rev: v2.4.6
     hooks:
       - id: djcodemod
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: ""
+    rev: 1.30.0
     hooks:
     - id: django-upgrade
       args: ["run", "--deprecated-in", "3.0"]

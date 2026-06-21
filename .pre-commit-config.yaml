@@ -68,3 +68,7 @@ repos:
   rev: v5.1.0
   hooks:
     - id: complexipy
+- repo: https://github.com/owenlamont/ryl-pre-commit
+  rev: v0.19.1
+  hooks:
+    - id: ryl

@@ -1,10 +1,11 @@
+---
 repos:
   - repo: https://github.com/MarcoGorelli/absolufy-imports
     rev: v0.3.1
     hooks:
       - id: absolufy-imports
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.12
+    rev: v0.15.18
     hooks:
       - id: ruff-check
       - id: ruff-format
@@ -20,12 +21,8 @@ repos:
     rev: 1.20.0
     hooks:
       - id: blacken-docs
-  - repo: https://github.com/crate-ci/typos
-    rev: v1
-    hooks:
-      - id: typos
   - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: v0.42.0
+    rev: 1.1.1
     hooks:
       - id: pyrefly-check
   - repo: https://github.com/astral-sh/ty-pre-commit
@@ -37,7 +34,12 @@ repos:
     hooks:
       - id: complexipy
   - repo: https://github.com/asmeurer/removestar
-    rev: "1.5"
+    rev: 1.5.2
     hooks:
       - id: removestar
         args: [-i]
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.23
+    hooks:
+      - id: uv-lock
+      - id: uv-sync
