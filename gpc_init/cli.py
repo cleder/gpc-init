@@ -38,9 +38,7 @@ def _run(
 ) -> None:
     """Validate, load, merge, render, and write the preset config."""
     if base_dir is not None and not (base_dir / "lang").is_dir():
-        typer.echo(
-            f"Error: '{base_dir}' must contain a 'lang' subdirectory.", err=True
-        )
+        typer.echo(f"Error: '{base_dir}' must contain a 'lang' subdirectory.", err=True)
         raise typer.Exit(code=1)
 
     try:

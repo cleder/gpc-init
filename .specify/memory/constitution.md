@@ -25,49 +25,38 @@ Sync Impact Report
 
 ### I. Purpose-Driven CLI Output
 
-The project MUST prioritize generating practical, production-ready
-`.pre-commit-config.yaml` files from clear CLI inputs (`--lang`, optional
-`--framework`). Every feature MUST directly improve initialization quality,
-maintainability, or user guidance for repository setup.
+The project MUST prioritize generating practical, production-ready `.pre-commit-config.yaml` files from clear CLI inputs (`--lang`, optional `--framework`).
+Every feature MUST directly improve initialization quality, maintainability, or user guidance for repository setup.
 
-Rationale: The tool exists to eliminate repetitive copy-paste setup and provide
-reliable first-commit quality gates.
+Rationale: The tool exists to eliminate repetitive copy-paste setup and provide reliable first-commit quality gates.
 
 ### II. Deterministic Configuration Generation
 
-Given the same inputs and version, the generator MUST produce semantically
-equivalent output every time. Default profiles, hook ordering, and revisions
-MUST be explicitly encoded and test-covered.
+Given the same inputs and version, the generator MUST produce semantically equivalent output every time.
+Default profiles, hook ordering, and revisions MUST be explicitly encoded and test-covered.
 
-Rationale: Deterministic output enables trust, easier review, and stable CI
-behavior across environments.
+Rationale: Deterministic output enables trust, easier review, and stable CI behavior across environments.
 
 ### III. Test-First Delivery (NON-NEGOTIABLE)
 
 All behavior changes MUST follow red-green-refactor with `pytest`.
-Implementation code MUST NOT be merged unless tests for the new or changed
-behavior were written first, observed failing, and then passing.
+Implementation code MUST NOT be merged unless tests for the new or changed behavior were written first, observed failing, and then passing.
 
-Rationale: TDD reduces regressions and keeps behavior specification close to the
-user-facing contract.
+Rationale: TDD reduces regressions and keeps behavior specification close to the user-facing contract.
 
 ### IV. Strict Static Typing with Pyrefly
 
 All Python code MUST satisfy `pyrefly` under the strictest available settings.
-Type errors MUST block merge, and new public functions MUST include explicit
-type signatures.
+Type errors MUST block merge, and new public functions MUST include explicit type signatures.
 
-Rationale: Strong static guarantees improve maintainability and reduce runtime
-configuration bugs.
+Rationale: Strong static guarantees improve maintainability and reduce runtime configuration bugs.
 
 ### V. Minimal, Extensible Hook Profiles
 
-Generated configurations MUST remain minimal for each stack while preserving a
-clear path for extension. Stack-specific additions are allowed only when they
-provide concrete quality value and do not degrade baseline usability.
+Generated configurations MUST remain minimal for each stack while preserving a clear path for extension.
+Stack-specific additions are allowed only when they provide concrete quality value and do not degrade baseline usability.
 
-Rationale: The project serves many repository types; concise defaults with
-explicit extension points balance simplicity and power.
+Rationale: The project serves many repository types; concise defaults with explicit extension points balance simplicity and power.
 
 ## Technical Standards
 
@@ -90,9 +79,8 @@ explicit extension points balance simplicity and power.
 
 ## Governance
 
-This constitution overrides conflicting local process notes. Amendments require
-documentation of impact, explicit approval by project maintainers, and updates
-to affected templates in `.specify/templates/`.
+This constitution overrides conflicting local process notes.
+Amendments require documentation of impact, explicit approval by project maintainers, and updates to affected templates in `.specify/templates/`.
 
 Versioning policy:
 

@@ -6,15 +6,10 @@
 
 ## Summary
 
-Build a deterministic Python CLI tool, `pc-init`, that generates
-`.pre-commit-config.yaml` from one or more `--lang` values and optional
-repeatable `--framework` values.
-Frameworks are modeled independently from languages and may declare optional
-`primary_languages` for informational guidance. The tool must enforce safe overwrite behavior
-(`--force` required), emit actionable errors, and satisfy TDD (`pytest`) plus
-strict typing (`pyrefly`) gates. Baselines are loaded from filesystem presets:
-`lang/<language>/` for language profiles and `framework/<framework>/` for
-framework profiles.
+Build a deterministic Python CLI tool, `pc-init`, that generates `.pre-commit-config.yaml` from one or more `--lang` values and optional repeatable `--framework` values.
+Frameworks are modeled independently from languages and may declare optional `primary_languages` for informational guidance.
+The tool must enforce safe overwrite behavior (`--force` required), emit actionable errors, and satisfy TDD (`pytest`) plus strict typing (`pyrefly`) gates.
+Baselines are loaded from filesystem presets: `lang/<language>/` for language profiles and `framework/<framework>/` for framework profiles.
 
 ## Technical Context
 
@@ -51,7 +46,8 @@ framework profiles.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*GATE: Must pass before Phase 0 research.*
+*Re-check after Phase 1 design.*
 
 ### Pre-Research Gate
 
@@ -152,10 +148,7 @@ tests/
     └── test_cli_generation.py
 ```
 
-**Structure Decision**: Use a single Python CLI package (`gpc_init/`) with
-filesystem-backed preset catalogs from `lang/` and `framework/`, plus separated
-request resolution and rendering concerns to keep determinism and testability
-explicit.
+**Structure Decision**: Use a single Python CLI package (`gpc_init/`) with filesystem-backed preset catalogs from `lang/` and `framework/`, plus separated request resolution and rendering concerns to keep determinism and testability explicit.
 
 ## Complexity Tracking
 

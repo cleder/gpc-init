@@ -4,7 +4,8 @@
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: Test tasks are REQUIRED. For every behavior change, tests MUST be written first and fail before implementation.
+**Tests**: Test tasks are REQUIRED.
+For every behavior change, tests MUST be written first and fail before implementation.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -185,9 +186,12 @@
 
 ### User Story Completion Order
 
-1. **US1 (P1 - MVP)**: Can run independently. Prerequisite: Phase 2 (foundational loader/merger/renderer).
-2. **US2 (P2)**: Depends on US1. Adds framework support on top of working language baseline.
-3. **US3 (P3)**: Depends on US1. Adds safety checks and error messaging.
+1. **US1 (P1 - MVP)**: Can run independently.
+   Prerequisite: Phase 2 (foundational loader/merger/renderer).
+2. **US2 (P2)**: Depends on US1.
+   Adds framework support on top of working language baseline.
+3. **US3 (P3)**: Depends on US1.
+   Adds safety checks and error messaging.
 
 ### Suggested MVP Scope
 
