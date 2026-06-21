@@ -99,7 +99,7 @@ jobs:
   test-publish:
     if: >-
         github.event_name == 'push' &&
-        github.repository == 'cleder/gpc_init' &&
+        github.repository == 'cleder/gpc-init' &&
         startsWith(github.ref, 'refs/tags')
     needs: [build-and-check-package, unit-tests, static-tests]
     name: Test install on TestPyPI
@@ -122,7 +122,7 @@ jobs:
   publish:
     if: >-
       github.event_name == 'push' &&
-      github.repository == 'cleder/gpc_init' &&
+      github.repository == 'cleder/gpc-init' &&
       github.ref == 'refs/heads/main'
     needs: [build-and-check-package, unit-tests, static-tests]
     name: Publish to PyPI
