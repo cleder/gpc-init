@@ -2,7 +2,8 @@
 
 [![Tests](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml/badge.svg?branch=main)](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml) [![codecov](https://codecov.io/gh/cleder/gpc-init/graph/badge.svg?token=3enkN1Q8JM)](https://codecov.io/gh/cleder/gpc-init) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![pyrefly](https://img.shields.io/badge/type_checker-pyrefly-blue)](https://github.com/facebook/pyrefly) [![ty](https://img.shields.io/badge/type_checker-ty-blue)](https://github.com/astral-sh/ty) [![GPLv3 License](https://img.shields.io/pypi/l/pc-init)](https://opensource.org/license/gpl-3-0/) [![Python Version](https://img.shields.io/pypi/pyversions/pc-init)](https://www.python.org/) [![PyPI - Version](https://img.shields.io/pypi/v/pc-init)](https://pypi.org/project/pc-init/) [![Status](https://img.shields.io/pypi/status/pc-init)](https://pypi.org/project/pc-init/)
 
-Generate a `.pre-commit-config.yaml` for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
+Generate a [pre-commit](https://pre-commit.com/) or [prek](https://github.com/j178/prek/) `.pre-commit-config.yaml` for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
+Works with [prek](https://github.com/j178/prek/) and [pre-commit](https://pre-commit.com/)
 
 ## Installation
 
