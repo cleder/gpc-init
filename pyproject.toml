@@ -47,7 +47,7 @@ keywords = [
     "pre-commit",
     "presets",
 ]
-name = "gpc-init"
+name = "pc-init"
 readme = "README.md"
 requires-python = ">=3.13"
 version = "0.1.0"
