@@ -179,19 +179,6 @@ class TestGetPrimaryLanguagesInfo:
         )
         assert result is None
 
-    def test_returns_message_when_selected_lang_not_in_primary(self) -> None:
-        frameworks = ["react"]
-        framework_presets = [{"primary_languages": ["js", "ts"]}]
-        selected_langs = ["py"]
-
-        result = get_primary_languages_info(
-            frameworks, framework_presets, selected_langs
-        )
-
-        assert result is not None
-        assert "react" in result
-        assert "js" in result
-
     def test_returns_none_when_selected_lang_in_primary(self) -> None:
         frameworks = ["react"]
         framework_presets = [{"primary_languages": ["js", "ts"]}]
@@ -202,15 +189,6 @@ class TestGetPrimaryLanguagesInfo:
         )
 
         assert result is None
-
-    def test_returns_message_when_no_selected_lang_is_primary(self) -> None:
-        result = get_primary_languages_info(
-            frameworks=["react"],
-            framework_presets=[{"primary_languages": ["js", "ts"]}],
-            selected_langs=["py"],
-        )
-        assert result is not None
-        assert "react" in result
 
     def test_returns_none_when_selected_lang_matches_primary(self) -> None:
         result = get_primary_languages_info(

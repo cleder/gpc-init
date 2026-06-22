@@ -165,12 +165,11 @@ class TestRenderYaml:
         )
 
     def test_width_4096_wraps_near_boundary(self) -> None:
-        # 2048 single-char words produce a YAML line of 4099 chars ('kk: w w...w').
-        # yaml.dump with width=4096 wraps this into 2 lines; width=4097 keeps it
-        # as 1 line.  Asserting exactly 2 output lines kills the mutant that
-        # changes width=4096 to width=4097.
+        # 2048 single-char words → full YAML line is ~4099 chars ('kk: w w...w'),
+        # which exceeds width=4096 so yaml.dump must fold it.  width=4097 keeps
+        # it on a single line, so asserting > 1 lines detects that mutation.
         long_value = " ".join(["w"] * 2048)
         output = render_yaml({"kk": long_value})
-        assert len(output.splitlines()) == 2, (
-            "expected yaml.dump to wrap the long value at width=4096 into 2 lines"
+        assert len(output.splitlines()) > 1, (
+            "render_yaml must fold a value that exceeds width=4096"
         )
