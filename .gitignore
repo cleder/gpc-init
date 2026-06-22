@@ -225,3 +225,6 @@ __marimo__/
 .rumdl_cache/
 .pyscn/
 .complexipy_cache/
+
+# mutmut generated mutants
+mutants/

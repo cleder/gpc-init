@@ -1,5 +1,6 @@
 """Integration tests for pc-init CLI generation."""
 
+import shutil
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
@@ -8,7 +9,11 @@ import yaml
 from typer.testing import CliRunner
 
 from gpc_init.cli import app, entry_point
-from gpc_init.exceptions import PresetFetchError, PresetNotFoundError
+from gpc_init.exceptions import (
+    PresetFetchError,
+    PresetNotFoundError,
+    PresetParseError,
+)
 
 runner = CliRunner()
 
@@ -59,6 +64,56 @@ class TestBasicGeneration:
         )
         assert "py" in result.output
         assert "js" in result.output
+
+    def test_success_message_formats_multiple_langs_with_comma_space(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--lang", "js", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "py, js" in result.output
+
+    def test_new_file_success_message_says_generated(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert "Generated" in result.output
+
+    def test_new_file_success_message_starts_with_generated(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert "Generated " in result.output
+        assert "XXGeneratedXX" not in result.output
+
+    def test_common_preset_hooks_included_in_default_output(
+        self, tmp_path: Path
+    ) -> None:
+        """Common preset hooks must appear in default (bundled) output."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
+        all_hook_ids = [
+            hook["id"]
+            for repo in parsed.get("repos", [])
+            for hook in repo.get("hooks", [])
+        ]
+        # check-added-large-files is defined in the bundled common preset only;
+        # it should be present when merge_presets receives the real common dict.
+        # With the mutant (common=None), the common preset is skipped and this
+        # hook is absent.
+        assert "check-added-large-files" in all_hook_ids
+
+    def test_success_message_says_none_when_no_framework(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert "frameworks: none" in result.output
 
 
 class TestFrameworkGeneration:
@@ -129,6 +184,58 @@ class TestFrameworkGeneration:
         parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
         assert "repos" in parsed
 
+    def test_non_primary_lang_prints_note_message(self, tmp_path: Path) -> None:
+        """A framework with a non-primary language should print an info note."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "go", "--framework", "react", "--output", str(output)],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Note:" in result.output
+
+    def test_framework_mismatch_info_message_content(self, tmp_path: Path) -> None:
+        """Info message must contain actual language hint, not 'None'."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "go", "--framework", "react", "--output", str(output)],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Note: framework 'react' is typically used with: js" in result.output
+        assert "None" not in result.output
+
+    def test_success_message_includes_framework_name(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "js", "--framework", "react", "--output", str(output)],
+        )
+        assert result.exit_code == 0, result.output
+        assert "react" in result.output
+
+    def test_success_message_includes_frameworks_joined_by_comma(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--lang",
+                "js",
+                "--framework",
+                "django",
+                "--framework",
+                "react",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "django, react" in result.output
+
 
 class TestErrorHandling:
     def test_unsupported_lang_exits_nonzero(self, tmp_path: Path) -> None:
@@ -155,6 +262,18 @@ class TestErrorHandling:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(app, ["--output", str(output)])
         assert result.exit_code != 0
+
+    def test_unsupported_lang_exits_with_code_1(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "cobol", "--output", str(output)])
+        assert result.exit_code == 1
+
+    def test_unsupported_framework_exits_with_code_1(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--framework", "angular", "--output", str(output)]
+        )
+        assert result.exit_code == 1
 
 
 class TestOverwriteBehavior:
@@ -194,6 +313,58 @@ class TestOverwriteBehavior:
             app, ["--lang", "py", "--force", "--output", str(output)]
         )
         assert "Overwrote" in result.output or "Generated" in result.output
+
+    def test_force_overwrites_existing_file_says_overwrote(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing content", encoding="utf-8")
+        result = runner.invoke(
+            app, ["--lang", "py", "--force", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "Overwrote" in result.output
+
+    def test_force_success_message_says_overwrote(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing content", encoding="utf-8")
+        result = runner.invoke(
+            app, ["--lang", "py", "--force", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "Overwrote" in result.output
+
+    def test_force_success_message_word_is_exactly_overwrote(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing content", encoding="utf-8")
+        result = runner.invoke(
+            app, ["--lang", "py", "--force", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        # Check "Overwrote " (with trailing space) so that a mutant like
+        # "XXOverwroteXX" does not pass — "Overwrote" is a substring of that,
+        # but "Overwrote " (with space) is not.
+        assert "Overwrote " in result.output
+
+    def test_write_text_called_with_utf8_encoding(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        original_write_text = Path.write_text
+
+        calls = []
+
+        def capturing_write_text(self, data, encoding=None, errors=None):
+            calls.append({"path": self, "encoding": encoding})
+            return original_write_text(self, data, encoding=encoding, errors=errors)
+
+        with patch.object(Path, "write_text", capturing_write_text):
+            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+
+        assert result.exit_code == 0, result.output
+        assert any(c["path"] == output and c["encoding"] == "utf-8" for c in calls), (
+            f"write_text was not called with encoding='utf-8'; calls={calls}"
+        )
 
 
 class TestArgumentNormalization:
@@ -327,6 +498,167 @@ class TestPresetsOption:
         assert result.exit_code == 1
         assert "Failed to fetch" in result.output
 
+    def test_local_presets_framework_validated_against_custom_dir(
+        self, tmp_path: Path, fixtures_dir: Path
+    ) -> None:
+        """validate_frameworks must use the custom base_dir, not the bundled catalog."""
+        preset_dir = tmp_path / "presets"
+        shutil.copytree(fixtures_dir / "lang", preset_dir / "lang")
+        fw_dir = preset_dir / "framework" / "customfw"
+        fw_dir.mkdir(parents=True)
+        (fw_dir / "preset.yaml").write_text(
+            "repos:\n  - repo: local\n    hooks:\n"
+            "      - id: custom-hook\n        name: custom\n"
+            "        entry: custom\n        language: system\n",
+            encoding="utf-8",
+        )
+
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--framework",
+                "customfw",
+                "--presets",
+                str(preset_dir),
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_custom_presets_dir_framework_only_in_custom_dir_succeeds(
+        self, tmp_path: Path, fixtures_dir: Path
+    ) -> None:
+        """validate_frameworks must use base_dir for custom-only frameworks."""
+        preset_dir = tmp_path / "presets"
+        shutil.copytree(fixtures_dir / "lang", preset_dir / "lang")
+        fw_dir = preset_dir / "framework" / "myfw"
+        fw_dir.mkdir(parents=True)
+        (fw_dir / "preset.yaml").write_text(
+            "repos:\n  - repo: local\n    hooks:\n"
+            "      - id: myfw-hook\n        name: myfw\n"
+            "        entry: myfw\n        language: system\n",
+            encoding="utf-8",
+        )
+
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--framework",
+                "myfw",
+                "--presets",
+                str(preset_dir),
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+    def test_local_presets_common_preset_loaded_from_custom_dir(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        """Common preset must come from the custom presets dir, not bundled defaults."""
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--presets", str(tmp_preset_dir), "--output", str(output)],
+        )
+        assert result.exit_code == 0, result.output
+        parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
+        all_hook_ids = [
+            hook["id"]
+            for repo in parsed.get("repos", [])
+            for hook in repo.get("hooks", [])
+        ]
+        # The fixture common preset only has trailing-whitespace and end-of-file-fixer.
+        # The bundled default also has check-added-large-files,
+        # check-merge-conflict, etc.
+        # If base_dir=None is used (the mutant), bundled hooks leak in.
+        assert "check-added-large-files" not in all_hook_ids
+        assert "check-merge-conflict" not in all_hook_ids
+
+    def test_local_presets_custom_framework_loaded_from_presets_dir(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        """Framework preset loads from the custom base_dir, not bundled."""
+        custom_fw_dir = tmp_preset_dir / "framework" / "custom_fw"
+        custom_fw_dir.mkdir(parents=True)
+        (custom_fw_dir / "preset.yaml").write_text(
+            "repos:\n  - repo: local\n    hooks:\n"
+            "      - id: custom-hook\n        name: custom\n"
+            "        entry: echo\n        language: system\n",
+            encoding="utf-8",
+        )
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--framework",
+                "custom_fw",
+                "--presets",
+                str(tmp_preset_dir),
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_local_presets_dir_framework_uses_custom_preset(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "js",
+                "--framework",
+                "react",
+                "--presets",
+                str(tmp_preset_dir),
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        content = output.read_text(encoding="utf-8")
+        # The fixture react preset pins eslint@9.0.0; the bundled preset uses 9.28.0.
+        # If base_dir is not forwarded to load_framework_preset the bundled preset
+        # would be used instead and this assertion would fail.
+        assert "eslint@9.0.0" in content
+
+    def test_local_presets_common_hooks_present_in_output(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        """Common preset hooks must be included when a custom presets dir is used."""
+        # The fixture lang/common/preset.yaml defines trailing-whitespace and
+        # end-of-file-fixer.  With the mutant (common = None) these are never
+        # loaded and therefore absent from the merged output.
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--presets", str(tmp_preset_dir), "--output", str(output)],
+        )
+        assert result.exit_code == 0, result.output
+        parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
+        all_hook_ids = [
+            hook["id"]
+            for repo in parsed.get("repos", [])
+            for hook in repo.get("hooks", [])
+        ]
+        assert "trailing-whitespace" in all_hook_ids
+        assert "end-of-file-fixer" in all_hook_ids
+
 
 class TestErrorPaths:
     def test_write_permission_error(self, tmp_path: Path) -> None:
@@ -349,6 +681,20 @@ class TestErrorPaths:
         assert result.exit_code == 1
         assert "must contain a 'lang' subdirectory" in result.output
 
+    def test_local_presets_missing_lang_subdir_error_goes_to_stderr(
+        self, tmp_path: Path
+    ) -> None:
+        presets_dir = tmp_path / "presets"
+        presets_dir.mkdir()
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--presets", str(presets_dir), "--output", str(output)],
+        )
+        assert result.exit_code == 1
+        assert "must contain a 'lang' subdirectory" in result.stderr
+        assert "must contain a 'lang' subdirectory" not in result.stdout
+
     def test_preset_not_found_error(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
@@ -358,6 +704,17 @@ class TestErrorPaths:
             result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
         assert result.exit_code == 1
         assert "preset not found" in result.output
+
+    def test_preset_not_found_error_goes_to_stderr(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        with patch(
+            "gpc_init.cli.load_language_preset",
+            side_effect=PresetNotFoundError("preset not found"),
+        ):
+            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 1
+        assert "preset not found" in result.stderr
+        assert "preset not found" not in result.stdout
 
     def test_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "bad"
@@ -377,6 +734,64 @@ class TestErrorPaths:
         )
         assert result.exit_code == 1
         assert "failed to parse" in result.output
+
+    def test_preset_parse_error_writes_to_stderr(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        with patch(
+            "gpc_init.cli.load_language_preset",
+            side_effect=PresetParseError("bad yaml"),
+        ):
+            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 1
+        assert "failed to parse" in result.stderr
+        assert "failed to parse" not in result.stdout
+
+    def test_write_permission_error_goes_to_stderr(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        with patch.object(Path, "write_text", side_effect=PermissionError("denied")):
+            result = runner.invoke(
+                app,
+                ["--lang", "py", "--force", "--output", str(output)],
+            )
+        assert "cannot write to" in result.stderr
+        assert "cannot write to" not in result.stdout
+
+    def test_unsupported_lang_error_goes_to_stderr(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "cobol", "--output", str(output)])
+        assert result.exit_code != 0
+        assert "Error" in result.stderr
+        assert result.stdout == ""
+
+    def test_unsupported_framework_error_message_contains_framework_name(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--framework", "angular", "--output", str(output)]
+        )
+        assert "angular" in result.output or "Error" in result.output
+        assert result.output.strip() != "None"
+
+    def test_unsupported_framework_error_message(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--framework", "angular", "--output", str(output)]
+        )
+        assert result.exit_code != 0
+        assert "Error" in result.output
+
+    def test_unsupported_framework_error_written_to_stderr(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--framework", "angular", "--output", str(output)],
+        )
+        assert result.exit_code != 0
+        assert "Error" in result.stderr
+        assert "Error" not in result.stdout
 
 
 class TestEntryPoint:
