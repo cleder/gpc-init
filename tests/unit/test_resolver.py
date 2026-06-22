@@ -149,7 +149,7 @@ class TestValidateFrameworks:
 
 class TestGetPrimaryLanguagesInfo:
     def test_mismatched_lengths_raises(self) -> None:
-        with pytest.raises(ValueError, match="length"):
+        with pytest.raises(ValueError, match="shorter than"):
             get_primary_languages_info(
                 frameworks=["react", "django"],
                 framework_presets=[{"primary_languages": ["js"]}],
@@ -159,7 +159,7 @@ class TestGetPrimaryLanguagesInfo:
     def test_mismatched_lengths_raises_value_error(self) -> None:
         frameworks = ["react", "django"]
         framework_presets = [{"primary_languages": ["js"]}]  # shorter list
-        with pytest.raises(ValueError, match="length"):
+        with pytest.raises(ValueError, match="shorter than"):
             get_primary_languages_info(frameworks, framework_presets, ["py"])
 
     def test_returns_message_when_lang_not_in_primary_languages(self) -> None:
