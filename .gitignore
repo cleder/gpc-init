@@ -228,3 +228,10 @@ __marimo__/
 
 # mutmut generated mutants
 mutants/
+
+# AWESOME-list
+
+AWESOME.md
+
+# backups
+*.bak
