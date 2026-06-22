@@ -1,3 +1,4 @@
+---
 context_file: .github/copilot-instructions.md
 context_markers:
   start: <!-- SPECKIT START -->

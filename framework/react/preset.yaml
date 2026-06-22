@@ -6,7 +6,7 @@ repos:
     hooks:
       - id: eslint-react
         name: eslint (react)
-        description: lint JavaScript/React files with eslint and react-hooks plugin
+        description: lint JavaScript/React files with eslint and react-hooks
         entry: npx eslint --fix
         files: \.(jsx?|tsx?)$
         language: node

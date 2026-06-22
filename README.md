@@ -111,6 +111,14 @@ Git repository:
 pc-init --lang py --presets https://github.com/org/my-presets
 ```
 
+## Updating bundled presets
+
+To pull the latest hook revisions into all bundled preset files:
+
+```bash
+find . -name "preset*.yaml" | xargs -I{} prek auto-update -c {}
+```
+
 ## Motivation
 
 Every new repository needs a `.pre-commit-config.yaml`.

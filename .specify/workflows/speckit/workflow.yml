@@ -1,3 +1,4 @@
+---
 schema_version: "1.0"
 workflow:
   id: "speckit"
@@ -33,7 +34,9 @@ inputs:
   integration:
     type: string
     default: "auto"
-    prompt: "Integration to use (e.g. claude, copilot, gemini; 'auto' uses the project's initialized integration)"
+    prompt: >-
+      Integration to use (e.g. claude, copilot, gemini; 'auto' uses
+      the project's initialized integration)
   scope:
     type: string
     default: "full"
