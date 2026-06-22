@@ -6,6 +6,7 @@ from gpc_init.merger import (
     _deep_merge_top_level,
     _merge_hooks_list,
     _merge_repos,
+    _repo_key,
     merge_presets,
 )
 
@@ -20,6 +21,40 @@ def make_repo(
     hooks: list[dict[str, Any]],
 ) -> dict[str, Any]:
     return {"repo": url, "rev": rev, "hooks": hooks}
+
+
+class TestRepoKey:
+    def test_repo_key_missing_repo_defaults_to_empty_string(self) -> None:
+        # When "repo" key is absent, the default should be "" not None.
+        # Mutants 3, 5, 8 change the default to None or "XXXX".
+        result = _repo_key({"rev": "v1"})
+        assert result == ("", "v1")
+
+    def test_repo_key_missing_rev_defaults_to_empty_string(self) -> None:
+        # When "rev" key is absent, the default should be "" not None.
+        # Mutants 11, 13, 16 change the default to None or "XXXX".
+        entry = {"repo": "https://a.com"}
+        key = _repo_key(entry)
+        assert key == ("https://a.com", ""), (
+            f"Expected rev component to be '' but got {key[1]!r}"
+        )
+
+    def test_repos_without_rev_share_same_key_and_merge(self) -> None:
+        # Two entries for the same repo URL but neither has a 'rev' key.
+        # _repo_key falls back to the default for "rev"; both entries must
+        # produce an identical key so they are merged rather than appended.
+        # Mutant 16 uses "XXXX" as default — both entries still get "XXXX",
+        # so they still merge. This test verifies the actual key value is "".
+        lower = [{"repo": "https://a.com", "hooks": [make_hook("ha")]}]
+        higher = [{"repo": "https://a.com", "hooks": [make_hook("hb")]}]
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1, (
+            "repos with no 'rev' key must share the same identity key and be merged"
+        )
+        assert [h["id"] for h in result[0]["hooks"]] == ["ha", "hb"]
+        # Also verify the key produced is exactly ("https://a.com", "")
+        key = _repo_key({"repo": "https://a.com"})
+        assert key == ("https://a.com", "")
 
 
 class TestMergeHooksList:
@@ -52,6 +87,47 @@ class TestMergeHooksList:
         lower = [make_hook("hook-a")]
         result = _merge_hooks_list(lower, [])
         assert result == [{"id": "hook-a"}]
+
+    def test_hooks_without_id_are_merged_not_duplicated(self) -> None:
+        # Both hooks lack an 'id' field; they should be treated as the same
+        # hook (keyed by the empty-string default) so the higher entry merges
+        # into the lower entry rather than being appended as a second hook.
+        # Mutants 7, 12, 19, 24 change the default to None or "XXXX" in either
+        # or both loops, causing a key mismatch and incorrect duplication.
+        lower = [{"args": ["--old"]}]
+        higher = [{"args": ["--new"]}]
+        result = _merge_hooks_list(lower, higher)
+        assert len(result) == 1
+        assert result[0]["args"] == ["--new"]
+
+    def test_hook_without_id_does_not_merge_with_hook_whose_id_is_string_none(
+        self,
+    ) -> None:
+        # A lower hook with id="None" (the literal string) and a higher hook
+        # with no "id" key must NOT be merged together.  The original code
+        # resolves a missing id to "" so the two entries have different keys
+        # ("None" vs "").  Mutant 9 resolves a missing id to None, which
+        # str()-ifies to "None", making both keys collide.
+        lower = [make_hook("None", args=["--lower"])]
+        higher = [{"args": ["--higher"]}]  # no "id" key at all
+        result = _merge_hooks_list(lower, higher)
+        assert len(result) == 2, (
+            "hook with id='None' and hook without id must remain separate entries"
+        )
+        assert result[0]["id"] == "None"
+        assert result[0]["args"] == ["--lower"]
+        assert result[1]["args"] == ["--higher"]
+
+    def test_higher_hook_without_id_matches_lower_hook_with_empty_id(self) -> None:
+        # A lower hook with an explicit empty-string id and a higher hook with
+        # no "id" key must merge together (both resolve to "" via the default).
+        # Mutant 21 changes the higher-loop default to None so str(None)=="None"
+        # and the lookup misses, causing an extra entry instead of a merge.
+        lower = [{"id": "", "args": ["--old"]}]
+        higher = [{"args": ["--new"]}]  # no 'id' key — defaults to "" via get("id", "")
+        result = _merge_hooks_list(lower, higher)
+        assert len(result) == 1
+        assert result[0]["args"] == ["--new"]
 
 
 class TestMergeRepos:
@@ -156,6 +232,14 @@ class TestDeepMergeTopLevel:
     def test_repos_key_skipped(self) -> None:
         result = _deep_merge_top_level({"a": 1}, {"repos": ["should be ignored"]})
         assert "repos" not in result
+
+    def test_repos_key_skipped_other_keys_still_merged(self) -> None:
+        # repos appears first in higher so a break (vs continue) would drop all
+        # subsequent keys; verify they are still present in the result
+        higher = {"repos": ["ignored"], "extra": "value"}
+        result = _deep_merge_top_level({"a": 1}, higher)
+        assert "repos" not in result
+        assert result["extra"] == "value"
 
     def test_nested_dict_recursively_merged(self) -> None:
         lower = {"versions": {"python": "3.10"}}
