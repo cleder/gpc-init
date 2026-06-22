@@ -66,27 +66,6 @@ pc-init = "gpc_init.cli:entry_point"
 Homepage = "https://github.com/cleder/gpc-init"
 Repository = "https://github.com/cleder/gpc-init"
 
-[tool.mutmut]
-also_copy = [
-    "gpc_init/framework",
-    "gpc_init/lang",
-]
-do_not_mutate_patterns = [
-    "logger\\.\\w+",
-    "raise \\w+",
-]
-pytest_add_cli_args_test_selection = [
-    "tests/",
-]
-source_paths = [
-    "gpc_init/",
-]
-type_check_command = [
-    "--output-format=json",
-    "check",
-    "pyrefly",
-]
-
 [tool.pyrefly]
 project_excludes = [
     "specs/**",
