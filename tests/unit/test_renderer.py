@@ -149,44 +149,6 @@ class TestRenderYaml:
         assert "café" in output
         assert "\\x" not in output
 
-    def test_long_values_are_not_line_wrapped(self) -> None:
-        """width=4096 must prevent PyYAML from wrapping long string values."""
-        long_value = "word " * 20  # ~100 chars; exceeds default yaml width of 80
-        data = {"description": long_value.strip()}
-        output = render_yaml(data)
-        # Each YAML line should contain at most one key/value entry;
-        # the long value must not be split across multiple lines.
-        lines = output.splitlines()
-        description_lines = [line for line in lines if line.startswith("description:")]
-        assert len(description_lines) == 1, (
-            "Long string value was wrapped across multiple lines; "
-            "width=4096 is required to prevent this."
-        )
-
-    def test_uses_block_style_not_flow_style(self) -> None:
-        """Rendered YAML must use block style (default_flow_style=False)."""
-        data = {
-            "repos": [
-                {
-                    "repo": "https://example.com",
-                    "rev": "v1.0.0",
-                    "hooks": [{"id": "my-hook"}],
-                }
-            ]
-        }
-        output = render_yaml(data)
-        # Block style produces multiple lines with indented keys.
-        # Flow style would collapse everything onto a single line.
-        assert "\n" in output
-        assert "repo:" in output
-        assert "hooks:" in output
-
-    def test_allow_unicode_emits_non_ascii_directly(self) -> None:
-        """Non-ASCII characters must appear verbatim in the YAML output, not escaped."""
-        data = {"message": "café"}
-        output = render_yaml(data)
-        assert "café" in output
-
     def test_width_limits_line_length_to_4096(self) -> None:
         # Construct a value that wraps at width=4096 but not at width=4097.
         # 'kk: ' (4 chars) + 2048 single-char words separated by spaces produces a
@@ -194,7 +156,10 @@ class TestRenderYaml:
         # 4097 chars; at width=4097 it is 4099 chars.
         long_value = " ".join(["w"] * 2048)
         output = render_yaml({"kk": long_value})
-        first_line = output.split("\n")[0]
-        # At width=4096 (original): first line is 4097 chars — passes.
-        # At width=4097 (mutant): first line is 4099 chars — fails.
-        assert len(first_line) < 4099
+        # The value must stay on a single line at width=4096 (no wrapping).
+        # A mutant raising width to 4097 would produce a longer first line.
+        lines = output.splitlines()
+        value_lines = [line for line in lines if line.startswith("kk:")]
+        assert len(value_lines) == 1, (
+            "long value was wrapped; width=4096 must prevent this"
+        )

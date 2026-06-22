@@ -81,19 +81,7 @@ class TestBasicGeneration:
         assert result.exit_code == 0, result.output
         assert "Generated" in result.output
 
-    def test_generated_action_message_capitalized(self, tmp_path: Path) -> None:
-        output = tmp_path / ".pre-commit-config.yaml"
-        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
-        assert result.exit_code == 0, result.output
-        assert "Generated" in result.output
-
     def test_success_message_says_none_when_no_framework(self, tmp_path: Path) -> None:
-        output = tmp_path / ".pre-commit-config.yaml"
-        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
-        assert result.exit_code == 0, result.output
-        assert "frameworks: none" in result.output
-
-    def test_no_framework_shows_none_lowercase(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -652,17 +640,6 @@ class TestErrorPaths:
         assert "preset not found" in result.stderr
         assert "preset not found" not in result.stdout
 
-    def test_preset_not_found_error_writes_to_stderr(self, tmp_path: Path) -> None:
-        output = tmp_path / "out.yaml"
-        with patch(
-            "gpc_init.cli.load_language_preset",
-            side_effect=PresetNotFoundError("preset not found"),
-        ):
-            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
-        assert result.exit_code == 1
-        assert "preset not found" in result.stderr
-        assert "preset not found" not in result.stdout
-
     def test_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "bad"
         lang_dir.mkdir(parents=True)
@@ -693,43 +670,12 @@ class TestErrorPaths:
         assert "failed to parse" in result.stderr
         assert "failed to parse" not in result.stdout
 
-    def test_preset_parse_error_goes_to_stderr(self, tmp_path: Path) -> None:
-        lang_dir = tmp_path / "lang" / "bad"
-        lang_dir.mkdir(parents=True)
-        (lang_dir / "preset.yaml").write_text(": bad: [", encoding="utf-8")
-        output = tmp_path / "out.yaml"
-        result = runner.invoke(
-            app,
-            [
-                "--lang",
-                "bad",
-                "--presets",
-                str(tmp_path),
-                "--output",
-                str(output),
-            ],
-        )
-        assert result.exit_code == 1
-        assert "failed to parse" in result.stderr
-        assert "failed to parse" not in result.stdout
-
-    def test_write_permission_error_message_goes_to_stderr(
-        self, tmp_path: Path
-    ) -> None:
-        output = tmp_path / "out.yaml"
-        with patch.object(Path, "write_text", side_effect=PermissionError("denied")):
-            result = runner.invoke(
-                app, ["--lang", "py", "--force", "--output", str(output)]
-            )
-        assert result.exit_code == 1
-        assert "cannot write to" in result.stderr
-        assert "cannot write to" not in result.stdout
-
     def test_write_permission_error_goes_to_stderr(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch.object(Path, "write_text", side_effect=PermissionError("denied")):
             result = runner.invoke(
-                app, ["--lang", "py", "--force", "--output", str(output)]
+                app,
+                ["--lang", "py", "--force", "--output", str(output)],
             )
         assert "cannot write to" in result.stderr
         assert "cannot write to" not in result.stdout
@@ -740,12 +686,6 @@ class TestErrorPaths:
         assert result.exit_code != 0
         assert "Error" in result.stderr
         assert result.stdout == ""
-
-    def test_unsupported_lang_error_written_to_stderr(self, tmp_path: Path) -> None:
-        output = tmp_path / ".pre-commit-config.yaml"
-        result = runner.invoke(app, ["--lang", "cobol", "--output", str(output)])
-        assert "Error" in result.stderr
-        assert "Error" not in result.stdout
 
     def test_unsupported_framework_error_message_contains_framework_name(
         self, tmp_path: Path
@@ -765,20 +705,13 @@ class TestErrorPaths:
         assert result.exit_code != 0
         assert "Error" in result.output
 
-    def test_unsupported_framework_error_goes_to_stderr(self, tmp_path: Path) -> None:
-        output = tmp_path / ".pre-commit-config.yaml"
-        result = runner.invoke(
-            app, ["--lang", "py", "--framework", "angular", "--output", str(output)]
-        )
-        assert "Error" in result.stderr
-        assert result.stdout == ""
-
     def test_unsupported_framework_error_written_to_stderr(
         self, tmp_path: Path
     ) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(
-            app, ["--lang", "py", "--framework", "angular", "--output", str(output)]
+            app,
+            ["--lang", "py", "--framework", "angular", "--output", str(output)],
         )
         assert result.exit_code != 0
         assert "Error" in result.stderr

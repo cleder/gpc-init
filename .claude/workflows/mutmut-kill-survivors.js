@@ -35,7 +35,7 @@ const ANALYSIS_SCHEMA = {
     test_method_name: { type: 'string' },
     test_code: { type: 'string' },
   },
-  required: ['mutant_name', 'source_file', 'test_file', 'is_equivalent', 'mutation_summary'],
+  required: ['mutant_name', 'source_file', 'is_equivalent', 'mutation_summary'],
 }
 
 const WRITE_SCHEMA = {
@@ -80,7 +80,7 @@ Step 2 — Find the pytest binary (try each in order):
   which pytest
 
 Step 3 — List surviving mutants:
-  cd <project> && <mutmut_bin> results 2>&1 | grep ": survived"
+  cd <project> && <mutmut_bin> results 2>&1 | grep ": survived" || true
   Extract the mutant name from each line (the part before ": survived").
 
 Return: the resolved project path, mutmut_bin path, pytest_bin path, and the survivors list.`,
@@ -214,7 +214,7 @@ const verification = await agent(
 
 Steps:
   cd ${project} && ${mutmutBin} run
-  cd ${project} && ${mutmutBin} results 2>&1 | grep ": survived"
+  cd ${project} && ${mutmutBin} results 2>&1 | grep ": survived" || true
 
 Extract the remaining survivor names (part before ": survived") and return them.
 Count them in remaining_count.`,

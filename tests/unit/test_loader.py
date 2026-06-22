@@ -103,7 +103,9 @@ class TestLoadLanguagePreset:
         with patch.object(Path, "open", tracking_open):
             load_language_preset("utf8test", base_dir=tmp_path)
 
-        assert open_encodings == ["utf-8"]
+        assert len(open_encodings) == 1
+        assert open_encodings[0] is not None
+        assert open_encodings[0].casefold() == "utf-8"
 
 
 class TestLoadFrameworkPreset:

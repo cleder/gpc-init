@@ -156,43 +156,11 @@ class TestGetPrimaryLanguagesInfo:
                 selected_langs=["py"],
             )
 
-    def test_mismatched_lengths_raises_value_error(self) -> None:
-        frameworks = ["react", "django"]
-        framework_presets = [{"primary_languages": ["js"]}]  # shorter list
-        with pytest.raises(ValueError, match="shorter than"):
-            get_primary_languages_info(frameworks, framework_presets, ["py"])
-
     def test_returns_message_when_lang_not_in_primary_languages(self) -> None:
         result = get_primary_languages_info(
             frameworks=["react"],
             framework_presets=[{"primary_languages": ["js", "ts"]}],
             selected_langs=["py"],
-        )
-        assert result is not None
-        assert "react" in result
-        assert "js" in result
-
-    def test_returns_info_message_when_selected_lang_not_in_primary_languages(
-        self,
-    ) -> None:
-        frameworks = ["react"]
-        framework_presets = [{"primary_languages": ["js", "ts"]}]
-        selected_langs = ["py"]
-
-        result = get_primary_languages_info(
-            frameworks, framework_presets, selected_langs
-        )
-
-        assert result is not None
-        assert "react" in result
-        assert "js" in result
-
-    def test_returns_message_when_selected_lang_not_in_primary_languages(self) -> None:
-        frameworks = ["react"]
-        framework_presets = [{"primary_languages": ["js", "ts"]}]
-        selected_langs = ["py"]
-        result = get_primary_languages_info(
-            frameworks, framework_presets, selected_langs
         )
         assert result is not None
         assert "react" in result
