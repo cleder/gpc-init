@@ -263,6 +263,18 @@ class TestErrorHandling:
         result = runner.invoke(app, ["--output", str(output)])
         assert result.exit_code != 0
 
+    def test_unsupported_lang_exits_with_code_1(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "cobol", "--output", str(output)])
+        assert result.exit_code == 1
+
+    def test_unsupported_framework_exits_with_code_1(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--framework", "angular", "--output", str(output)]
+        )
+        assert result.exit_code == 1
+
 
 class TestOverwriteBehavior:
     def test_existing_file_without_force_exits_nonzero(self, tmp_path: Path) -> None:

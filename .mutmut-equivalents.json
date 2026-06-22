@@ -24,7 +24,7 @@
     "source_file": "gpc_init/resolver.py"
   },
   {
-    "equivalent_reason": "PyYAML 6.x sets `default_flow_style=False` by default in its `Dumper` class (`yaml.Dumper(None).default_flow_style` is `False`). Removing the explicit `default_flow_style=False` from `yaml.dump(...)` therefore changes nothing \u2014 the rendered YAML output is byte-for-byte identical for all inputs tested (nested dicts, lists, unicode, long strings, empty dicts, etc.). No test can detect this mutation because there is no observable behavioural difference.",
+    "equivalent_reason": "PyYAML 6.x sets `default_flow_style=False` by default in its `Dumper` class (`yaml.Dumper(None).default_flow_style` is `False`). Removing the explicit `default_flow_style=False` from `yaml.dump(...)` therefore changes nothing - the rendered YAML output is byte-for-byte identical for all inputs tested (nested dicts, lists, unicode, long strings, empty dicts, etc.). No test can detect this mutation because there is no observable behavioural difference.",
     "file_hash": "545bc45b0d1d604c086d77c7616f39dbb9157f18",
     "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_7",
     "source_file": "gpc_init/renderer.py"

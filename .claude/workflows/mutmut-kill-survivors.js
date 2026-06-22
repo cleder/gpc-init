@@ -228,8 +228,10 @@ Steps:
    Add the output as the "file_hash" field.
 2. Build the merged array: previously cached entries + new entries.
    If the same mutant_name appears in both, the new entry wins.
-3. Write the merged array as pretty-printed JSON (2-space indent) to
-   ${project}/.mutmut-equivalents.json.`,
+3. Write the merged array as pretty-printed JSON (2-space indent, keys sorted
+   alphabetically within each object) to ${project}/.mutmut-equivalents.json.
+   Use Python: python3 -c "import json,sys; d=json.load(open('.mutmut-equivalents.json')); open('.mutmut-equivalents.json','w').write(json.dumps(d,indent=2,sort_keys=True,ensure_ascii=True)+'\\n')"
+   Run this command from ${project} after writing the file to guarantee correct formatting.`,
     { phase: 'Analyze' },
   )
 }
@@ -315,7 +317,7 @@ Count them in remaining_count.`,
 const started = discovery.survivors.length
 const remaining = verification.remaining_count
 const totalEquivalent = equivalent.length + cachedEquivalents.length
-const newlyKilled = started - remaining - totalEquivalent
+const newlyKilled = started - remaining
 
 log(`Started: ${started}  |  Killed: ${newlyKilled}  |  Equivalent: ${totalEquivalent} (${cachedEquivalents.length} cached)  |  Still surviving: ${remaining}`)
 
