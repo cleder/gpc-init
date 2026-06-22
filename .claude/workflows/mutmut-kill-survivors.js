@@ -3,7 +3,8 @@ export const meta = {
   description: 'Analyze surviving mutmut mutants and write targeted tests to kill them',
   phases: [
     { title: 'Discover', detail: 'Find project root, mutmut binary, and surviving mutants' },
-    { title: 'Analyze', detail: 'Classify each mutant: missing test vs equivalent' },
+    { title: 'Cache', detail: 'Skip re-analysis of equivalent mutants whose source file is unchanged' },
+    { title: 'Analyze', detail: 'Classify each uncached mutant: missing test vs equivalent' },
     { title: 'Write', detail: 'Add tests grouped by test file' },
     { title: 'Verify', detail: 'Re-run mutmut and report the delta' },
   ],
@@ -21,6 +22,27 @@ const DISCOVERY_SCHEMA = {
     survivors: { type: 'array', items: { type: 'string' } },
   },
   required: ['project', 'mutmut_bin', 'pytest_bin', 'survivors'],
+}
+
+const CACHE_LOAD_SCHEMA = {
+  type: 'object',
+  properties: {
+    cached_equivalents: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          mutant_name: { type: 'string' },
+          source_file: { type: 'string' },
+          file_hash: { type: 'string' },
+          equivalent_reason: { type: 'string' },
+        },
+        required: ['mutant_name', 'source_file', 'file_hash', 'equivalent_reason'],
+      },
+    },
+    survivors_to_analyze: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['cached_equivalents', 'survivors_to_analyze'],
 }
 
 const ANALYSIS_SCHEMA = {
@@ -98,12 +120,55 @@ if (discovery.survivors.length === 0) {
 
 log(`Found ${discovery.survivors.length} surviving mutants in ${project}`)
 
-// ─── Phase 2: Analyze ─────────────────────────────────────────────────────────
+// ─── Phase 2: Cache ───────────────────────────────────────────────────────────
+
+phase('Cache')
+
+const cacheCheck = await agent(
+  `Load the equivalents cache and identify which surviving mutants still need analysis.
+
+Cache file: ${project}/.mutmut-equivalents.json
+All surviving mutants: ${JSON.stringify(discovery.survivors)}
+
+Steps:
+1. Try to read ${project}/.mutmut-equivalents.json.
+   If the file does not exist or cannot be parsed, set cached_equivalents = [] and
+   survivors_to_analyze = all survivors — do not error.
+2. Parse the JSON array. For each cache entry whose mutant_name appears in the survivors list:
+   a. Run: cd ${project} && git hash-object <entry.source_file>
+   b. If the hash matches entry.file_hash exactly: file is unchanged → include in cached_equivalents.
+   c. If the hash differs, the command errors, or the source file is missing: discard from cache.
+3. survivors_to_analyze = all survivors NOT covered by a valid (still-matching) cache entry.
+
+Return cached_equivalents (valid cache hits) and survivors_to_analyze (need fresh analysis).`,
+  { schema: CACHE_LOAD_SCHEMA, phase: 'Cache' },
+)
+
+const cachedEquivalents = cacheCheck.cached_equivalents
+const survivorsToAnalyze = cacheCheck.survivors_to_analyze
+
+if (cachedEquivalents.length > 0) {
+  log(`Cache: ${cachedEquivalents.length} equivalent mutant(s) skipped (source file unchanged)`)
+}
+
+if (survivorsToAnalyze.length === 0) {
+  log('All surviving mutants are cached equivalents — nothing to analyze.')
+  return {
+    status: 'complete',
+    tests_written: 0,
+    equivalent: cachedEquivalents.length,
+    equivalent_mutants: cachedEquivalents.map((e) => ({ name: e.mutant_name, reason: e.equivalent_reason })),
+  }
+}
+
+log(`Analyzing ${survivorsToAnalyze.length} uncached survivor(s)`)
+
+// ─── Phase 3: Analyze ─────────────────────────────────────────────────────────
 
 phase('Analyze')
 
 const analyses = (await pipeline(
-  discovery.survivors,
+  survivorsToAnalyze,
   (name) => agent(
     `Analyze the surviving mutmut mutant "${name}" in the project at ${project}.
 
@@ -144,18 +209,44 @@ STEP 4 — Classify:
 const equivalent = analyses.filter((a) => a.is_equivalent)
 const actionable = analyses.filter((a) => !a.is_equivalent && a.test_code)
 
-log(`${actionable.length} need tests  |  ${equivalent.length} are equivalent`)
+log(`${actionable.length} need tests  |  ${equivalent.length} newly equivalent  |  ${cachedEquivalents.length} cache hit(s)`)
+
+// Save updated equivalents cache (merge kept entries + newly found)
+if (equivalent.length > 0 || cachedEquivalents.length > 0) {
+  await agent(
+    `Update the equivalents cache at ${project}/.mutmut-equivalents.json.
+
+Previously cached entries (already have file_hash — keep as-is unless superseded):
+${JSON.stringify(cachedEquivalents, null, 2)}
+
+Newly classified equivalents (compute file_hash for each):
+${JSON.stringify(equivalent.map((a) => ({ mutant_name: a.mutant_name, source_file: a.source_file, equivalent_reason: a.equivalent_reason })), null, 2)}
+
+Steps:
+1. For each entry in "newly classified equivalents", compute the git blob hash:
+   cd ${project} && git hash-object <source_file>
+   Add the output as the "file_hash" field.
+2. Build the merged array: previously cached entries + new entries.
+   If the same mutant_name appears in both, the new entry wins.
+3. Write the merged array as pretty-printed JSON (2-space indent) to
+   ${project}/.mutmut-equivalents.json.`,
+    { phase: 'Analyze' },
+  )
+}
 
 if (actionable.length === 0) {
   return {
     status: 'complete',
     tests_written: 0,
-    equivalent: equivalent.length,
-    equivalent_mutants: equivalent.map((a) => ({ name: a.mutant_name, reason: a.equivalent_reason })),
+    equivalent: equivalent.length + cachedEquivalents.length,
+    equivalent_mutants: [
+      ...equivalent.map((a) => ({ name: a.mutant_name, reason: a.equivalent_reason })),
+      ...cachedEquivalents.map((e) => ({ name: e.mutant_name, reason: e.equivalent_reason })),
+    ],
   }
 }
 
-// ─── Phase 3: Write ───────────────────────────────────────────────────────────
+// ─── Phase 4: Write ───────────────────────────────────────────────────────────
 
 phase('Write')
 
@@ -205,7 +296,7 @@ Instructions
 const totalWritten = writeResults.reduce((sum, r) => sum + r.tests_written, 0)
 log(`Wrote ${totalWritten} tests across ${writeResults.length} file(s)`)
 
-// ─── Phase 4: Verify ──────────────────────────────────────────────────────────
+// ─── Phase 5: Verify ──────────────────────────────────────────────────────────
 
 phase('Verify')
 
@@ -223,14 +314,18 @@ Count them in remaining_count.`,
 
 const started = discovery.survivors.length
 const remaining = verification.remaining_count
-const newlyKilled = started - remaining - equivalent.length
+const totalEquivalent = equivalent.length + cachedEquivalents.length
+const newlyKilled = started - remaining - totalEquivalent
 
-log(`Started: ${started}  |  Killed: ${newlyKilled}  |  Equivalent: ${equivalent.length}  |  Still surviving: ${remaining}`)
+log(`Started: ${started}  |  Killed: ${newlyKilled}  |  Equivalent: ${totalEquivalent} (${cachedEquivalents.length} cached)  |  Still surviving: ${remaining}`)
 
 return {
   started_with: started,
   newly_killed: newlyKilled,
-  equivalent_mutants: equivalent.map((a) => ({ name: a.mutant_name, reason: a.equivalent_reason })),
+  equivalent_mutants: [
+    ...equivalent.map((a) => ({ name: a.mutant_name, reason: a.equivalent_reason })),
+    ...cachedEquivalents.map((e) => ({ name: e.mutant_name, reason: e.equivalent_reason })),
+  ],
   tests_written: totalWritten,
   still_surviving: remaining,
   remaining_survivors: verification.remaining,

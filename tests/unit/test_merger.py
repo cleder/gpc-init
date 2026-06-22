@@ -152,6 +152,49 @@ class TestMergeRepos:
         result = _merge_repos(lower, higher)
         assert len(result) == 2
 
+    def test_merge_repos_lower_repo_without_hooks_key(self) -> None:
+        # When the lower repo entry has no "hooks" key at all, _merge_repos must
+        # default to an empty list rather than None.  The mutant changes the
+        # default to None, which causes list(None) to raise a TypeError.
+        lower = [{"repo": "https://a.com", "rev": "v1"}]  # no "hooks" key
+        higher = [make_repo("https://a.com", "v1", [make_hook("ha")])]
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1
+        assert [h["id"] for h in result[0]["hooks"]] == ["ha"]
+
+    def test_merge_repos_lower_entry_without_hooks_key(self) -> None:
+        # A lower repo entry that has no "hooks" key at all must not crash when a
+        # higher entry with the same (repo, rev) key is merged into it.
+        # The mutant removes the default `[]` from `result[idx].get("hooks", [])`,
+        # causing `list(None)` to raise TypeError when the key is absent.
+        lower = [{"repo": "https://a.com", "rev": "v1"}]  # no "hooks" key
+        higher = [make_repo("https://a.com", "v1", [make_hook("ha")])]
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1
+        assert [h["id"] for h in result[0]["hooks"]] == ["ha"]
+
+    def test_same_repo_rev_higher_missing_hooks_key(self) -> None:
+        # When the higher repo entry shares the same (repo, rev) key as a lower
+        # entry but has no "hooks" key, _merge_repos must not raise and must
+        # preserve the lower hooks unchanged.
+        # Mutant 26 changes the default from [] to None so list(None) raises TypeError.
+        lower = [make_repo("https://a.com", "v1", [make_hook("ha")])]
+        higher = [{"repo": "https://a.com", "rev": "v1"}]  # no "hooks" key
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1
+        assert [h["id"] for h in result[0]["hooks"]] == ["ha"]
+
+    def test_higher_repo_without_hooks_key_merged_safely(self) -> None:
+        # A higher-layer repo entry for the same (repo, rev) key that has no
+        # "hooks" key at all must default to an empty list, not raise TypeError.
+        # Mutant 28 removes the default from repo.get("hooks", []), so
+        # list(None) would be raised instead of list([]).
+        lower = [make_repo("https://a.com", "v1", [make_hook("ha")])]
+        higher = [{"repo": "https://a.com", "rev": "v1"}]  # no "hooks" key
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1
+        assert [h["id"] for h in result[0]["hooks"]] == ["ha"]
+
 
 class TestMergePresets:
     def test_merges_common_and_single_lang(self) -> None:

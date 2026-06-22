@@ -1,0 +1,44 @@
+[
+  {
+    "equivalent_reason": "The `repos` key is filtered out in two independent places: once in the `non_repo` comprehension in `merge_presets` (the mutated line), and again inside `_deep_merge_top_level` via `if key == \"repos\": continue`. Even with the mutation, when `repos` is included in `non_repo` and passed to `_deep_merge_top_level`, that second guard drops it. The final return value of `merge_presets` is therefore identical whether or not the first filter excludes `repos`.",
+    "file_hash": "8772970ff641719fee62969123623721322332a4",
+    "mutant_name": "gpc_init.merger.x_merge_presets__mutmut_21",
+    "source_file": "gpc_init/merger.py"
+  },
+  {
+    "equivalent_reason": "The `repos` key is filtered out at two points: first in the `non_repo` dict comprehension in `merge_presets` (the mutated line), and second inside `_deep_merge_top_level` which explicitly skips `\"repos\"` keys. Changing the first filter from `\"repos\"` to `\"REPOS\"` allows the `repos` list to enter `_deep_merge_top_level`, but that function discards it anyway. The final merged result is provably identical for all normal inputs, as confirmed by running both original and mutant logic end-to-end and getting equal outputs.",
+    "file_hash": "8772970ff641719fee62969123623721322332a4",
+    "mutant_name": "gpc_init.merger.x_merge_presets__mutmut_22",
+    "source_file": "gpc_init/merger.py"
+  },
+  {
+    "equivalent_reason": "Both `[]` (original) and `None` (mutant) are falsy in Python. The code immediately checks `if primary` before using `primary` in any further operation. When the `primary_languages` key is absent from the preset dict, both defaults cause the `if` body to be skipped, resulting in the same outcome: no message is appended. There is no observable behavioral difference between the two values because the only use of `primary` after assignment is gated behind this truthiness check.",
+    "file_hash": "58512a20c2fb25aeb5a143415f50b80a5a9f15fc",
+    "mutant_name": "gpc_init.resolver.x_get_primary_languages_info__mutmut_11",
+    "source_file": "gpc_init/resolver.py"
+  },
+  {
+    "equivalent_reason": "When `primary_languages` is absent from the preset dict, the original code returns `[]` and the mutant returns `None`. Both values are falsy. The immediately following `if primary and not any(...)` condition short-circuits to `False` for both values without evaluating `any(...)`, so no message is appended and no `TypeError` is raised. The return value of `get_primary_languages_info` is identical in every call scenario, making this mutation undetectable by any test.",
+    "file_hash": "58512a20c2fb25aeb5a143415f50b80a5a9f15fc",
+    "mutant_name": "gpc_init.resolver.x_get_primary_languages_info__mutmut_13",
+    "source_file": "gpc_init/resolver.py"
+  },
+  {
+    "equivalent_reason": "PyYAML 6.x sets `default_flow_style=False` by default in its `Dumper` class (`yaml.Dumper(None).default_flow_style` is `False`). Removing the explicit `default_flow_style=False` from `yaml.dump(...)` therefore changes nothing \u2014 the rendered YAML output is byte-for-byte identical for all inputs tested (nested dicts, lists, unicode, long strings, empty dicts, etc.). No test can detect this mutation because there is no observable behavioural difference.",
+    "file_hash": "545bc45b0d1d604c086d77c7616f39dbb9157f18",
+    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_7",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "PyYAML's `yaml.dump_all` declares `sort_keys=True` as its default (visible in the function signature `def dump_all(..., sort_keys=True)`). The explicit `sort_keys=True` in the source code is therefore redundant; dropping it leaves the same default in effect. All existing tests (including `test_keys_are_sorted_in_output` and `test_sort_keys_for_determinism`) pass identically against the mutant because the YAML output is byte-for-byte identical.",
+    "file_hash": "545bc45b0d1d604c086d77c7616f39dbb9157f18",
+    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_8",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "Python's built-in `open()` (and `Path.open()`) normalises encoding names case-insensitively via the `codecs` module. `\"utf-8\"` and `\"UTF-8\"` resolve to the same codec and produce byte-for-byte identical file reads. No caller can observe any difference in return value, raised exceptions, or side effects between the two forms. The existing test at `tests/unit/test_loader.py:108` explicitly uses `.casefold()` on the captured encoding string to accept both variants, confirming that the test authors considered the casing irrelevant to correctness.",
+    "file_hash": "773f6d38fbde5b280630af7c51f570969a2f53f8",
+    "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_5",
+    "source_file": "gpc_init/loader.py"
+  }
+]

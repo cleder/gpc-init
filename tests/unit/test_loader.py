@@ -76,6 +76,16 @@ class TestLoadLanguagePreset:
         with pytest.raises(PresetParseError, match="list"):
             load_language_preset("list_preset2", base_dir=tmp_path)
 
+    def test_non_mapping_yaml_error_message_contains_actual_type_name_not_nonetype(
+        self, tmp_path: Path
+    ) -> None:
+        # A YAML scalar string is not a mapping; error must report "str", not "NoneType"
+        lang_dir = tmp_path / "lang" / "scalar_preset"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("just a string\n", encoding="utf-8")
+        with pytest.raises(PresetParseError, match="str"):
+            load_language_preset("scalar_preset", base_dir=tmp_path)
+
     def test_returns_dict_with_repos(self, tmp_preset_dir: Path) -> None:
         result = load_language_preset("py", base_dir=tmp_preset_dir)
         assert isinstance(result, dict)

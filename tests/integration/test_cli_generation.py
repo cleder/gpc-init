@@ -81,6 +81,34 @@ class TestBasicGeneration:
         assert result.exit_code == 0, result.output
         assert "Generated" in result.output
 
+    def test_new_file_success_message_starts_with_generated(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert "Generated " in result.output
+        assert "XXGeneratedXX" not in result.output
+
+    def test_common_preset_hooks_included_in_default_output(
+        self, tmp_path: Path
+    ) -> None:
+        """Common preset hooks must appear in default (bundled) output."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
+        all_hook_ids = [
+            hook["id"]
+            for repo in parsed.get("repos", [])
+            for hook in repo.get("hooks", [])
+        ]
+        # check-added-large-files is defined in the bundled common preset only;
+        # it should be present when merge_presets receives the real common dict.
+        # With the mutant (common=None), the common preset is skipped and this
+        # hook is absent.
+        assert "check-added-large-files" in all_hook_ids
+
     def test_success_message_says_none_when_no_framework(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
@@ -293,6 +321,20 @@ class TestOverwriteBehavior:
         )
         assert result.exit_code == 0, result.output
         assert "Overwrote" in result.output
+
+    def test_force_success_message_word_is_exactly_overwrote(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing content", encoding="utf-8")
+        result = runner.invoke(
+            app, ["--lang", "py", "--force", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        # Check "Overwrote " (with trailing space) so that a mutant like
+        # "XXOverwroteXX" does not pass — "Overwrote" is a substring of that,
+        # but "Overwrote " (with space) is not.
+        assert "Overwrote " in result.output
 
     def test_write_text_called_with_utf8_encoding(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
@@ -582,6 +624,28 @@ class TestPresetsOption:
         # If base_dir is not forwarded to load_framework_preset the bundled preset
         # would be used instead and this assertion would fail.
         assert "eslint@9.0.0" in content
+
+    def test_local_presets_common_hooks_present_in_output(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        """Common preset hooks must be included when a custom presets dir is used."""
+        # The fixture lang/common/preset.yaml defines trailing-whitespace and
+        # end-of-file-fixer.  With the mutant (common = None) these are never
+        # loaded and therefore absent from the merged output.
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--presets", str(tmp_preset_dir), "--output", str(output)],
+        )
+        assert result.exit_code == 0, result.output
+        parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
+        all_hook_ids = [
+            hook["id"]
+            for repo in parsed.get("repos", [])
+            for hook in repo.get("hooks", [])
+        ]
+        assert "trailing-whitespace" in all_hook_ids
+        assert "end-of-file-fixer" in all_hook_ids
 
 
 class TestErrorPaths:
