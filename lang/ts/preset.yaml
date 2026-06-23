@@ -1,0 +1,28 @@
+---
+repos:
+  - repo: https://github.com/biomejs/pre-commit
+    rev: v2.5.0
+    hooks:
+      - id: biome-check
+        additional_dependencies: ["@biomejs/biome@1.9.4"]
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v10.5.0
+    hooks:
+      - id: eslint
+        files: \.[jt]sx?$
+        types: [file]
+        additional_dependencies:
+          - eslint@9.23.0
+          - "@typescript-eslint/parser@8.0.0"
+          - "@typescript-eslint/eslint-plugin@8.0.0"
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types_or: [ts, tsx, javascript, jsx, json, css, markdown]
+  - repo: https://github.com/pre-commit/mirrors-tsc
+    rev: v5.4.5
+    hooks:
+      - id: tsc
+        args: [--noEmit]
+        additional_dependencies: [typescript@5.4.5]

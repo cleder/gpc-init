@@ -1,0 +1,12 @@
+---
+repos:
+  - repo: https://github.com/bridgecrewio/checkov
+    rev: 3.3.1
+    hooks:
+      - id: checkov_diff
+        files: Dockerfile
+        args: [--framework, dockerfile]
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
+    hooks:
+      - id: hadolint

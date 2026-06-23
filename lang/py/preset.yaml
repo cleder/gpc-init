@@ -13,6 +13,7 @@ repos:
     rev: v0.25
     hooks:
       - id: validate-pyproject
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/kieran-ryan/pyprojectsort
     rev: v0.4.0
     hooks:
@@ -26,7 +27,7 @@ repos:
     hooks:
       - id: pyrefly-check
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.51
+    rev: v0.0.52
     hooks:
       - id: ty
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
@@ -38,8 +39,24 @@ repos:
     hooks:
       - id: removestar
         args: [-i]
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        args: ["-ll"]
+        files: \.py$
+  - repo: https://github.com/PyCQA/docformatter
+    rev: v1.7.8
+    hooks:
+      - id: docformatter
+        args: [--in-place]
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.7.0
+    hooks:
+      - id: interrogate
+        args: ["--quiet", "--fail-under=70"]
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.19.1
+    rev: v3.21.2
     hooks:
       - id: pyupgrade
         args: [--py313-plus]
