@@ -7,15 +7,24 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
+      - id: check-case-conflict
       - id: check-docstring-first
+      - id: check-executables-have-shebangs
       - id: check-json
       - id: check-merge-conflict
+      - id: check-shebang-scripts-are-executable
+      - id: check-symlinks
       - id: check-toml
       - id: check-vcs-permalinks
       - id: check-xml
       - id: check-yaml
       - id: debug-statements
+      - id: destroyed-symlinks
+      - id: detect-private-key
       - id: end-of-file-fixer
+      - id: file-contents-sorter
+      - id: fix-byte-order-marker
+      - id: forbid-new-submodules
       - id: mixed-line-ending
       - id: name-tests-test
       - id: no-commit-to-branch
@@ -30,3 +39,19 @@ repos:
     rev: v1.47.2
     hooks:
       - id: typos
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.27.2
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/thoughtworks/talisman
+    rev: v1.32.0
+    hooks:
+      - id: talisman-commit
+  - repo: https://github.com/trufflesecurity/truffleHog
+    rev: v3.88.33
+    hooks:
+      - id: trufflehog
+        args: ["--only-verified"]
+        description: Detect secrets in your data.
+        entry: trufflehog git file://. --since-commit HEAD --only-verified --fail
+        stages: ["pre-commit", "pre-push"]

@@ -7,10 +7,13 @@ from gpc_init.exceptions import UnsupportedFrameworkError, UnsupportedLanguageEr
 
 # Language name aliases -> canonical id
 _LANG_ALIASES: dict[str, str] = {
-    "python": "py",
-    "javascript": "js",
-    "rust": "ru",
+    "bash": "sh",
     "golang": "go",
+    "image": "img",
+    "javascript": "js",
+    "python": "py",
+    "rust": "ru",
+    "shell": "sh",
 }
 
 # Default base directory for preset discovery.

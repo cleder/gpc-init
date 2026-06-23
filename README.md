@@ -60,11 +60,13 @@ Options:
 | `js` | JavaScript |
 | `go` | Go |
 | `ru` | Rust |
+| `sh` | Shell / Bash |
 | `md` | Markdown |
+| `img` | Images |
 | `toml` | TOML |
 | `yaml` | YAML |
 
-Language aliases `python`, `javascript`, `rust`, and `golang` are also accepted.
+Language aliases `python`, `javascript`, `rust`, `golang`, `shell`, `bash`, and `image` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -73,6 +75,8 @@ Language aliases `python`, `javascript`, `rust`, and `golang` are also accepted.
 | `react` | React |
 | `django` | Django |
 | `bevy` | Bevy (Rust game engine) |
+| `sphinx` | Sphinx documentation |
+| `git` | Commit message linting |
 
 ## Examples
 

@@ -38,6 +38,11 @@ repos:
     hooks:
       - id: removestar
         args: [-i]
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.19.1
+    hooks:
+      - id: pyupgrade
+        args: [--py313-plus]
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.11.23
     hooks:
