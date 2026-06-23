@@ -5,11 +5,11 @@ repos:
     hooks:
       - id: rumdl-fmt
   - repo: https://github.com/thlorenz/doctoc
-    rev: v2.2.1
+    rev: v2.5.0
     hooks:
       - id: doctoc
   - repo: https://github.com/amperser/proselint
-    rev: 0.14.0
+    rev: v0.16.0
     hooks:
       - id: proselint
   - repo: https://github.com/crate-ci/typos
