@@ -55,3 +55,13 @@ repos:
         description: Detect secrets in your data.
         entry: trufflehog git file://. --since-commit HEAD --only-verified --fail
         stages: ["pre-commit", "pre-push"]
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+  - repo: https://github.com/semgrep/semgrep
+    rev: v1.68.0
+    hooks:
+      - id: semgrep
+        args: [--config, auto, --error]

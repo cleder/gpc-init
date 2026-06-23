@@ -13,6 +13,7 @@ repos:
     rev: v0.25
     hooks:
       - id: validate-pyproject
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/kieran-ryan/pyprojectsort
     rev: v0.4.0
     hooks:
@@ -38,6 +39,22 @@ repos:
     hooks:
       - id: removestar
         args: [-i]
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.7
+    hooks:
+      - id: bandit
+        args: ["-ll"]
+        files: \.py$
+  - repo: https://github.com/PyCQA/docformatter
+    rev: v1.7.5
+    hooks:
+      - id: docformatter
+        args: [--in-place]
+  - repo: https://github.com/econchick/interrogate
+    rev: 1.5.0
+    hooks:
+      - id: interrogate
+        args: ["--quiet", "--fail-under=70"]
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.21.2
     hooks:

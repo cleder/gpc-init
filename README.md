@@ -61,12 +61,17 @@ Options:
 | `go` | Go |
 | `ru` | Rust |
 | `sh` | Shell / Bash |
+| `ts` | TypeScript |
+| `nb` | Jupyter Notebooks |
 | `md` | Markdown |
 | `img` | Images |
+| `docker` | Docker |
+| `sql` | SQL |
+| `tf` | Terraform |
 | `toml` | TOML |
 | `yaml` | YAML |
 
-Language aliases `python`, `javascript`, `rust`, `golang`, `shell`, `bash`, and `image` are also accepted.
+Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, and `terraform` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -77,6 +82,7 @@ Language aliases `python`, `javascript`, `rust`, `golang`, `shell`, `bash`, and 
 | `bevy` | Bevy (Rust game engine) |
 | `sphinx` | Sphinx documentation |
 | `git` | Commit message linting |
+| `k8s` | Kubernetes |
 
 ## Examples
 

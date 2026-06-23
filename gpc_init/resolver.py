@@ -8,12 +8,17 @@ from gpc_init.exceptions import UnsupportedFrameworkError, UnsupportedLanguageEr
 # Language name aliases -> canonical id
 _LANG_ALIASES: dict[str, str] = {
     "bash": "sh",
+    "dockerfile": "docker",
     "golang": "go",
     "image": "img",
     "javascript": "js",
+    "jupyter": "nb",
+    "notebook": "nb",
     "python": "py",
     "rust": "ru",
     "shell": "sh",
+    "terraform": "tf",
+    "typescript": "ts",
 }
 
 # Default base directory for preset discovery.
