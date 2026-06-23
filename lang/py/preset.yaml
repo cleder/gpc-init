@@ -66,7 +66,7 @@ repos:
       - id: uv-lock
       - id: uv-sync
   - repo: https://github.com/numpy/numpydoc
-    rev: v1.11.0rc0
+    rev: v1.10.0
     hooks:
       - id: numpydoc-validation
-        exclude: ""
+        exclude: "tests/"
