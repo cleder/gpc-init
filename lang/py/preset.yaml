@@ -40,18 +40,18 @@ repos:
       - id: removestar
         args: [-i]
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.7
+    rev: 1.9.4
     hooks:
       - id: bandit
         args: ["-ll"]
         files: \.py$
   - repo: https://github.com/PyCQA/docformatter
-    rev: v1.7.5
+    rev: v1.7.8
     hooks:
       - id: docformatter
         args: [--in-place]
   - repo: https://github.com/econchick/interrogate
-    rev: 1.5.0
+    rev: 1.7.0
     hooks:
       - id: interrogate
         args: ["--quiet", "--fail-under=70"]
