@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -24,7 +25,7 @@ def load_preset(path: Path) -> dict:
     """Load and parse a preset YAML file, returning an empty dict if missing."""
     if not path.exists():
         return {}
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 
@@ -37,6 +38,7 @@ def discover_sorted(base: Path, exclude: frozenset[str] = frozenset()) -> list[s
     )
 
 
+_GH = shutil.which("gh")
 _description_cache: dict[str, str] = {}
 
 
@@ -44,23 +46,40 @@ def gh_description(owner_repo: str) -> str:
     """Fetch the GitHub repository description via the gh CLI, with caching."""
     if owner_repo in _description_cache:
         return _description_cache[owner_repo]
-    gh = shutil.which("gh") or "gh"
-    result = subprocess.run(  # noqa: S603
-        [
-            gh,
-            "repo",
-            "view",
-            owner_repo,
-            "--json",
-            "description",
-            "--jq",
-            ".description",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    desc = result.stdout.strip() if result.returncode == 0 else ""
+    if not _GH:
+        _description_cache[owner_repo] = ""
+        return ""
+    try:
+        result = subprocess.run(  # noqa: S603
+            [
+                _GH,
+                "repo",
+                "view",
+                owner_repo,
+                "--json",
+                "description",
+                "--jq",
+                ".description",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            desc = result.stdout.strip()
+        else:
+            print(  # noqa: T201
+                f"Warning: could not fetch description for {owner_repo}",
+                file=sys.stderr,
+            )
+            desc = ""
+    except (subprocess.TimeoutExpired, OSError):
+        print(  # noqa: T201
+            f"Warning: gh timed out or failed for {owner_repo}",
+            file=sys.stderr,
+        )
+        desc = ""
     _description_cache[owner_repo] = desc
     return desc
 
@@ -131,7 +150,7 @@ def build_awesome_list(languages: list[str], frameworks: list[str]) -> str:
         "[prek](https://github.com/j178/prek/) hooks, "
         "organized by language and framework.",
         "",
-        "_Auto-generated from [pc-init](https://github.com/cleder/gpc-init) presets"
+        "_Auto-generated from [gpc-init](https://github.com/cleder/gpc-init) presets"
         " — to add or update a hook, open a PR there rather than editing this file"
         " directly._",
         "",
@@ -185,7 +204,7 @@ def main() -> None:
     content = build_awesome_list(languages, frameworks)
 
     output = Path(args.output)
-    output.write_text(content)
+    output.write_text(content, encoding="utf-8")
     print(f"Generated {output} ({output.stat().st_size} bytes)")  # noqa: T201
     print(f"  Languages: {', '.join(languages)}")  # noqa: T201
     print(f"  Frameworks: {', '.join(frameworks)}")  # noqa: T201
