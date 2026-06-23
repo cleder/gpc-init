@@ -4,6 +4,14 @@ repos:
     rev: v0.2.20
     hooks:
       - id: rumdl-fmt
+  - repo: https://github.com/thlorenz/doctoc
+    rev: v2.2.1
+    hooks:
+      - id: doctoc
+  - repo: https://github.com/amperser/proselint
+    rev: 0.14.0
+    hooks:
+      - id: proselint
   - repo: https://github.com/crate-ci/typos
     rev: v1.47.2
     hooks:

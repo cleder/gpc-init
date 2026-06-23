@@ -5,6 +5,17 @@
 Generate a [pre-commit](https://pre-commit.com/) or [prek](https://github.com/j178/prek/) `.pre-commit-config.yaml` for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
 Works with [prek](https://github.com/j178/prek/) and [pre-commit](https://pre-commit.com/)
 
+## Motivation
+
+Every new repository needs a `.pre-commit-config.yaml`.
+Each language and framework has its own recommended linters, formatters, and quality tools, each with its own hook URL and revision.
+`pc-init` encodes those choices in version-controlled presets so you run one command instead of copying configs and looking up hook URLs.
+The bundled presets pin specific hook revisions — run `pre-commit autoupdate` or `prek autoupdate` after generation to pull in the latest versions.
+
+## Awesome Pre-commit Hooks
+
+The curated hooks bundled with `pc-init` are also published as a standalone reference at [awesome-pre-commit-hooks](https://github.com/cleder/awesome-pre-commit-hooks) — a browsable list of every hook organised by language and framework.
+
 ## Installation
 
 ```bash
@@ -49,11 +60,13 @@ Options:
 | `js` | JavaScript |
 | `go` | Go |
 | `ru` | Rust |
+| `sh` | Shell / Bash |
 | `md` | Markdown |
+| `img` | Images |
 | `toml` | TOML |
 | `yaml` | YAML |
 
-Language aliases `python`, `javascript`, `rust`, and `golang` are also accepted.
+Language aliases `python`, `javascript`, `rust`, `golang`, `shell`, `bash`, and `image` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -62,6 +75,8 @@ Language aliases `python`, `javascript`, `rust`, and `golang` are also accepted.
 | `react` | React |
 | `django` | Django |
 | `bevy` | Bevy (Rust game engine) |
+| `sphinx` | Sphinx documentation |
+| `git` | Commit message linting |
 
 ## Examples
 
@@ -118,10 +133,3 @@ To pull the latest hook revisions into all bundled preset files:
 ```bash
 find . -name "preset*.yaml" | xargs -I{} prek auto-update -c {}
 ```
-
-## Motivation
-
-Every new repository needs a `.pre-commit-config.yaml`.
-Each language and framework has its own recommended linters, formatters, and quality tools, each with its own hook URL and revision.
-`pc-init` encodes those choices in version-controlled presets so you run one command instead of copying configs and looking up hook URLs.
-The bundled presets pin specific hook revisions — run `pre-commit autoupdate` or `prek autoupdate` after generation to pull in the latest versions.
