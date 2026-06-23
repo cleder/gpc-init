@@ -65,20 +65,8 @@ repos:
     hooks:
       - id: uv-lock
       - id: uv-sync
-  - repo: https://github.com/kynan/nbstripout
-    rev: 0.9.1
-    hooks:
-      - id: nbstripout
-  - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.9.1
-    hooks:
-      - id: nbqa-black
-      - id: nbqa-check-ast
-      - id: nbqa-flake8
-      - id: nbqa-isort
-      - id: nbqa-pyupgrade
   - repo: https://github.com/numpy/numpydoc
-    rev: v1.11.0rc0
+    rev: v1.10.0
     hooks:
       - id: numpydoc-validation
         exclude: ""
