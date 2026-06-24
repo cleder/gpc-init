@@ -349,7 +349,6 @@ dev = [
     { name = "rumdl" },
     { name = "ryl" },
     { name = "ty" },
-    { name = "typer" },
 ]
 lint = [
     { name = "complexipy" },
@@ -393,7 +392,6 @@ dev = [
     { name = "rumdl", specifier = ">=0.0.129" },
     { name = "ryl", specifier = ">=0.21.0" },
     { name = "ty", specifier = ">=0.0.51" },
-    { name = "typer", specifier = ">=0.12.0" },
 ]
 lint = [
     { name = "complexipy" },

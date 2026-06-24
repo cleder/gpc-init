@@ -1,7 +1,6 @@
 [dependency-groups]
 dev = [
     "deptry>=0.24.0",
-    "typer>=0.12.0",
     { include-group = "lint" },
     { include-group = "test" },
 ]
@@ -32,7 +31,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -51,13 +49,11 @@ keywords = [
     "pre-commit",
     "presets",
 ]
+license = "GPL-3.0-only"
 name = "pc-init"
 readme = "README.md"
 requires-python = ">=3.13"
 version = "0.2.0"
-
-[project.license]
-file = "LICENSE"
 
 [project.scripts]
 pc-init = "gpc_init.cli:entry_point"
