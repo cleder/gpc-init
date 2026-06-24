@@ -1,3 +1,4 @@
+---
 primary_languages:
   - py
 repos:
@@ -6,3 +7,30 @@ repos:
     hooks:
       - id: name-tests-test
         args: ['--django']
+  - repo: https://github.com/ecugol/pre-commit-hooks-django
+    rev: v0.4.0  # Use the ref you want to point at
+    hooks:
+      - id: check-untracked-migrations
+        args: ["--branches", "main", "other_branch"]
+      - id: check-unapplied-migrations
+      - id: check-absent-migrations
+      - id: po-location-format
+        args: ["--add-location", "file"]
+  - repo: https://github.com/AliSayyah/django-urlconfchecks
+    rev: v0.13.2
+    hooks:
+      - id: django-urlconfchecks
+  - repo: https://github.com/browniebroke/django-codemod
+    rev: v2.4.6
+    hooks:
+      - id: djcodemod
+  - repo: https://github.com/adamchainz/django-upgrade
+    rev: 1.30.0
+    hooks:
+      - id: django-upgrade
+        args: ["run", "--deprecated-in", "3.0"]
+  - repo: https://github.com/djlint/djLint
+    rev: v1.39.4
+    hooks:
+      - id: djlint-reformat-django
+      - id: djlint-django

@@ -41,11 +41,11 @@ def _load_yaml_file(path: Path) -> dict[str, Any]:
 
 def load_common_preset(base_dir: Path | None = None) -> dict[str, Any]:
     """
-    Load the common baseline preset (lang/common/default.yaml).
+    Load the common baseline preset (lang/common/preset.yaml).
 
     Returns an empty dict if the file does not exist.
     """
-    path = _resolve_base(base_dir) / "lang" / "common" / "default.yaml"
+    path = _resolve_base(base_dir) / "lang" / "common" / "preset.yaml"
     if not path.exists():
         return {}
     return _load_yaml_file(path)
@@ -53,7 +53,7 @@ def load_common_preset(base_dir: Path | None = None) -> dict[str, Any]:
 
 def load_language_preset(lang_id: str, base_dir: Path | None = None) -> dict[str, Any]:
     """
-    Load the baseline preset for a language (lang/<lang_id>/baseline.yaml).
+    Load the preset for a language (lang/<lang_id>/preset.yaml).
 
     Args:
         lang_id: Canonical language identifier (e.g. 'py', 'js', 'go', 'ru').
@@ -67,7 +67,7 @@ def load_language_preset(lang_id: str, base_dir: Path | None = None) -> dict[str
         PresetParseError: If the YAML is invalid or not a mapping.
 
     """
-    return _load_yaml_file(_resolve_base(base_dir) / "lang" / lang_id / "baseline.yaml")
+    return _load_yaml_file(_resolve_base(base_dir) / "lang" / lang_id / "preset.yaml")
 
 
 def load_framework_preset(

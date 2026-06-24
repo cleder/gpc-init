@@ -1,6 +1,8 @@
 """Unit tests for gpc_init/loader.py."""
 
 from pathlib import Path
+from typing import Any
+from unittest.mock import patch
 
 import pytest
 
@@ -20,7 +22,7 @@ class TestLoadCommonPreset:
         assert len(repos) > 0
 
     def test_returns_empty_dict_when_missing(self, tmp_path: Path) -> None:
-        # No lang/common/default.yaml in tmp_path
+        # No lang/common/preset.yaml in tmp_path
         result = load_common_preset(base_dir=tmp_path)
         assert result == {}
 
@@ -52,7 +54,7 @@ class TestLoadLanguagePreset:
     def test_invalid_yaml_raises_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "bad"
         lang_dir.mkdir(parents=True)
-        (lang_dir / "baseline.yaml").write_text(
+        (lang_dir / "preset.yaml").write_text(
             "key: [unclosed bracket", encoding="utf-8"
         )
         with pytest.raises(PresetParseError, match="Failed to parse"):
@@ -61,9 +63,28 @@ class TestLoadLanguagePreset:
     def test_non_mapping_yaml_raises_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "list_preset"
         lang_dir.mkdir(parents=True)
-        (lang_dir / "baseline.yaml").write_text("- item1\n- item2\n", encoding="utf-8")
+        (lang_dir / "preset.yaml").write_text("- item1\n- item2\n", encoding="utf-8")
         with pytest.raises(PresetParseError, match="must contain a YAML mapping"):
             load_language_preset("list_preset", base_dir=tmp_path)
+
+    def test_non_mapping_yaml_error_includes_actual_type_name(
+        self, tmp_path: Path
+    ) -> None:
+        lang_dir = tmp_path / "lang" / "list_preset2"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("- item1\n- item2\n", encoding="utf-8")
+        with pytest.raises(PresetParseError, match="list"):
+            load_language_preset("list_preset2", base_dir=tmp_path)
+
+    def test_non_mapping_yaml_error_message_contains_actual_type_name_not_nonetype(
+        self, tmp_path: Path
+    ) -> None:
+        # A YAML scalar string is not a mapping; error must report "str", not "NoneType"
+        lang_dir = tmp_path / "lang" / "scalar_preset"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("just a string\n", encoding="utf-8")
+        with pytest.raises(PresetParseError, match="str"):
+            load_language_preset("scalar_preset", base_dir=tmp_path)
 
     def test_returns_dict_with_repos(self, tmp_preset_dir: Path) -> None:
         result = load_language_preset("py", base_dir=tmp_preset_dir)
@@ -74,9 +95,27 @@ class TestLoadLanguagePreset:
     def test_empty_yaml_returns_empty_dict(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "empty"
         lang_dir.mkdir(parents=True)
-        (lang_dir / "baseline.yaml").write_text("", encoding="utf-8")
+        (lang_dir / "preset.yaml").write_text("", encoding="utf-8")
         result = load_language_preset("empty", base_dir=tmp_path)
         assert result == {}
+
+    def test_opens_yaml_file_with_utf8_encoding(self, tmp_path: Path) -> None:
+        lang_dir = tmp_path / "lang" / "utf8test"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("key: value\n", encoding="utf-8")
+        _original_open = Path.open
+        open_encodings: list[str | None] = []
+
+        def tracking_open(self: Path, *args: Any, **kwargs: Any) -> Any:
+            open_encodings.append(kwargs.get("encoding"))  # type: ignore[arg-type]
+            return _original_open(self, *args, **kwargs)  # type: ignore[arg-type]
+
+        with patch.object(Path, "open", tracking_open):
+            load_language_preset("utf8test", base_dir=tmp_path)
+
+        assert len(open_encodings) == 1
+        assert open_encodings[0] is not None
+        assert open_encodings[0].casefold() == "utf-8"
 
 
 class TestLoadFrameworkPreset:
@@ -96,3 +135,10 @@ class TestLoadFrameworkPreset:
         result = load_framework_preset("react", base_dir=tmp_preset_dir)
         assert "primary_languages" in result
         assert "js" in result["primary_languages"]
+
+    def test_custom_base_dir_is_used(self, tmp_path: Path) -> None:
+        fw_dir = tmp_path / "framework" / "custom_fw"
+        fw_dir.mkdir(parents=True)
+        (fw_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+        result = load_framework_preset("custom_fw", base_dir=tmp_path)
+        assert result == {"repos": []}

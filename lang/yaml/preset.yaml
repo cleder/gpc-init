@@ -1,6 +1,11 @@
+---
 repos:
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.21.0
+    hooks:
+      - id: yamlfmt
   - repo: https://github.com/owenlamont/ryl-pre-commit
     # Match the latest ryl release tag.
-    rev: v0.19.1
+    rev: v0.21.0
     hooks:
       - id: ryl

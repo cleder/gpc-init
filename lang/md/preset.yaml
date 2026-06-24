@@ -1,0 +1,18 @@
+---
+repos:
+  - repo: https://github.com/rvben/rumdl-pre-commit
+    rev: v0.2.22
+    hooks:
+      - id: rumdl-fmt
+  - repo: https://github.com/thlorenz/doctoc
+    rev: v2.5.0
+    hooks:
+      - id: doctoc
+  - repo: https://github.com/amperser/proselint
+    rev: v0.16.0
+    hooks:
+      - id: proselint
+  - repo: https://github.com/crate-ci/typos
+    rev: v1
+    hooks:
+      - id: typos

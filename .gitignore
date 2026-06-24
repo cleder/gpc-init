@@ -220,3 +220,18 @@ __marimo__/
 
 # speckit
 .specify/templates/
+
+# various tools
+.rumdl_cache/
+.pyscn/
+.complexipy_cache/
+
+# mutmut generated mutants
+mutants/
+
+# AWESOME-list
+
+AWESOME.md
+
+# backups
+*.bak

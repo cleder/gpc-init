@@ -1,0 +1,13 @@
+---
+repos:
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.9.1
+    hooks:
+      - id: nbqa-mypy
+        additional_dependencies: [mypy]
+      - id: nbqa-ruff
+        additional_dependencies: [ruff]
