@@ -132,10 +132,31 @@ Git repository:
 pc-init --lang py --presets https://github.com/org/my-presets
 ```
 
-## Updating bundled presets
+## Check the config files
+
+To check the config files with `pre-commit` and `prek` for a specific language or framework:
+
+```bash
+pre-commit validate-config lang/py/preset.yaml
+prek validate-config lang/py/preset.yaml
+```
+
+## Update bundled presets
+
+Update a config file with the command:
+
+```bash
+pre-commit autoupdate lang/py/preset.yaml
+prek autoupdate lang/py/preset.yaml
+```
+
+## Check and update all presets
 
 To pull the latest hook revisions into all bundled preset files:
 
 ```bash
-find . -name "preset*.yaml" | xargs -I{} prek auto-update -c {}
+find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
+find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
+find . -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
+find . -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
 ```
