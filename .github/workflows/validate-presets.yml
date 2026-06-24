@@ -1,0 +1,53 @@
+---
+name: validate-presets
+
+"on":
+  push:
+    paths:
+      - '**/preset*.yaml'
+  pull_request:
+    paths:
+      - '**/preset*.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-presets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install pre-commit and prek
+        run: |
+          uv tool install pre-commit
+          uv tool install prek
+          uv tool install ryl
+
+      - name: Validate yaml files
+        run: ryl .
+
+      - name: Validate presets (pre-commit)
+        run: |
+          find . -name "preset*.yaml" |
+          xargs -I{} pre-commit validate-config {}
+
+      - name: Validate presets (prek)
+        run: find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
+
+      - name: Check hook revisions are up to date (pre-commit autoupdate)
+        run: |
+          find . -name "preset*.yaml" |
+          xargs -I{} pre-commit autoupdate -c {}
+
+      - name: Check hook revisions are up to date (prek autoupdate)
+        run: find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
+
+      - name: Fail if any preset contained outdated hook revisions
+        run: git diff --exit-code
+...
