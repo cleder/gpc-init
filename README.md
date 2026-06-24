@@ -160,3 +160,7 @@ find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
 find . -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
 find . -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, preset guidelines, and the pull request checklist.
