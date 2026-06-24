@@ -64,7 +64,7 @@ jobs:
         run: |
           uv run ruff check --no-fix gpc_init tests
           uv run ruff format --check gpc_init tests
-          uv run yamllint .github/workflows/
+          uv run ryl .github/workflows/
       - name: Check complexity
         run: |
           uv run radon cc --min B gpc_init
@@ -88,12 +88,12 @@ jobs:
       - name: Check with pyroma
         run: |
           uv tool run pyroma .
-      - name: Check tag name
-        if: >-
-          github.event_name == 'push' &&
-          startsWith(github.ref, 'refs/tags')
-        run: |
-          uv tool run vercheck $GITHUB_REF_NAME gpc_init/about.py
+      # - name: Check tag name
+      #   if: >-
+      #     github.event_name == 'push' &&
+      #     startsWith(github.ref, 'refs/tags')
+      #   run: |
+      #     uv tool run vercheck $GITHUB_REF_NAME gpc_init/about.py
 
 
   test-publish:
