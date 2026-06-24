@@ -41,10 +41,10 @@ repos:
       #
       # Go Tool (Go 1.24+)
       #
-      - id: go-tool
-      - id: go-tool-mod
-      - id: go-tool-repo
-      - id: go-tool-repo-mod
+      # - id: go-tool
+      # - id: go-tool-mod
+      # - id: go-tool-repo
+      # - id: go-tool-repo-mod
       #
       # Go Mod Tidy
       #

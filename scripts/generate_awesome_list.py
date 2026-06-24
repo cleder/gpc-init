@@ -9,6 +9,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -40,13 +41,15 @@ def discover_sorted(base: Path, exclude: frozenset[str] = frozenset()) -> list[s
 
 _GH = shutil.which("gh")
 _description_cache: dict[str, str] = {}
+# Set GPC_INIT_NO_GH=1 or pass --no-fetch to disable GitHub API calls entirely.
+_NO_FETCH: bool = bool(os.environ.get("GPC_INIT_NO_GH"))
 
 
 def gh_description(owner_repo: str) -> str:
     """Fetch the GitHub repository description via the gh CLI, with caching."""
     if owner_repo in _description_cache:
         return _description_cache[owner_repo]
-    if not _GH:
+    if not _GH or _NO_FETCH:
         _description_cache[owner_repo] = ""
         return ""
     try:
@@ -129,6 +132,21 @@ def toc_anchor(name: str) -> str:
     return name.lower().replace(" ", "-")
 
 
+def count_unique_repos(languages: list[str], frameworks: list[str]) -> int:
+    """Count distinct repo URLs across all presets (common + languages + frameworks)."""
+    seen: set[str] = set()
+    for preset_path in [
+        LANG_DIR / "common" / "preset.yaml",
+        *(LANG_DIR / lang / "preset.yaml" for lang in languages),
+        *(FRAMEWORK_DIR / fw / "preset.yaml" for fw in frameworks),
+    ]:
+        for repo in load_preset(preset_path).get("repos", []):
+            url = repo.get("repo", "")
+            if url and url not in ("meta", "local"):
+                seen.add(url)
+    return len(seen)
+
+
 def build_awesome_list(languages: list[str], frameworks: list[str]) -> str:
     """Build the full AWESOME.md content string."""
     common = load_preset(LANG_DIR / "common" / "preset.yaml")
@@ -196,7 +214,17 @@ def main() -> None:
         default=str(PROJECT_ROOT / "AWESOME.md"),
         help="Output file path (default: AWESOME.md at project root)",
     )
+    parser.add_argument(
+        "--no-fetch",
+        action="store_true",
+        default=False,
+        help="Disable GitHub API calls (also honoured via GPC_INIT_NO_GH=1).",
+    )
     args = parser.parse_args()
+
+    global _NO_FETCH  # noqa: PLW0603
+    if args.no_fetch:
+        _NO_FETCH = True
 
     languages = discover_sorted(LANG_DIR, exclude=frozenset({"common"}))
     frameworks = discover_sorted(FRAMEWORK_DIR)
@@ -205,9 +233,11 @@ def main() -> None:
 
     output = Path(args.output)
     output.write_text(content, encoding="utf-8")
+    unique_repos = count_unique_repos(languages, frameworks)
     print(f"Generated {output} ({output.stat().st_size} bytes)")  # noqa: T201
-    print(f"  Languages: {', '.join(languages)}")  # noqa: T201
-    print(f"  Frameworks: {', '.join(frameworks)}")  # noqa: T201
+    print(f"  Languages:    {', '.join(languages)}")  # noqa: T201
+    print(f"  Frameworks:   {', '.join(frameworks)}")  # noqa: T201
+    print(f"  Unique repos: {unique_repos}")  # noqa: T201
 
 
 if __name__ == "__main__":
