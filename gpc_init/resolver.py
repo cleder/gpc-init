@@ -141,23 +141,48 @@ def get_primary_languages_info(
     """
     Return a message if selected langs don't match a framework's primary_languages.
 
-    This is purely informational and non-blocking.
+    This is purely informational and non-blocking. A framework preset may declare
+    ``primary_languages`` listing the languages it is typically used with. When none
+    of the user-selected languages appear in that list, a per-framework note is
+    emitted together with a single consolidated ``Try:`` suggestion.
+
+    The suggestion is constructed to be safe to re-run with ``--force``:
+    - ``--lang`` starts with all currently-selected languages so no existing hooks
+      are lost, then appends only the missing primary languages.
+    - ``--framework`` lists every framework the user originally specified, not just
+      the mismatched ones.
+
+    Example output for ``--lang=go --framework=react,django`` where neither matches::
+
+        Note: framework 'react' is typically used with: js, ts
+        Note: framework 'django' is typically used with: py
+              Try: pc-init --lang=go,js,ts,py --framework=react,django
+
+    Returns ``None`` when every framework either declares no ``primary_languages`` or
+    at least one selected language already satisfies it.
 
     Args:
         frameworks: Normalized framework ids.
-        framework_presets: Loaded framework preset dicts.
+        framework_presets: Loaded framework preset dicts (same order as frameworks).
         selected_langs: Normalized selected language ids.
 
-    Returns:
-        Informational message string, or None if no mismatch.
-
     """
-    messages: list[str] = []
+    notes: list[str] = []
+    extra_langs: list[str] = []
     for fw_id, fw_preset in zip(frameworks, framework_presets, strict=True):
         primary = fw_preset.get("primary_languages", [])
         if primary and not any(lang in primary for lang in selected_langs):
             primary_str = ", ".join(primary)
-            messages.append(
+            notes.append(
                 f"Note: framework '{fw_id}' is typically used with: {primary_str}"
             )
-    return "\n".join(messages) if messages else None
+            for lang in primary:
+                if lang not in selected_langs and lang not in extra_langs:
+                    extra_langs.append(lang)
+    if not notes:
+        return None
+    all_langs = [*selected_langs, *extra_langs]
+    lang_flag = ",".join(all_langs)
+    fw_flag = ",".join(frameworks)
+    suggestion = f"      Try: pc-init --lang={lang_flag} --framework={fw_flag}"
+    return "\n".join([*notes, suggestion])

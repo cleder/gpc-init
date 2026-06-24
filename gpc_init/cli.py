@@ -127,7 +127,11 @@ def _handle_existing_file(
 ) -> None:
     """Show unified diff vs existing file. Always raises typer.Exit."""
     content, _ = _generate_content(langs, frameworks, base_dir)
-    existing = target.read_text(encoding="utf-8")
+    try:
+        existing = target.read_text(encoding="utf-8")
+    except (PermissionError, OSError) as exc:
+        typer.echo(f"Error: cannot read '{target}': {exc}", err=True)
+        raise typer.Exit(code=1) from exc
     diff_lines = list(
         difflib.unified_diff(
             existing.splitlines(keepends=True),

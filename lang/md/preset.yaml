@@ -12,7 +12,8 @@ repos:
     rev: v0.16.0
     hooks:
       - id: proselint
-  - repo: https://github.com/crate-ci/typos
-    rev: v1
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.22.1
     hooks:
-      - id: typos
+      - id: markdownlint-cli2
+        args: []
