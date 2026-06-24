@@ -9,6 +9,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -40,13 +41,15 @@ def discover_sorted(base: Path, exclude: frozenset[str] = frozenset()) -> list[s
 
 _GH = shutil.which("gh")
 _description_cache: dict[str, str] = {}
+# Set GPC_INIT_NO_GH=1 or pass --no-fetch to disable GitHub API calls entirely.
+_NO_FETCH: bool = bool(os.environ.get("GPC_INIT_NO_GH"))
 
 
 def gh_description(owner_repo: str) -> str:
     """Fetch the GitHub repository description via the gh CLI, with caching."""
     if owner_repo in _description_cache:
         return _description_cache[owner_repo]
-    if not _GH:
+    if not _GH or _NO_FETCH:
         _description_cache[owner_repo] = ""
         return ""
     try:
@@ -196,7 +199,17 @@ def main() -> None:
         default=str(PROJECT_ROOT / "AWESOME.md"),
         help="Output file path (default: AWESOME.md at project root)",
     )
+    parser.add_argument(
+        "--no-fetch",
+        action="store_true",
+        default=False,
+        help="Disable GitHub API calls (also honoured via GPC_INIT_NO_GH=1).",
+    )
     args = parser.parse_args()
+
+    global _NO_FETCH  # noqa: PLW0603
+    if args.no_fetch:
+        _NO_FETCH = True
 
     languages = discover_sorted(LANG_DIR, exclude=frozenset({"common"}))
     frameworks = discover_sorted(FRAMEWORK_DIR)
