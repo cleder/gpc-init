@@ -25,20 +25,18 @@ uv tool install pc-init
 ## Usage
 
 ```text
-Usage: pc-init [OPTIONS]
+Usage: pc-init [OPTIONS] COMMAND [ARGS]...
 
-  Generate a .pre-commit-config.yaml from language and optional framework presets.
-
-  At least one --lang value is required. --framework values are optional.
-  Use --force to overwrite an existing config file.
+  Generate a .pre-commit-config.yaml for your project.
 
 Options:
-  --lang       TEXT  Language preset to include (repeatable). Run without
-                     --lang to see supported values from the active catalog.
-                     [required]
+  --lang       TEXT  Language preset to include (repeatable, or
+                     comma-delimited: --lang=py,js). Run `pc-init list` to
+                     see supported values from the active catalog.
   --framework  TEXT  Framework preset to layer on top of language baselines
-                     (repeatable). Run without --framework to see supported
-                     values from the active catalog.
+                     (repeatable, or comma-delimited: --framework=react,django).
+                     Run `pc-init list` to see supported values from the
+                     active catalog.
   --force            Overwrite existing .pre-commit-config.yaml without
                      prompting.
   --output     TEXT  Output file path.  [default: .pre-commit-config.yaml]
@@ -47,7 +45,34 @@ Options:
                      The directory / repo root must contain lang/ and
                      framework/ subdirectories. Defaults to the bundled
                      presets.
+  --version          Show version and exit.
   --help             Show this message and exit.
+
+Commands:
+  list  List available language and framework presets in the active catalog.
+```
+
+### List available presets
+
+Run `pc-init list` to discover all supported languages and frameworks in the active catalog (bundled or custom):
+
+```bash
+pc-init list
+```
+
+```text
+Languages:
+  docker, go, img, js, md, nb, py, ru, sh, sql, tf, toml, ts, yaml
+
+Frameworks:
+  django, git, k8s, react, sphinx
+```
+
+Use `--presets` to list what a custom catalog provides:
+
+```bash
+pc-init list --presets /path/to/my-presets
+pc-init list --presets https://github.com/org/my-presets
 ```
 
 ## Supported presets
@@ -79,7 +104,6 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`
 |----|-----------|
 | `react` | React |
 | `django` | Django |
-| `bevy` | Bevy (Rust game engine) |
 | `sphinx` | Sphinx documentation |
 | `git` | Commit message linting |
 | `k8s` | Kubernetes |
@@ -104,16 +128,11 @@ Python + Django, overwriting an existing config:
 pc-init --lang py --framework django --force
 ```
 
-Rust project with the Bevy game engine:
-
-```bash
-pc-init --lang ru --framework bevy
-```
-
-Multiple languages:
+Multiple languages (two equivalent forms):
 
 ```bash
 pc-init --lang py --lang js
+pc-init --lang=py,js
 ```
 
 ## Custom presets
@@ -132,10 +151,35 @@ Git repository:
 pc-init --lang py --presets https://github.com/org/my-presets
 ```
 
-## Updating bundled presets
+## Check the config files
+
+To check the config files with `pre-commit` and `prek` for a specific language or framework:
+
+```bash
+pre-commit validate-config lang/py/preset.yaml
+prek validate-config lang/py/preset.yaml
+```
+
+## Update bundled presets
+
+Update a config file with the command:
+
+```bash
+pre-commit autoupdate lang/py/preset.yaml
+prek autoupdate lang/py/preset.yaml
+```
+
+## Check and update all presets
 
 To pull the latest hook revisions into all bundled preset files:
 
 ```bash
-find . -name "preset*.yaml" | xargs -I{} prek auto-update -c {}
+find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
+find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
+find . -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
+find . -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, preset guidelines, and the pull request checklist.

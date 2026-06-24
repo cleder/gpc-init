@@ -275,6 +275,54 @@ class TestErrorHandling:
         )
         assert result.exit_code == 1
 
+    def test_no_lang_error_mentions_list_command(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--output", str(output)])
+        assert result.exit_code == 1, result.output
+        assert "pc-init list" in result.output
+
+
+class TestListCommand:
+    def test_list_exits_zero(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert result.exit_code == 0, result.output
+
+    def test_list_output_contains_languages_header(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "Languages:" in result.output
+
+    def test_list_output_contains_frameworks_header(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "Frameworks:" in result.output
+
+    def test_list_output_contains_known_language(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "py" in result.output
+
+    def test_list_output_contains_known_framework(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "react" in result.output
+
+    def test_list_with_custom_presets_dir(self, tmp_preset_dir: Path) -> None:
+        result = runner.invoke(app, ["list", "--presets", str(tmp_preset_dir)])
+        assert result.exit_code == 0, result.output
+        assert "py" in result.output
+        assert "js" in result.output
+        assert "react" in result.output
+
+    def test_list_with_missing_custom_presets_dir(self, tmp_path: Path) -> None:
+        missing_dir = tmp_path / "missing_presets_dir"
+        result = runner.invoke(app, ["list", "--presets", str(missing_dir)])
+        assert result.exit_code == 1
+        assert "presets directory" in result.output
+
+    def test_list_custom_presets_dir_excludes_bundled_only_langs(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        """Custom preset dir with only py/js should not list bundled-only langs."""
+        result = runner.invoke(app, ["list", "--presets", str(tmp_preset_dir)])
+        assert "go" not in result.output
+
 
 class TestOverwriteBehavior:
     def test_existing_file_without_force_exits_nonzero(self, tmp_path: Path) -> None:
@@ -406,6 +454,55 @@ class TestArgumentNormalization:
         content_dedup = output_dedup.read_text(encoding="utf-8")
         content_single = output_single.read_text(encoding="utf-8")
         assert content_dedup == content_single
+
+    def test_comma_delimited_langs_accepted(self, tmp_path: Path) -> None:
+        """--lang=py,js should produce the same output as --lang=py --lang=js."""
+        output_comma = tmp_path / "comma.yaml"
+        output_repeat = tmp_path / "repeat.yaml"
+        runner.invoke(app, ["--lang", "py,js", "--output", str(output_comma)])
+        runner.invoke(
+            app, ["--lang", "py", "--lang", "js", "--output", str(output_repeat)]
+        )
+        assert output_comma.read_text(encoding="utf-8") == output_repeat.read_text(
+            encoding="utf-8"
+        )
+
+    def test_comma_delimited_frameworks_accepted(self, tmp_path: Path) -> None:
+        """--framework=react,django equals --framework=react --framework=django."""
+        output_comma = tmp_path / "comma.yaml"
+        output_repeat = tmp_path / "repeat.yaml"
+        runner.invoke(
+            app,
+            [
+                "--lang",
+                "js",
+                "--framework",
+                "react,django",
+                "--output",
+                str(output_comma),
+            ],
+        )
+        runner.invoke(
+            app,
+            [
+                "--lang",
+                "js",
+                "--framework",
+                "react",
+                "--framework",
+                "django",
+                "--output",
+                str(output_repeat),
+            ],
+        )
+        assert output_comma.read_text(encoding="utf-8") == output_repeat.read_text(
+            encoding="utf-8"
+        )
+
+    def test_comma_delimited_langs_exit_zero(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py,js", "--output", str(output)])
+        assert result.exit_code == 0, result.output
 
 
 class TestDeterminism:
@@ -792,6 +889,79 @@ class TestErrorPaths:
         assert result.exit_code != 0
         assert "Error" in result.stderr
         assert "Error" not in result.stdout
+
+
+class TestDiffOnExistingFile:
+    def test_diff_shows_unified_diff_when_content_differs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert "---" in result.output
+        assert "+++" in result.output
+
+    def test_diff_exits_nonzero_when_content_differs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 1
+
+    def test_diff_does_not_write_when_content_differs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert output.read_text(encoding="utf-8") == "existing: content\n"
+
+    def test_diff_no_changes_exits_zero(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0
+
+    def test_diff_no_changes_prints_no_changes_message(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert "No changes" in result.output
+
+    def test_diff_no_changes_does_not_write(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        content_before = output.read_text(encoding="utf-8")
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert output.read_text(encoding="utf-8") == content_before
+
+    def test_diff_mentions_force_when_content_differs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert "--force" in result.output
+
+    def test_force_bypasses_diff_and_overwrites(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(
+            app, ["--lang", "py", "--force", "--output", str(output)]
+        )
+        assert result.exit_code == 0
+        assert output.read_text(encoding="utf-8") != "existing: content\n"
+
+
+class TestVersion:
+    def test_version_exits_zero(self) -> None:
+        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+            result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+
+    def test_version_prints_version_string(self) -> None:
+        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+            result = runner.invoke(app, ["--version"])
+        assert result.output.strip() == "9.9.9"
+
+    def test_version_is_eager_no_lang_required(self) -> None:
+        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+            result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+        assert "Missing" not in result.output
 
 
 class TestEntryPoint:
