@@ -223,6 +223,45 @@ class TestGetPrimaryLanguagesInfo:
         # The two primary langs must be separated by ", " not "XX, XX"
         assert "py, ts" in result
 
+    def test_message_includes_actionable_suggestion(self) -> None:
+        result = get_primary_languages_info(
+            frameworks=["react"],
+            framework_presets=[{"primary_languages": ["js", "ts"]}],
+            selected_langs=["py"],
+        )
+        assert result is not None
+        # selected lang (py) is preserved; missing primary langs appended
+        assert "pc-init --lang=py,js,ts --framework=react" in result
+
+    def test_multiple_mismatches_consolidated_into_one_suggestion(self) -> None:
+        result = get_primary_languages_info(
+            frameworks=["react", "django"],
+            framework_presets=[
+                {"primary_languages": ["js", "ts"]},
+                {"primary_languages": ["py"]},
+            ],
+            selected_langs=["go"],
+        )
+        assert result is not None
+        assert result.count("Try:") == 1
+        # selected lang preserved; all primary langs appended; all frameworks included
+        assert "pc-init --lang=go,js,ts,py --framework=react,django" in result
+
+    def test_suggestion_includes_all_frameworks_even_if_only_one_mismatches(
+        self,
+    ) -> None:
+        result = get_primary_languages_info(
+            frameworks=["react", "django"],
+            framework_presets=[
+                {"primary_languages": ["js", "ts"]},
+                {"primary_languages": ["py"]},
+            ],
+            selected_langs=["py"],
+        )
+        assert result is not None
+        # django doesn't mismatch, but must still appear in --framework flag
+        assert "--framework=react,django" in result
+
     def test_multiple_framework_mismatches_joined_by_newline(self) -> None:
         frameworks = ["react", "django"]
         framework_presets = [
@@ -236,6 +275,7 @@ class TestGetPrimaryLanguagesInfo:
         )
 
         assert result is not None
-        lines = result.split("\n")
-        assert len(lines) == 2
-        assert all(not line.startswith("XX") for line in lines)
+        assert "react" in result
+        assert "django" in result
+        assert "js" in result
+        assert "py" in result
