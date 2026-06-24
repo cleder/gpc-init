@@ -11,3 +11,5 @@ repos:
         additional_dependencies: [mypy]
       - id: nbqa-ruff
         additional_dependencies: [ruff]
+      - id: nbqa-check-ast
+      - id: nbqa-isort
