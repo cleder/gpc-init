@@ -4,7 +4,9 @@
 
 ## Pre-submission checklist
 
-Run the following commands against every preset file you added or modified and confirm each passes.
+- [ ] This PR touches exactly one language or framework preset
+
+Run the following commands against the preset file and confirm each passes.
 
 - [ ] `pre-commit validate-config <preset-file>` passes without errors
 - [ ] `prek validate-config <preset-file>` passes without errors
