@@ -149,19 +149,13 @@ class TestRenderYaml:
         assert "café" in output
         assert "\\x" not in output
 
-    def test_width_limits_line_length_to_4096(self) -> None:
-        # Construct a value that wraps at width=4096 but not at width=4097.
-        # 'kk: ' (4 chars) + 2048 single-char words separated by spaces produces a
-        # line that hits the width=4096 boundary: at width=4096 the first line is
-        # 4097 chars; at width=4097 it is 4099 chars.
-        long_value = " ".join(["w"] * 2048)
-        output = render_yaml({"kk": long_value})
-        # The value must stay on a single line at width=4096 (no wrapping).
-        # A mutant raising width to 4097 would produce a longer first line.
-        lines = output.splitlines()
-        value_lines = [line for line in lines if line.startswith("kk:")]
-        assert len(value_lines) == 1, (
-            "long value was wrapped; width=4096 must prevent this"
+    def test_values_within_width_are_not_folded(self) -> None:
+        # 2046 single-char words → 'kk: ' (4) + 2046 'w' + 2045 spaces = 4095 chars,
+        # which is within width=4096, so yaml.dump must not fold it.
+        near_limit_value = " ".join(["w"] * 2046)
+        output = render_yaml({"kk": near_limit_value})
+        assert len(output.splitlines()) == 1, (
+            "value within width=4096 must not be folded"
         )
 
     def test_width_4096_wraps_near_boundary(self) -> None:
