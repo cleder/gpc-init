@@ -183,16 +183,25 @@ app = typer.Typer(
 )
 
 
-def _normalize_langs(raw_langs: list[str]) -> list[str]:
+def _expand_comma_separated(raw: list[str] | None) -> list[str]:
+    """Split comma-delimited items, strip whitespace, and filter empty strings."""
+    return [
+        v for item in (raw or []) for v in (s.strip() for s in item.split(",")) if v
+    ]
+
+
+def _normalize_langs(raw_langs: list[str] | None) -> list[str]:
     """Lowercase, resolve aliases, and deduplicate language values."""
-    expanded = [v.strip() for item in raw_langs for v in item.split(",") if v.strip()]
-    return deduplicate_preserving_order([normalize_lang(v) for v in expanded])
+    return deduplicate_preserving_order(
+        [normalize_lang(v) for v in _expand_comma_separated(raw_langs)]
+    )
 
 
-def _normalize_frameworks(raw_frameworks: list[str]) -> list[str]:
+def _normalize_frameworks(raw_frameworks: list[str] | None) -> list[str]:
     """Lowercase and deduplicate framework values."""
-    expanded = [v for item in raw_frameworks for v in item.split(",") if v]
-    return deduplicate_preserving_order([normalize_framework(v) for v in expanded])
+    return deduplicate_preserving_order(
+        [normalize_framework(v) for v in _expand_comma_separated(raw_frameworks)]
+    )
 
 
 _PRESETS_HELP = (
@@ -275,10 +284,8 @@ def main(
         )
         raise typer.Exit(code=1)
 
-    raw_frameworks: list[str] = framework or []
-
     langs = _normalize_langs(lang)
-    frameworks = _normalize_frameworks(raw_frameworks)
+    frameworks = _normalize_frameworks(framework)
 
     target = Path(output)
 

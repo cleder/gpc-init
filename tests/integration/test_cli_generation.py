@@ -278,6 +278,7 @@ class TestErrorHandling:
     def test_no_lang_error_mentions_list_command(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(app, ["--output", str(output)])
+        assert result.exit_code == 1, result.output
         assert "pc-init list" in result.output
 
 
@@ -308,6 +309,12 @@ class TestListCommand:
         assert "py" in result.output
         assert "js" in result.output
         assert "react" in result.output
+
+    def test_list_with_missing_custom_presets_dir(self, tmp_path: Path) -> None:
+        missing_dir = tmp_path / "missing_presets_dir"
+        result = runner.invoke(app, ["list", "--presets", str(missing_dir)])
+        assert result.exit_code == 1
+        assert "presets directory" in result.output
 
     def test_list_custom_presets_dir_excludes_bundled_only_langs(
         self, tmp_preset_dir: Path
