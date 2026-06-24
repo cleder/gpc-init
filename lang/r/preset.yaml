@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/lorenzwalthert/precommit
-    rev: v0.4.3.9026
+    rev: v0.4.3
     hooks:
       - id: style-files
         args: [--style_pkg=styler, --style_fun=tidyverse_style, --cache-root=styler-perm]
@@ -23,7 +23,6 @@ repos:
           - rstudioapi
           - withr
           - yaml
-          - r-lib/pkgapi
       # codemeta must be above use-tidy-description when both are used
       # - id: codemeta-description-updated
       - id: use-tidy-description
@@ -58,25 +57,24 @@ repos:
           inst/hooks/.*|
           inst/pre-commit-.*|
           inst/usethis-legacy-hook|
-          renv/.*|
           revdep/.*|
-          tests/testthat/in/.*|
+          tests/testthat/in/.
           )$
       - id: readme-rmd-rendered
       - id: parsable-R
         exclude: >
           (?x)^(
-          tests/testthat/in/.*|
+          tests/testthat/in/.*
           )$
       - id: no-browser-statement
         exclude: >
           (?x)^(
-          tests/testthat/in/.*|
+          tests/testthat/in/.*
           )$
       - id: no-debug-statement
         exclude: >
           (?x)^(
-          tests/testthat/in/.*|
+          tests/testthat/in/.*
           )$
       - id: deps-in-desc
         exclude: >
@@ -88,6 +86,6 @@ repos:
           inst/update-dependency-graph-existing-packages\.R|
           inst/update-existing-hook-dependencies\.R|
           renv/activate.R|
-          vignettes/FAQ\.Rmd|
+          vignettes/FAQ\.Rmd
           )$
       - id: pkgdown
