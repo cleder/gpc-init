@@ -1,6 +1,7 @@
 """pc-init CLI: Generate .pre-commit-config.yaml from language and framework presets."""
 
 import difflib
+import importlib.metadata
 from pathlib import Path
 from typing import Annotated
 
@@ -139,6 +140,12 @@ def _handle_existing_file(
     raise typer.Exit(code=0)
 
 
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(importlib.metadata.version("pc-init"))
+        raise typer.Exit
+
+
 app = typer.Typer(
     name="pc-init",
     help="Generate a .pre-commit-config.yaml for your project.",
@@ -200,6 +207,15 @@ def main(
                 "repo root must contain lang/ and framework/ subdirectories. "
                 "Defaults to the bundled presets."
             ),
+        ),
+    ] = None,
+    version: Annotated[
+        bool | None,
+        typer.Option(
+            "--version",
+            callback=_version_callback,
+            is_eager=True,
+            help="Show version and exit.",
         ),
     ] = None,
 ) -> None:
