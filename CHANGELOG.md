@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0]
+
+Expanded preset catalog, framework/language UX improvements, and CI refinements.
+
+### New Features
+
+- Add actionable language suggestion on framework mismatch: when none of the selected
+  languages satisfy a framework's `primary_languages`, emit a consolidated `Try:` command
+  that preserves existing `--lang` values so it is safe to re-run with `--force`.
+
+### Enhancements
+
+- Modernise `js` preset to complement `ts`: replace local prettier + typos with
+  biome-check and mirrors-prettier scoped to JS/JSX/JSON/CSS/Markdown types.
+- Add `ts` as a primary language for the `react` preset alongside `js`.
+- Remove `biome-check` from the `react` preset — it is now inherited from the `js` preset.
+- Consolidate `typos` hook into the `common` preset, removing redundant copies from
+  individual language presets (`js`, `md`, `ru`).
+- Add `codespell` hook to the `common` preset.
+- Add R language preset with pre-commit hooks for the statistical programming language.
+- Expand Python preset: add `numpydoc`, `nbstripout`, and `nbQA` hooks and autoupdate pins.
+- Expand Jupyter Notebooks preset: add `nbqa` hooks for `check-ast` and `isort`.
+- Expand Markdown preset: add `markdownlint-cli2` hook and autoupdate pins.
+- Print unique repo count in `generate_awesome_list.py`.
+
+### CI
+
+- Restrict the "fail if hook revisions are outdated" step to tag pushes and the main
+  branch, so it does not block work-in-progress feature branches.
+
 ## [0.2.0]
 
 Enhanced CLI, richer preset catalog, and stronger validation and testing around preset loading, merging, and error handling.

@@ -53,13 +53,14 @@ license = "GPL-3.0-only"
 name = "pc-init"
 readme = "README.md"
 requires-python = ">=3.13"
-version = "0.3.0"
+version = "0.4.0"
 
 [project.scripts]
 pc-init = "gpc_init.cli:entry_point"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/cleder/gpc-init/issues"
+Changelog = "https://github.com/cleder/gpc-init/blob/main/CHANGELOG.md"
 Homepage = "https://github.com/cleder/gpc-init"
 Repository = "https://github.com/cleder/gpc-init"
 
