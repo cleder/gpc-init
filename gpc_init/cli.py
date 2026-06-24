@@ -185,7 +185,7 @@ app = typer.Typer(
 
 def _normalize_langs(raw_langs: list[str]) -> list[str]:
     """Lowercase, resolve aliases, and deduplicate language values."""
-    expanded = [v for item in raw_langs for v in item.split(",") if v]
+    expanded = [v.strip() for item in raw_langs for v in item.split(",") if v.strip()]
     return deduplicate_preserving_order([normalize_lang(v) for v in expanded])
 
 
