@@ -10,7 +10,3 @@ repos:
     hooks:
       - id: prettier
         types_or: [javascript, jsx, json, css, markdown]
-  - repo: https://github.com/crate-ci/typos
-    rev: v1
-    hooks:
-      - id: typos
