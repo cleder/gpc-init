@@ -108,6 +108,18 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`
 | `git` | Commit message linting |
 | `k8s` | Kubernetes |
 
+## Language suggestions for frameworks
+
+Some framework presets declare the languages they are typically used with.
+If none of your `--lang` selections match, `pc-init` prints an informational note and a ready-to-run command that adds the missing languages:
+
+```text
+Note: framework 'react' is typically used with: js, ts
+      Try: pc-init --lang=py,js,ts --framework=react
+```
+
+The suggested command preserves your existing `--lang` values so it is safe to run with `--force` — no hooks you already selected will be removed.
+
 ## Examples
 
 Python project:
