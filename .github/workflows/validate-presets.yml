@@ -1,7 +1,7 @@
 ---
 name: validate-presets
 
-on:
+"on":
   push:
     paths:
       - '**/preset*.yaml'
@@ -30,13 +30,17 @@ jobs:
         run: ryl .
 
       - name: Validate presets (pre-commit)
-        run: find . -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
+        run: |
+          find . -name "preset*.yaml" |
+          xargs -I{} pre-commit validate-config {}
 
       - name: Validate presets (prek)
         run: find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
 
       - name: Check hook revisions are up to date (pre-commit autoupdate)
-        run: find . -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
+        run: |
+          find . -name "preset*.yaml" |
+          xargs -I{} pre-commit autoupdate -c {}
 
       - name: Check hook revisions are up to date (prek autoupdate)
         run: find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}

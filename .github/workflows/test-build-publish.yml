@@ -64,7 +64,7 @@ jobs:
         run: |
           uv run ruff check --no-fix gpc_init tests
           uv run ruff format --check gpc_init tests
-          uv run yamllint .github/workflows/
+          uv run ryl .github/workflows/
       - name: Check complexity
         run: |
           uv run radon cc --min B gpc_init
