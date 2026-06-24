@@ -159,14 +159,14 @@ app = typer.Typer(
 
 def _normalize_langs(raw_langs: list[str]) -> list[str]:
     """Lowercase, resolve aliases, and deduplicate language values."""
-    return deduplicate_preserving_order([normalize_lang(v) for v in raw_langs])
+    expanded = [v for item in raw_langs for v in item.split(",") if v]
+    return deduplicate_preserving_order([normalize_lang(v) for v in expanded])
 
 
 def _normalize_frameworks(raw_frameworks: list[str]) -> list[str]:
     """Lowercase and deduplicate framework values."""
-    return deduplicate_preserving_order(
-        [normalize_framework(v) for v in raw_frameworks]
-    )
+    expanded = [v for item in raw_frameworks for v in item.split(",") if v]
+    return deduplicate_preserving_order([normalize_framework(v) for v in expanded])
 
 
 @app.command()
@@ -175,16 +175,23 @@ def main(
         list[str],
         typer.Option(
             "--lang",
-            help="Language preset to include (repeatable). "
-            "Run without --lang to see supported values from the active catalog.",
+            help=(
+                "Language preset to include (repeatable, or comma-delimited: "
+                "--lang=py,js). "
+                "Run without --lang to see supported values from the active catalog."
+            ),
         ),
     ],
     framework: Annotated[
         list[str] | None,
         typer.Option(
             "--framework",
-            help="Framework preset to layer on top of language baselines (repeatable). "
-            "Run without --framework to see supported values from the active catalog.",
+            help=(
+                "Framework preset to layer on top of language baselines "
+                "(repeatable, or comma-delimited: --framework=react,django). "
+                "Run without --framework to see supported values from the active "
+                "catalog."
+            ),
         ),
     ] = None,
     force: Annotated[

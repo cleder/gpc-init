@@ -407,6 +407,55 @@ class TestArgumentNormalization:
         content_single = output_single.read_text(encoding="utf-8")
         assert content_dedup == content_single
 
+    def test_comma_delimited_langs_accepted(self, tmp_path: Path) -> None:
+        """--lang=py,js should produce the same output as --lang=py --lang=js."""
+        output_comma = tmp_path / "comma.yaml"
+        output_repeat = tmp_path / "repeat.yaml"
+        runner.invoke(app, ["--lang", "py,js", "--output", str(output_comma)])
+        runner.invoke(
+            app, ["--lang", "py", "--lang", "js", "--output", str(output_repeat)]
+        )
+        assert output_comma.read_text(encoding="utf-8") == output_repeat.read_text(
+            encoding="utf-8"
+        )
+
+    def test_comma_delimited_frameworks_accepted(self, tmp_path: Path) -> None:
+        """--framework=react,django equals --framework=react --framework=django."""
+        output_comma = tmp_path / "comma.yaml"
+        output_repeat = tmp_path / "repeat.yaml"
+        runner.invoke(
+            app,
+            [
+                "--lang",
+                "js",
+                "--framework",
+                "react,django",
+                "--output",
+                str(output_comma),
+            ],
+        )
+        runner.invoke(
+            app,
+            [
+                "--lang",
+                "js",
+                "--framework",
+                "react",
+                "--framework",
+                "django",
+                "--output",
+                str(output_repeat),
+            ],
+        )
+        assert output_comma.read_text(encoding="utf-8") == output_repeat.read_text(
+            encoding="utf-8"
+        )
+
+    def test_comma_delimited_langs_exit_zero(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py,js", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+
 
 class TestDeterminism:
     def test_same_input_twice_produces_identical_output(self, tmp_path: Path) -> None:
