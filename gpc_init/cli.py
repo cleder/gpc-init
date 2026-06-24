@@ -142,7 +142,11 @@ def _handle_existing_file(
 
 def _version_callback(value: bool) -> None:
     if value:
-        typer.echo(importlib.metadata.version("pc-init"))
+        try:
+            ver = importlib.metadata.version("pc-init")
+        except importlib.metadata.PackageNotFoundError:
+            ver = "unknown"
+        typer.echo(ver)
         raise typer.Exit
 
 

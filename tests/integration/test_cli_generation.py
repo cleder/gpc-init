@@ -1,6 +1,5 @@
 """Integration tests for pc-init CLI generation."""
 
-import importlib.metadata
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
@@ -852,16 +851,18 @@ class TestDiffOnExistingFile:
 
 class TestVersion:
     def test_version_exits_zero(self) -> None:
-        result = runner.invoke(app, ["--version"])
+        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+            result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
 
     def test_version_prints_version_string(self) -> None:
-        expected = importlib.metadata.version("pc-init")
-        result = runner.invoke(app, ["--version"])
-        assert result.output.strip() == expected
+        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+            result = runner.invoke(app, ["--version"])
+        assert result.output.strip() == "9.9.9"
 
     def test_version_is_eager_no_lang_required(self) -> None:
-        result = runner.invoke(app, ["--version"])
+        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+            result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
         assert "Missing" not in result.output
 
