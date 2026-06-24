@@ -1,0 +1,93 @@
+---
+repos:
+  - repo: https://github.com/lorenzwalthert/precommit
+    rev: v0.4.3.9026
+    hooks:
+      - id: style-files
+        args: [--style_pkg=styler, --style_fun=tidyverse_style, --cache-root=styler-perm]
+        exclude: >
+          (?x)^(
+          tests/testthat/in/.*|
+          renv/.*
+          )$
+      - id: roxygenize
+        additional_dependencies:
+          - cli
+          - fs
+          - here
+          - magrittr
+          - purrr
+          - R.cache
+          - rlang
+          - rprojroot
+          - rstudioapi
+          - withr
+          - yaml
+          - r-lib/pkgapi
+      # codemeta must be above use-tidy-description when both are used
+      # - id: codemeta-description-updated
+      - id: use-tidy-description
+      - id: spell-check
+        exclude: >
+          (?x)^(
+          (.*/|)NAMESPACE|
+          (.*/|)WORDLIST|
+          (.*/|)\.Rbuildignore|
+          (.*/|)\.Renviron|
+          (.*/|)\.Rprofile|
+          (.*/|)\.gitignore|
+          (.*/|)\.pre-commit-.*|
+          (.*/|)\.travis\.yml|
+          (.*/|)appveyor\.yml|
+          (.*/|)renv/settings\.dcf|
+          (.*/|)renv\.lock|
+          .*\.RData|
+          .*\.Rds|
+          .*\.Rproj|
+          .*\.[rR]|
+          .*\.feather|
+          .*\.jpeg|
+          .*\.pdf|
+          .*\.png|
+          .*\.py|
+          .*\.rds|
+          .*\.sh|
+          LICENSE|
+          \.github/workflows/.*|
+          data/.*|
+          inst/hooks/.*|
+          inst/pre-commit-.*|
+          inst/usethis-legacy-hook|
+          renv/.*|
+          revdep/.*|
+          tests/testthat/in/.*|
+          )$
+      - id: readme-rmd-rendered
+      - id: parsable-R
+        exclude: >
+          (?x)^(
+          tests/testthat/in/.*|
+          )$
+      - id: no-browser-statement
+        exclude: >
+          (?x)^(
+          tests/testthat/in/.*|
+          )$
+      - id: no-debug-statement
+        exclude: >
+          (?x)^(
+          tests/testthat/in/.*|
+          )$
+      - id: deps-in-desc
+        exclude: >
+          (?x)^(
+          inst/hooks/exported/pkgdown.R|
+          tests/testthat/in/.*|
+          inst/update-renv-prepare.R|
+          inst/update-ppm-url.R|
+          inst/update-dependency-graph-existing-packages\.R|
+          inst/update-existing-hook-dependencies\.R|
+          renv/activate.R|
+          vignettes/FAQ\.Rmd|
+          )$
+      - id: pkgdown
