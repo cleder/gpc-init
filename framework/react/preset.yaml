@@ -2,11 +2,6 @@
 primary_languages:
   - js
 repos:
-  - repo: https://github.com/biomejs/pre-commit
-    rev: v2.5.1
-    hooks:
-      - id: biome-check
-        additional_dependencies: ["@biomejs/biome@1.9.4"]
   - repo: local
     hooks:
       - id: eslint-react
