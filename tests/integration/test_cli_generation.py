@@ -1,5 +1,6 @@
 """Integration tests for pc-init CLI generation."""
 
+import importlib.metadata
 import shutil
 from contextlib import contextmanager
 from pathlib import Path
@@ -847,6 +848,22 @@ class TestDiffOnExistingFile:
         )
         assert result.exit_code == 0
         assert output.read_text(encoding="utf-8") != "existing: content\n"
+
+
+class TestVersion:
+    def test_version_exits_zero(self) -> None:
+        result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+
+    def test_version_prints_version_string(self) -> None:
+        expected = importlib.metadata.version("pc-init")
+        result = runner.invoke(app, ["--version"])
+        assert result.output.strip() == expected
+
+    def test_version_is_eager_no_lang_required(self) -> None:
+        result = runner.invoke(app, ["--version"])
+        assert result.exit_code == 0
+        assert "Missing" not in result.output
 
 
 class TestEntryPoint:
