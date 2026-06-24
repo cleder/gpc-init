@@ -794,6 +794,61 @@ class TestErrorPaths:
         assert "Error" not in result.stdout
 
 
+class TestDiffOnExistingFile:
+    def test_diff_shows_unified_diff_when_content_differs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert "---" in result.output
+        assert "+++" in result.output
+
+    def test_diff_exits_nonzero_when_content_differs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 1
+
+    def test_diff_does_not_write_when_content_differs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert output.read_text(encoding="utf-8") == "existing: content\n"
+
+    def test_diff_no_changes_exits_zero(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0
+
+    def test_diff_no_changes_prints_no_changes_message(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert "No changes" in result.output
+
+    def test_diff_no_changes_does_not_write(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        content_before = output.read_text(encoding="utf-8")
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert output.read_text(encoding="utf-8") == content_before
+
+    def test_diff_mentions_force_when_content_differs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert "--force" in result.output
+
+    def test_force_bypasses_diff_and_overwrites(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(
+            app, ["--lang", "py", "--force", "--output", str(output)]
+        )
+        assert result.exit_code == 0
+        assert output.read_text(encoding="utf-8") != "existing: content\n"
+
+
 class TestEntryPoint:
     def test_entry_point_calls_app(self) -> None:
         with patch("gpc_init.cli.app") as mock_app:
