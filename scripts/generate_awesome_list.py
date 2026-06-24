@@ -132,6 +132,21 @@ def toc_anchor(name: str) -> str:
     return name.lower().replace(" ", "-")
 
 
+def count_unique_repos(languages: list[str], frameworks: list[str]) -> int:
+    """Count distinct repo URLs across all presets (common + languages + frameworks)."""
+    seen: set[str] = set()
+    for preset_path in [
+        LANG_DIR / "common" / "preset.yaml",
+        *(LANG_DIR / lang / "preset.yaml" for lang in languages),
+        *(FRAMEWORK_DIR / fw / "preset.yaml" for fw in frameworks),
+    ]:
+        for repo in load_preset(preset_path).get("repos", []):
+            url = repo.get("repo", "")
+            if url and url not in ("meta", "local"):
+                seen.add(url)
+    return len(seen)
+
+
 def build_awesome_list(languages: list[str], frameworks: list[str]) -> str:
     """Build the full AWESOME.md content string."""
     common = load_preset(LANG_DIR / "common" / "preset.yaml")
@@ -218,9 +233,11 @@ def main() -> None:
 
     output = Path(args.output)
     output.write_text(content, encoding="utf-8")
+    unique_repos = count_unique_repos(languages, frameworks)
     print(f"Generated {output} ({output.stat().st_size} bytes)")  # noqa: T201
-    print(f"  Languages: {', '.join(languages)}")  # noqa: T201
-    print(f"  Frameworks: {', '.join(frameworks)}")  # noqa: T201
+    print(f"  Languages:    {', '.join(languages)}")  # noqa: T201
+    print(f"  Frameworks:   {', '.join(frameworks)}")  # noqa: T201
+    print(f"  Unique repos: {unique_repos}")  # noqa: T201
 
 
 if __name__ == "__main__":
