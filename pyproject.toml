@@ -1,16 +1,16 @@
 [dependency-groups]
 dev = [
     "deptry>=0.24.0",
-    "pre-commit>=4.2.0",
-    "typer>=0.12.0",
     { include-group = "lint" },
     { include-group = "test" },
 ]
 lint = [
     "complexipy",
+    "prek>=0.4.5",
     "pyrefly>=1.1.1",
     "ruff",
     "rumdl>=0.0.129",
+    "ryl>=0.21.0",
 ]
 test = [
     "complexipy>=5.6.1,<6.0.0",
@@ -20,7 +20,7 @@ test = [
     "pytest",
     "pytest-cov",
     "radon>=6.0.1,<7.0.0",
-    "ty>=0.0.51,<0.0.52",
+    "ty>=0.0.51",
 ]
 
 [project]
@@ -31,7 +31,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -50,13 +49,11 @@ keywords = [
     "pre-commit",
     "presets",
 ]
+license = "GPL-3.0-only"
 name = "pc-init"
 readme = "README.md"
 requires-python = ">=3.13"
 version = "0.2.0"
-
-[project.license]
-file = "LICENSE"
 
 [project.scripts]
 pc-init = "gpc_init.cli:entry_point"
@@ -100,7 +97,10 @@ select = [
 
 [tool.ruff.lint.extend-per-file-ignores]
 "gpc_init/cli.py" = [
+    "ARG001",
+    "FBT001",
     "FBT002",
+    "PLR0913",
 ]
 "tests/**" = [
     "ANN001",
