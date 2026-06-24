@@ -24,7 +24,10 @@ jobs:
           enable-cache: true
 
       - name: Install pre-commit and prek
-        run: uv tool install pre-commit prek ryl
+        run: |
+          uv tool install pre-commit
+          uv tool install prek
+          uv tool install ryl
 
       - name: Validate yaml files
         run: ryl .
