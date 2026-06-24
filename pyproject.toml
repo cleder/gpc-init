@@ -101,7 +101,10 @@ select = [
 
 [tool.ruff.lint.extend-per-file-ignores]
 "gpc_init/cli.py" = [
+    "ARG001",
+    "FBT001",
     "FBT002",
+    "PLR0913",
 ]
 "tests/**" = [
     "ANN001",
