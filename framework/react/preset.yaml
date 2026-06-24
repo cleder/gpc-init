@@ -1,6 +1,7 @@
 ---
 primary_languages:
   - js
+  - ts
 repos:
   - repo: local
     hooks:
