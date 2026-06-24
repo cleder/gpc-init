@@ -144,7 +144,7 @@ def _version_callback(value: bool) -> None:
     if value:
         try:
             ver = importlib.metadata.version("pc-init")
-        except importlib.metadata.PackageNotFoundError:
+        except importlib.metadata.PackageNotFoundError:  # pragma: no cover
             ver = "unknown"
         typer.echo(ver)
         raise typer.Exit
