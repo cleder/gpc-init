@@ -2,6 +2,8 @@
 
 import difflib
 import importlib.metadata
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
 
@@ -25,6 +27,8 @@ from gpc_init.renderer import render_yaml
 from gpc_init.resolver import (
     deduplicate_preserving_order,
     get_primary_languages_info,
+    get_supported_frameworks,
+    get_supported_languages,
     normalize_framework,
     normalize_lang,
     validate_frameworks,
@@ -150,6 +154,28 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit
 
 
+@contextmanager
+def _resolved_preset_base(
+    presets: str | None,
+) -> Generator[Path | None]:
+    """Resolve --presets to a local Path, yielding None for the bundled catalog."""
+    if presets is None:
+        yield None
+    elif not fetcher.is_git_url(presets):
+        local = Path(presets)
+        if not local.is_dir():
+            typer.echo(f"Error: presets directory '{local}' does not exist.", err=True)
+            raise typer.Exit(code=1)
+        yield local
+    else:
+        try:
+            with fetcher.fetch_preset_repo(presets) as cloned:
+                yield cloned
+        except PresetFetchError as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+
+
 app = typer.Typer(
     name="pc-init",
     help="Generate a .pre-commit-config.yaml for your project.",
@@ -169,19 +195,28 @@ def _normalize_frameworks(raw_frameworks: list[str]) -> list[str]:
     return deduplicate_preserving_order([normalize_framework(v) for v in expanded])
 
 
-@app.command()
+_PRESETS_HELP = (
+    "Preset catalog to use. Accepts a local directory path or a git "
+    "repository URL (https://, git@, git://, ssh://). The directory / "
+    "repo root must contain lang/ and framework/ subdirectories. "
+    "Defaults to the bundled presets."
+)
+
+
+@app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     lang: Annotated[
-        list[str],
+        list[str] | None,
         typer.Option(
             "--lang",
             help=(
                 "Language preset to include (repeatable, or comma-delimited: "
                 "--lang=py,js). "
-                "Run without --lang to see supported values from the active catalog."
+                "Run `pc-init list` to see supported values from the active catalog."
             ),
         ),
-    ],
+    ] = None,
     framework: Annotated[
         list[str] | None,
         typer.Option(
@@ -189,7 +224,7 @@ def main(
             help=(
                 "Framework preset to layer on top of language baselines "
                 "(repeatable, or comma-delimited: --framework=react,django). "
-                "Run without --framework to see supported values from the active "
+                "Run `pc-init list` to see supported values from the active "
                 "catalog."
             ),
         ),
@@ -210,15 +245,7 @@ def main(
     ] = ".pre-commit-config.yaml",
     presets: Annotated[
         str | None,
-        typer.Option(
-            "--presets",
-            help=(
-                "Preset catalog to use. Accepts a local directory path or a git "
-                "repository URL (https://, git@, git://, ssh://). The directory / "
-                "repo root must contain lang/ and framework/ subdirectories. "
-                "Defaults to the bundled presets."
-            ),
-        ),
+        typer.Option("--presets", help=_PRESETS_HELP),
     ] = None,
     version: Annotated[
         bool | None,
@@ -235,33 +262,46 @@ def main(
 
     At least one --lang value is required. --framework values are optional.
     Use --force to overwrite an existing config file.
+    Run `pc-init list` to see all available languages and frameworks.
     """
+    if ctx.invoked_subcommand is not None:
+        return
+
+    if not lang:
+        typer.echo(
+            "No --lang specified. "
+            "Run `pc-init list` to see available languages and frameworks.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
     raw_frameworks: list[str] = framework or []
 
-    # Normalize and deduplicate
     langs = _normalize_langs(lang)
     frameworks = _normalize_frameworks(raw_frameworks)
 
     target = Path(output)
 
-    # Resolve preset catalog
-    if presets is not None and not fetcher.is_git_url(presets):
-        local_dir = Path(presets)
-        if not local_dir.is_dir():
-            typer.echo(
-                f"Error: presets directory '{local_dir}' does not exist.", err=True
-            )
-            raise typer.Exit(code=1)
-        _dispatch(langs, frameworks, target, local_dir, force=force)
-    elif presets is not None:
-        try:
-            with fetcher.fetch_preset_repo(presets) as cloned:
-                _dispatch(langs, frameworks, target, cloned, force=force)
-        except PresetFetchError as exc:
-            typer.echo(f"Error: {exc}", err=True)
-            raise typer.Exit(code=1) from exc
-    else:
-        _dispatch(langs, frameworks, target, None, force=force)
+    with _resolved_preset_base(presets) as base_dir:
+        _dispatch(langs, frameworks, target, base_dir, force=force)
+
+
+@app.command("list")
+def list_presets(
+    presets: Annotated[
+        str | None,
+        typer.Option("--presets", help=_PRESETS_HELP),
+    ] = None,
+) -> None:
+    """List available language and framework presets in the active catalog."""
+    with _resolved_preset_base(presets) as base_dir:
+        langs = get_supported_languages(base_dir)
+        frameworks = get_supported_frameworks(base_dir)
+
+    typer.echo("Languages:")
+    typer.echo("  " + ", ".join(langs))
+    typer.echo("\nFrameworks:")
+    typer.echo("  " + ", ".join(frameworks))
 
 
 def entry_point() -> None:

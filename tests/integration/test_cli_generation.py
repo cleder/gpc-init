@@ -275,6 +275,47 @@ class TestErrorHandling:
         )
         assert result.exit_code == 1
 
+    def test_no_lang_error_mentions_list_command(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--output", str(output)])
+        assert "pc-init list" in result.output
+
+
+class TestListCommand:
+    def test_list_exits_zero(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert result.exit_code == 0, result.output
+
+    def test_list_output_contains_languages_header(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "Languages:" in result.output
+
+    def test_list_output_contains_frameworks_header(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "Frameworks:" in result.output
+
+    def test_list_output_contains_known_language(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "py" in result.output
+
+    def test_list_output_contains_known_framework(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "react" in result.output
+
+    def test_list_with_custom_presets_dir(self, tmp_preset_dir: Path) -> None:
+        result = runner.invoke(app, ["list", "--presets", str(tmp_preset_dir)])
+        assert result.exit_code == 0, result.output
+        assert "py" in result.output
+        assert "js" in result.output
+        assert "react" in result.output
+
+    def test_list_custom_presets_dir_excludes_bundled_only_langs(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        """Custom preset dir with only py/js should not list bundled-only langs."""
+        result = runner.invoke(app, ["list", "--presets", str(tmp_preset_dir)])
+        assert "go" not in result.output
+
 
 class TestOverwriteBehavior:
     def test_existing_file_without_force_exits_nonzero(self, tmp_path: Path) -> None:
