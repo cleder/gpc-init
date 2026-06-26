@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1]
+
+Preset updates and generate_awesome_list improvements.
+
+### Enhancements
+
+- Add `uv-audit` hook to the Python preset (runs on changes to `uv.lock` or
+  `pyproject.toml`).
+- Add `deptry` hook to the Python preset for detecting unused, missing, or
+  transitive dependency issues.
+- Add `primary_languages` (`docker`, `tf`) to the Kubernetes framework preset.
+- Remove `checkov_diff` from the Kubernetes preset.
+- Bump bundled hook revisions: `ruff` → v0.15.20, `ty` → v0.0.54,
+  `rumdl` → v0.2.23, `django-upgrade` → 1.31.1.
+- Filter `meta` repos from the generated AWESOME.md output.
+- Remove the "Applied to every generated configuration" note from the Common
+  section of AWESOME.md.
+- Improve type annotations in `generate_awesome_list.py`.
+
 ## [0.3.0]
 
 Expanded preset catalog, framework/language UX improvements, and CI refinements.
