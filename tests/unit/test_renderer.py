@@ -77,7 +77,7 @@ class TestRenderYaml:
 
     def test_empty_dict_renders_to_yaml(self) -> None:
         output = render_yaml({})
-        assert output.strip() == "{}"
+        assert output.strip() == "--- {}"
 
     def test_round_trip_semantics(self) -> None:
         """Parsing the rendered output should yield the original data."""
@@ -135,12 +135,56 @@ class TestRenderYaml:
         # The value must not be split across lines (no folded/wrapped scalar).
         assert "\n " not in output.rstrip("\n")
 
-    def test_keys_are_sorted_in_output(self) -> None:
+    def test_arbitrary_keys_are_sorted_alphabetically(self) -> None:
         data = {"z_key": "last", "a_key": "first", "m_key": "middle"}
         output = render_yaml(data)
-        lines = [line for line in output.splitlines() if ":" in line]
+        lines = [
+            line
+            for line in output.splitlines()
+            if ":" in line and line.strip() != "---"
+        ]
         key_names = [line.split(":")[0].strip() for line in lines]
         assert key_names == sorted(key_names)
+
+    def test_repo_keys_are_semantically_ordered(self) -> None:
+        data = {
+            "repos": [
+                {
+                    "hooks": [{"args": ["--fix"], "id": "my-hook"}],
+                    "rev": "v1.0.0",
+                    "repo": "https://example.com",
+                }
+            ]
+        }
+        output = render_yaml(data)
+        repo_block = output.split("- repo:")[1]
+        rev_pos = repo_block.index("rev:")
+        hooks_pos = repo_block.index("hooks:")
+        id_pos = repo_block.index("id:")
+        args_pos = repo_block.index("args:")
+        assert rev_pos < hooks_pos, "rev must come before hooks"
+        assert id_pos < args_pos, "id must come before args in hook entry"
+
+    def test_output_starts_with_document_marker(self) -> None:
+        output = render_yaml({"repos": []})
+        assert output.startswith("---"), (
+            "output must begin with --- document-start marker"
+        )
+
+    def test_sequence_items_are_indented(self) -> None:
+        data = {
+            "repos": [
+                {"repo": "https://example.com", "rev": "v1", "hooks": [{"id": "h"}]}
+            ]
+        }
+        output = render_yaml(data)
+        lines = output.splitlines()
+        repo_line = next(line for line in lines if "repo:" in line and "https" in line)
+        assert repo_line.startswith("  "), "repo list items must be indented 2 spaces"
+        hook_line = next(line for line in lines if "id: h" in line)
+        assert hook_line.startswith("      "), (
+            "hook list items must be indented under hooks:"
+        )
 
     def test_unicode_values_are_not_escaped(self) -> None:
         r"""Unicode characters must appear literally, not as \\xNN escape sequences."""
@@ -152,11 +196,11 @@ class TestRenderYaml:
     def test_values_within_width_are_not_folded(self) -> None:
         # 2046 single-char words → 'kk: ' (4) + 2046 'w' + 2045 spaces = 4095 chars,
         # which is within width=4096, so yaml.dump must not fold it.
+        # Output has 2 lines: '---' marker + the value line.
         near_limit_value = " ".join(["w"] * 2046)
         output = render_yaml({"kk": near_limit_value})
-        assert len(output.splitlines()) == 1, (
-            "value within width=4096 must not be folded"
-        )
+        content_lines = [line for line in output.splitlines() if line != "---"]
+        assert len(content_lines) == 1, "value within width=4096 must not be folded"
 
     def test_width_4096_wraps_near_boundary(self) -> None:
         # 2048 single-char words → full YAML line is ~4099 chars ('kk: w w...w'),
@@ -166,4 +210,15 @@ class TestRenderYaml:
         output = render_yaml({"kk": long_value})
         assert len(output.splitlines()) > 1, (
             "render_yaml must fold a value that exceeds width=4096"
+        )
+
+    def test_width_4096_exactly_folds_at_boundary(self) -> None:
+        # 2048 single-char words produce a YAML line of ~4099 chars ('kk: w w...w'),
+        # which exceeds width=4096 so yaml.dump folds it into 2 content lines.
+        # width=4097 keeps it on a single content line, so this distinguishes them.
+        boundary_value = " ".join(["w"] * 2048)
+        output = render_yaml({"kk": boundary_value})
+        content_lines = [line for line in output.splitlines() if line != "---"]
+        assert len(content_lines) == 2, (
+            "width=4096 must fold a ~4099-char line into 2 content lines"
         )

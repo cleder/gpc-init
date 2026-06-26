@@ -1,6 +1,7 @@
 ---
-primary_languages:
-  - py
+recommended:
+  lang:
+    - py
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -25,7 +26,7 @@ repos:
     hooks:
       - id: djcodemod
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: 1.30.0
+    rev: 1.31.1
     hooks:
       - id: django-upgrade
         args: ["run", "--deprecated-in", "3.0"]

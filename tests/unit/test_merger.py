@@ -228,13 +228,13 @@ class TestMergePresets:
         assert repos[0]["repo"] == "https://lang.com"
         assert repos[1]["repo"] == "https://fw.com"
 
-    def test_framework_primary_languages_excluded_from_output(self) -> None:
+    def test_recommended_metadata_excluded_from_output(self) -> None:
         fw = {
-            "primary_languages": ["js"],
+            "recommended": {"lang": ["js"]},
             "repos": [make_repo("https://fw.com", "v1", [make_hook("fw-hook")])],
         }
         result = merge_presets({}, [], [fw])
-        assert "primary_languages" not in result
+        assert "recommended" not in result
 
     def test_duplicate_repo_rev_merges_hooks_across_layers(self) -> None:
         lang1 = {"repos": [make_repo("https://shared.com", "v1", [make_hook("ha")])]}
