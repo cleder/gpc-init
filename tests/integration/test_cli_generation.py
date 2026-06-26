@@ -1054,3 +1054,131 @@ class TestEntryPoint:
         with patch("gpc_init.cli.app") as mock_app:
             entry_point()
         mock_app.assert_called_once_with()
+
+
+class TestDetect:
+    def test_detect_flag_generates_valid_config(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        with (
+            patch("gpc_init.cli.detect_languages", return_value=["py"]),
+            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+        ):
+            result = runner.invoke(app, ["--detect", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+        parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
+        assert isinstance(parsed, dict)
+        assert "repos" in parsed
+
+    def test_detect_flag_prints_detected_langs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        with (
+            patch("gpc_init.cli.detect_languages", return_value=["py"]),
+            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+        ):
+            result = runner.invoke(app, ["--detect", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert "Detected languages:" in result.output
+        assert "py" in result.output
+
+    def test_detect_flag_prints_detected_frameworks(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        with (
+            patch("gpc_init.cli.detect_languages", return_value=["py"]),
+            patch("gpc_init.cli.detect_frameworks", return_value=["django"]),
+        ):
+            result = runner.invoke(app, ["--detect", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert "Detected frameworks:" in result.output
+        assert "django" in result.output
+
+    def test_detect_flag_merges_with_explicit_lang(self, tmp_path: Path) -> None:
+        """Detected languages and explicitly passed --lang are both included."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        with (
+            patch("gpc_init.cli.detect_languages", return_value=["py"]),
+            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+        ):
+            result = runner.invoke(
+                app, ["--detect", "--lang", "md", "--output", str(output)]
+            )
+        assert result.exit_code == 0, result.output
+        assert "py" in result.output
+        assert "md" in result.output
+
+    def test_detect_flag_deduplicates_langs(self, tmp_path: Path) -> None:
+        """When detect returns a lang also passed via --lang, it appears once."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        with (
+            patch("gpc_init.cli.detect_languages", return_value=["py"]),
+            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+        ):
+            result = runner.invoke(
+                app, ["--detect", "--lang", "py", "--output", str(output)]
+            )
+        assert result.exit_code == 0, result.output
+        # "py" should appear in output but not duplicated as "py, py"
+        assert "py, py" not in result.output
+
+    def test_detect_no_files_and_no_lang_errors(self, tmp_path: Path) -> None:
+        """--detect with nothing detected and no --lang must exit non-zero."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        with (
+            patch("gpc_init.cli.detect_languages", return_value=[]),
+            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+        ):
+            result = runner.invoke(app, ["--detect", "--output", str(output)])
+        assert result.exit_code != 0
+
+    def test_detect_no_files_error_message(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        with (
+            patch("gpc_init.cli.detect_languages", return_value=[]),
+            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+        ):
+            result = runner.invoke(app, ["--detect", "--output", str(output)])
+        assert (
+            "No --lang specified" in result.output or "none detected" in result.output
+        )
+
+    def test_detect_without_flag_suggests_detect(self, tmp_path: Path) -> None:
+        """The 'no --lang' error message should hint about --detect."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--output", str(output)])
+        assert result.exit_code != 0
+        assert "--detect" in result.output
+
+    def test_detect_only_with_framework_no_lang_detected_errors(
+        self, tmp_path: Path
+    ) -> None:
+        """--detect + --framework but no lang detected and no --recommended → error."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        with (
+            patch("gpc_init.cli.detect_languages", return_value=[]),
+            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+        ):
+            result = runner.invoke(
+                app, ["--detect", "--framework", "django", "--output", str(output)]
+            )
+        assert result.exit_code != 0
+
+    def test_detect_passes_cwd_to_detectors(self, tmp_path: Path) -> None:
+        """detect_languages and detect_frameworks are called with Path.cwd()."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        cwd = Path("/some/project")
+        captured: list[Path] = []
+
+        def fake_detect_langs(repo_dir: Path, supported: list[str]) -> list[str]:  # noqa: ARG001
+            captured.append(repo_dir)
+            return ["py"]
+
+        with (
+            patch("gpc_init.cli.Path") as mock_path_cls,
+            patch("gpc_init.cli.detect_languages", side_effect=fake_detect_langs),
+            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+        ):
+            mock_path_cls.cwd.return_value = cwd
+            mock_path_cls.return_value = Path(str(output))
+            runner.invoke(app, ["--detect", "--output", str(output)])
+
+        assert cwd in captured
