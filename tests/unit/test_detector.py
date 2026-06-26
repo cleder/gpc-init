@@ -437,3 +437,44 @@ class TestDetectFrameworks:
         workflows.mkdir(parents=True)
         (workflows / "ci.yaml").touch()
         assert "git" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    # mutmut_16: encoding=None instead of encoding="utf-8" in _has_kubernetes_files
+    def test_k8s_reads_yaml_file_with_utf8_encoding(self, tmp_path: Path) -> None:
+        (tmp_path / "deployment.yaml").write_text(
+            "apiVersion: apps/v1\nkind: Deployment\n", encoding="utf-8"
+        )
+
+        recorded: dict = {}
+        _original_read_text = Path.read_text
+
+        def tracking_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
+            if self.suffix.lower() in {".yaml", ".yml"}:
+                recorded.update(kwargs)
+            return _original_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+
+        with patch.object(Path, "read_text", tracking_read_text):
+            result = detect_frameworks(tmp_path, ["k8s"])
+
+        assert "k8s" in result
+        assert recorded.get("encoding") == "utf-8"
+
+    # mutmut_18:
+    # encoding="utf-8" removed from file.read_text call in _has_kubernetes_files
+    def test_k8s_yaml_read_uses_utf8_encoding(self, tmp_path: Path) -> None:
+        (tmp_path / "deployment.yaml").write_text(
+            "apiVersion: apps/v1\nkind: Deployment\n", encoding="utf-8"
+        )
+
+        _original_read_text = Path.read_text
+        recorded: dict[str, Any] = {}
+
+        def tracking_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
+            if self.suffix in (".yaml", ".yml"):
+                recorded.update(kwargs)
+            return _original_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+
+        with patch.object(Path, "read_text", tracking_read_text):
+            result = detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+        assert "k8s" in result
+        assert recorded.get("encoding") == "utf-8"

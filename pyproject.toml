@@ -79,12 +79,6 @@ pytest_add_cli_args_test_selection = [
 source_paths = [
     "gpc_init/",
 ]
-type_check_command = [
-    "--output-format=json",
-    "--use-ignore-files=false",
-    "check",
-    "pyrefly",
-]
 
 [tool.pyrefly]
 project_excludes = [

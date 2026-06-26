@@ -137,7 +137,11 @@ def merge_presets(
         if layer_repos:
             merged_repos = _merge_repos(merged_repos, layer_repos)
         # Merge other top-level keys (skip repos and framework metadata)
-        non_repo = {k: v for k, v in layer.items() if k not in ("repos", "recommended")}
+        non_repo = {
+            k: v
+            for k, v in layer.items()
+            if k not in {"repos", "recommended", "primary_languages"}
+        }
         result = _deep_merge_top_level(result, non_repo)
 
     if merged_repos:

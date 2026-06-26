@@ -133,6 +133,13 @@ def validate_frameworks(frameworks: list[str], base_dir: Path | None = None) -> 
             raise UnsupportedFrameworkError(fw, supported)
 
 
+def _normalize_rec(preset: dict[str, Any]) -> dict[str, Any]:
+    rec = preset.get("recommended") or preset.get("primary_languages") or {}
+    if isinstance(rec, list):
+        return {"lang": rec}
+    return rec
+
+
 def expand_recommendations(  # noqa: PLR0913
     langs: list[str],
     frameworks: list[str],
@@ -160,15 +167,15 @@ def expand_recommendations(  # noqa: PLR0913
     extra_langs: list[str] = []
     extra_fws: list[str] = []
     for preset in [*lang_presets, *fw_presets]:
-        rec = preset.get("recommended", {})
-        for lang in rec.get("lang", []):
+        rec = _normalize_rec(preset)
+        for lang in rec.get("lang") or []:
             if (
                 lang not in langs
                 and lang not in extra_langs
                 and lang in supported_langs
             ):
                 extra_langs.append(lang)
-        for fw in rec.get("framework", []):
+        for fw in rec.get("framework") or []:
             if (
                 fw not in frameworks
                 and fw not in extra_fws
@@ -183,9 +190,9 @@ def _missing_recommendations(
     langs: list[str],
     frameworks: list[str],
 ) -> tuple[list[str], list[str]]:
-    rec = preset.get("recommended", {})
-    missing_langs = [lang for lang in rec.get("lang", []) if lang not in langs]
-    missing_fws = [fw for fw in rec.get("framework", []) if fw not in frameworks]
+    rec = _normalize_rec(preset)
+    missing_langs = [lang for lang in (rec.get("lang") or []) if lang not in langs]
+    missing_fws = [fw for fw in (rec.get("framework") or []) if fw not in frameworks]
     return missing_langs, missing_fws
 
 

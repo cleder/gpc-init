@@ -5,7 +5,7 @@ import importlib.metadata
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, NamedTuple
 
 import typer
 
@@ -38,13 +38,21 @@ from gpc_init.resolver import (
 )
 
 
+class _GenerationResult(NamedTuple):
+    yaml_content: str
+    langs: list[str]
+    frameworks: list[str]
+    lang_presets: list[dict[str, Any]]
+    fw_presets: list[dict[str, Any]]
+
+
 def _generate_content(
     langs: list[str],
     frameworks: list[str],
     base_dir: Path | None,
     *,
     recommended: bool = False,
-) -> tuple[str, list[str], list[str], list[dict[str, Any]], list[dict[str, Any]]]:
+) -> _GenerationResult:
     """
     Validate, load, merge, render.
 
@@ -85,7 +93,9 @@ def _generate_content(
             ]
 
         merged = merge_presets(common, lang_presets, fw_presets)
-        return render_yaml(merged), langs, frameworks, lang_presets, fw_presets
+        return _GenerationResult(
+            render_yaml(merged), langs, frameworks, lang_presets, fw_presets
+        )
 
     except UnsupportedLanguageError as exc:
         typer.echo(f"Error: {exc}", err=True)

@@ -59,12 +59,9 @@ _FILENAME_TO_LANG: dict[str, str] = {
 
 def _walk(repo_dir: Path) -> Generator[Path]:
     """Yield all files under repo_dir, skipping directories in _SKIP_DIRS."""
-    for entry in repo_dir.iterdir():
-        if entry.is_dir():
-            if entry.name not in _SKIP_DIRS:
-                yield from _walk(entry)
-        else:
-            yield entry
+    for root, dirs, files in repo_dir.walk(on_error=lambda _: None):
+        dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
+        yield from (root / f for f in files)
 
 
 def detect_languages(repo_dir: Path, supported_langs: list[str]) -> list[str]:
@@ -94,7 +91,9 @@ def _has_package_json_dep(repo_dir: Path, dep: str) -> bool:
         data = json.loads(pkg.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return False
-    deps = {*data.get("dependencies", {}), *data.get("devDependencies", {})}
+    if not isinstance(data, dict):
+        return False
+    deps = {*(data.get("dependencies") or {}), *(data.get("devDependencies") or {})}
     return dep in deps
 
 
@@ -131,11 +130,14 @@ def _has_github_workflows(repo_dir: Path) -> bool:
     workflows = repo_dir / ".github" / "workflows"
     if not workflows.is_dir():
         return False
-    return any(
-        f.suffix.lower() in {".yaml", ".yml"}
-        for f in workflows.iterdir()
-        if f.is_file()
-    )
+    try:
+        return any(
+            f.suffix.lower() in {".yaml", ".yml"}
+            for f in workflows.iterdir()
+            if f.is_file()
+        )
+    except OSError:
+        return False
 
 
 # Ordered list of (framework_id, detector) pairs.
