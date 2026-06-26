@@ -240,6 +240,21 @@ class TestGetRecommendationsInfo:
         assert "git" in result
         assert "--framework=git" in result
 
+    def test_missing_recommendations_returns_missing_frameworks(self) -> None:
+        # A framework preset recommends a framework not in the current selection.
+        # _missing_recommendations must look up "framework" (not any other key) to
+        # detect it. The mutant changes that key to "XXframeworkXX", making
+        # missing_fws always empty and suppressing the note entirely.
+        result = get_recommendations_info(
+            langs=[],
+            frameworks=["react"],
+            lang_presets=[],
+            fw_presets=[{"recommended": {"framework": ["docker"]}}],
+        )
+        assert result is not None
+        assert "docker" in result
+        assert "--framework=docker" in result
+
     def test_suggestion_includes_all_selected_frameworks(self) -> None:
         result = get_recommendations_info(
             langs=["py"],
@@ -370,6 +385,19 @@ class TestGetRecommendationsInfo:
         )
         assert "--framework=git,docker" in note_line
 
+    def test_primary_languages_fallback_treated_as_recommendations(self) -> None:
+        # A preset using the legacy 'primary_languages' key (no 'recommended' key)
+        # must still trigger a recommendation note for the missing languages.
+        result = get_recommendations_info(
+            langs=["py"],
+            frameworks=["react"],
+            lang_presets=[{}],
+            fw_presets=[{"primary_languages": ["js", "ts"]}],
+        )
+        assert result is not None
+        assert "js" in result
+        assert "ts" in result
+
     def test_notes_and_suggestion_joined_by_newline(self) -> None:
         result = get_recommendations_info(
             langs=["py"],
@@ -480,3 +508,19 @@ class TestExpandRecommendations:
             supported_frameworks=["react", "django"],
         )
         assert fws.count("react") == 1
+
+    def test_list_valued_recommended_is_treated_as_lang_list(self) -> None:
+        # When a preset's "recommended" value is a plain list (not a dict), it must
+        # be interpreted as a list of language ids — i.e. normalised to {"lang": rec}.
+        # The mutant changes the normalisation key to "LANG", which causes the list
+        # to be silently ignored so no extra langs are appended.
+        langs, _fws = expand_recommendations(
+            langs=["py"],
+            frameworks=[],
+            lang_presets=[{"recommended": ["js", "ts"]}],
+            fw_presets=[],
+            supported_langs=["py", "js", "ts"],
+            supported_frameworks=[],
+        )
+        assert "js" in langs
+        assert "ts" in langs
