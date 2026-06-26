@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0]
+
+Enhanced preset support with detection and recommendations, improved YAML rendering, and code quality improvements.
+
+### New Features
+
+- Add language and framework detection from repository structure: `--detect` flag automatically identifies programming languages and frameworks present in the repository.
+- Implement `--recommended` flag to suggest and auto-apply recommended languages/frameworks from preset metadata.
+- Support preset recommendations metadata: presets can now declare `recommended` field to suggest compatible language and framework combinations.
+
+### Enhancements
+
+- Improve YAML output rendering to strictly conform with pre-commit conventions and spacing requirements.
+- Refactor preset loading and merging logic to support the new `recommended` metadata structure.
+- Enhance resolver logic to provide actionable recommendations when user-selected languages or frameworks have suggestions.
+- Improve test coverage for detection, recommendations, and YAML output validation.
+- Update contributing guidelines with preset validation and installation commands.
+- Refactor codebase for improved readability and maintainability with better separation of concerns.
+
+### Tests
+
+- Add comprehensive tests for language and framework detection from common file patterns.
+- Add tests for recommendation resolution and suggestion generation.
+- Add tests validating YAML output structure and pre-commit compliance.
+- Enhance integration tests for CLI flows combining detection and recommendations.
+
 ## [0.3.1]
 
 Preset updates and generate_awesome_list improvements.
