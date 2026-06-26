@@ -80,10 +80,10 @@ source_paths = [
     "gpc_init/",
 ]
 type_check_command = [
-    "  pyrefly",
-    " check",
     "--output-format=json",
     "--use-ignore-files=false",
+    "check",
+    "pyrefly",
 ]
 
 [tool.pyrefly]

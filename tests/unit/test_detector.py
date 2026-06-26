@@ -330,6 +330,20 @@ class TestDetectFrameworks:
         )
         assert "k8s" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
+    def test_k8s_detected_when_non_yaml_file_precedes_manifest_in_walk(
+        self, tmp_path: Path
+    ) -> None:
+        # Guarantee that a non-YAML file is yielded before the k8s manifest.
+        # With 'break' instead of 'continue' the loop would stop at the first
+        # non-YAML file and never inspect the manifest, returning False.
+        non_yaml = tmp_path / "README.md"
+        non_yaml.write_text("docs", encoding="utf-8")
+        k8s_yaml = tmp_path / "deployment.yaml"
+        k8s_yaml.write_text("apiVersion: apps/v1\nkind: Deployment\n", encoding="utf-8")
+
+        with patch.object(_detector, "_walk", return_value=iter([non_yaml, k8s_yaml])):
+            assert "k8s" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
     # mutmut_14: continue changed to break when .github file encountered
     # in _has_kubernetes_files
     def test_k8s_detected_alongside_github_actions_yaml(self, tmp_path: Path) -> None:
@@ -386,6 +400,33 @@ class TestDetectFrameworks:
     def test_no_k8s_from_yaml_with_only_kind(self, tmp_path: Path) -> None:
         (tmp_path / "config.yaml").write_text("kind: SomeValue\n", encoding="utf-8")
         assert "k8s" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    # mutmut_14 (has_kubernetes_files): continue changed to break when a
+    # .github YAML file is encountered. With 'break' the loop exits as soon
+    # as the .github file is seen, so a real k8s manifest that comes later in
+    # the walk order is never inspected. Patch _walk to guarantee the .github
+    # file is yielded first so the behaviour difference is deterministic.
+    def test_k8s_detected_when_github_yaml_is_walked_before_k8s_manifest(
+        self, tmp_path: Path
+    ) -> None:
+        github_workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+        github_workflow.parent.mkdir(parents=True)
+        github_workflow.write_text("apiVersion: v1\nkind: fake\n", encoding="utf-8")
+
+        k8s_manifest = tmp_path / "deployment.yaml"
+        k8s_manifest.write_text(
+            "apiVersion: apps/v1\nkind: Deployment\n", encoding="utf-8"
+        )
+
+        # Force the .github workflow to be visited BEFORE the k8s manifest.
+        # With 'break', the loop exits on the github file and misses the manifest.
+        # With 'continue', the github file is skipped and the manifest is found.
+        with patch.object(
+            _detector,
+            "_walk",
+            return_value=iter([github_workflow, k8s_manifest]),
+        ):
+            assert "k8s" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
     # mutmut_13 and mutmut_14 (_has_github_workflows): ".yaml" replaced with
     # "XX.yamlXX" or ".YAML" in extension set

@@ -354,6 +354,22 @@ class TestGetRecommendationsInfo:
         assert result is not None
         assert "--lang=js --framework=git" in result
 
+    def test_note_line_framework_flag_uses_comma_separator(self) -> None:
+        # A lang preset recommends two frameworks, neither currently selected.
+        # The per-preset "recommends adding:" note line must join framework ids
+        # with ',' — not with any other string like 'XX,XX'.
+        result = get_recommendations_info(
+            langs=["py"],
+            frameworks=[],
+            lang_presets=[{"recommended": {"framework": ["git", "docker"]}}],
+            fw_presets=[],
+        )
+        assert result is not None
+        note_line = next(
+            line for line in result.splitlines() if "recommends adding" in line
+        )
+        assert "--framework=git,docker" in note_line
+
     def test_notes_and_suggestion_joined_by_newline(self) -> None:
         result = get_recommendations_info(
             langs=["py"],

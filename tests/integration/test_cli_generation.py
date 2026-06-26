@@ -1931,6 +1931,82 @@ class TestDiffOnExistingFile:
             "without --recommended and is missing the js/ts preset hooks"
         )
 
+    def test_force_hint_goes_to_stderr_not_stdout(self, tmp_path: Path) -> None:
+        """
+        The 'Run with --force' hint must be written to stderr, not stdout.
+
+        _handle_existing_file calls typer.echo(..., err=True) for the force hint.
+        The mutant removes err=True, routing the hint to stdout instead.
+        This test asserts the hint appears in result.stderr and that result.stdout
+        does not contain it, killing the mutant.
+        """
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 1
+        assert "Run with --force" in result.stderr
+        assert "Run with --force" not in result.stdout
+
+    def test_diff_fromfile_label_is_target_path(self, tmp_path: Path) -> None:
+        """
+        The '---' line in the unified diff must contain the target file path.
+
+        difflib.unified_diff is called with fromfile=str(target) so that the
+        '---' header reads '--- /path/to/.pre-commit-config.yaml'.
+
+        Mutant 28 removes the fromfile argument entirely, producing '--- '
+        (a trailing space) instead of '--- /path/to/...'.
+
+        Mutant 34 replaces fromfile=str(target) with fromfile=str(None),
+        making the '---' header read '--- None' instead.
+
+        The path still appears in the 'Run with --force to overwrite' message
+        on stderr, so checking str(output) anywhere in result.output does not
+        catch either mutant.  This test extracts the '---' line explicitly and
+        asserts the actual path is present there.
+        """
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 1
+        minus_line = next(
+            (line for line in result.output.splitlines() if line.startswith("---")),
+            None,
+        )
+        assert minus_line is not None, "No '---' line found in diff output"
+        assert str(output) in minus_line, (
+            f"Expected the target path '{output}' in the '---' fromfile header line, "
+            f"got: {minus_line!r}. The fromfile=str(target) argument may be missing "
+            f"or corrupted in the difflib.unified_diff call."
+        )
+
+    def test_diff_tofile_label_has_no_xx_markers(self, tmp_path: Path) -> None:
+        """
+        The tofile label in the unified diff '+++' line must be exactly '<generated>'.
+
+        The mutant changes tofile='<generated>' to tofile='XX<generated>XX',
+        producing a '+++' line of the form '+++ XX<generated>XX'.  Existing tests
+        only check that '<generated>' is a substring of the '+++' line, which
+        passes for the mutant because '<generated>' is contained within
+        'XX<generated>XX'.  This test additionally asserts that 'XX' does not
+        appear in the '+++' line and that the line is exactly '+++ <generated>',
+        killing the mutant.
+        """
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        plus_line = next(
+            (line for line in result.output.splitlines() if line.startswith("+++")),
+            None,
+        )
+        assert plus_line is not None, "No '+++' line found in diff output"
+        assert "XX" not in plus_line, (
+            f"Expected no 'XX' markers in '+++' line, got: {plus_line!r}"
+        )
+        assert plus_line.strip() == "+++ <generated>", (
+            f"Expected '+++' line to be '+++ <generated>', got: {plus_line!r}"
+        )
+
 
 class TestVersion:
     def test_version_exits_zero(self) -> None:
