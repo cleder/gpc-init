@@ -2,25 +2,23 @@
     @just --list
 
 validate_update_all:
-    find . -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
-    find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
-    find . -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
-    find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
+    find lang framework -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
+    find lang framework -name "preset*.yaml" | xargs -I{} prek validate-config {}
+    find lang framework -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
+    find lang framework -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
 
-validate target:
+validate target type="lang":
     @echo 'Validating {{target}}...'
-    pre-commit validate-config lang/{{target}}/preset.yaml
-    prek validate-config lang/{{target}}/preset.yaml
+    pre-commit validate-config "{{type}}/{{target}}/preset.yaml"
+    prek validate-config "{{type}}/{{target}}/preset.yaml"
 
-autoupdate target:
+autoupdate target type="lang":
     @echo 'Autoupdating {{target}}...'
-    pre-commit autoupdate -c lang/{{target}}/preset.yaml
-    prek autoupdate -c lang/{{target}}/preset.yaml
+    pre-commit autoupdate -c "{{type}}/{{target}}/preset.yaml"
+    prek autoupdate -c "{{type}}/{{target}}/preset.yaml"
 
-validate_update target:
+validate_update target type="lang":
     @echo 'Validating {{target}}...'
-    pre-commit validate-config lang/{{target}}/preset.yaml
-    prek validate-config lang/{{target}}/preset.yaml
+    just validate "{{target}}" "{{type}}"
     @echo 'Autoupdating {{target}}...'
-    pre-commit autoupdate -c lang/{{target}}/preset.yaml
-    prek autoupdate -c lang/{{target}}/preset.yaml
+    just autoupdate "{{target}}" "{{type}}"
