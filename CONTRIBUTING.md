@@ -8,7 +8,8 @@ Thank you for helping improve the bundled presets and tooling for `pc-init`.
 git clone https://github.com/cleder/gpc-init.git
 cd gpc-init
 uv sync
-pre-commit install
+uv tool install prek
+prek install
 ```
 
 ## Repository layout
@@ -61,9 +62,9 @@ CI enforces the same checks and will fail if they are skipped.
 
 ```bash
 pre-commit validate-config lang/<id>/preset.yaml
-prek validate-config lang/<id>/preset.yaml
-
 pre-commit autoupdate -c lang/<id>/preset.yaml
+
+prek validate-config lang/<id>/preset.yaml
 prek autoupdate -c lang/<id>/preset.yaml
 ```
 
@@ -73,8 +74,9 @@ To validate and update every preset at once:
 
 ```bash
 find . -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
-find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
 find . -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
+
+find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
 find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
 ```
 
@@ -108,6 +110,7 @@ uv run ruff check gpc_init tests
 uv run ruff format gpc_init tests
 uv run pyrefly check gpc_init tests
 uv run ty check gpc_init tests
+uv run complexipy gpc_init
 ```
 
 ## Submitting a pull request
