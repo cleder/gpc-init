@@ -211,3 +211,14 @@ class TestRenderYaml:
         assert len(output.splitlines()) > 1, (
             "render_yaml must fold a value that exceeds width=4096"
         )
+
+    def test_width_4096_exactly_folds_at_boundary(self) -> None:
+        # 2048 single-char words produce a YAML line of ~4099 chars ('kk: w w...w'),
+        # which exceeds width=4096 so yaml.dump folds it into 2 content lines.
+        # width=4097 keeps it on a single content line, so this distinguishes them.
+        boundary_value = " ".join(["w"] * 2048)
+        output = render_yaml({"kk": boundary_value})
+        content_lines = [line for line in output.splitlines() if line != "---"]
+        assert len(content_lines) == 2, (
+            "width=4096 must fold a ~4099-char line into 2 content lines"
+        )
