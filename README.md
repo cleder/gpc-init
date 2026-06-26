@@ -192,6 +192,50 @@ find . -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
 find . -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
 ```
 
+### Just Runner
+
+The repository includes a `.justfile` for using the [just](https://just.systems/man/en/) runner framework.
+If you have this installed you can use `just` to see the available recipes.
+
+``` bash
+❱ just
+just --list
+Available recipes:
+    autoupdate target
+    default
+    validate target
+    validate_update target
+    validate_update_all
+```
+
+These allow you to validate and/or update a given language preset in a slightly more concise manner as the provided language name is inserted into the target path automatically, all you have to do is provide the language alias as the example below shows.
+
+``` bash
+❱ just validate_update py
+Validating py...
+pre-commit validate-config lang/py/preset.yaml
+prek validate-config lang/py/preset.yaml
+success: All configs are valid
+Autoupdating py...
+pre-commit autoupdate -c lang/py/preset.yaml
+[https://github.com/MarcoGorelli/absolufy-imports] already up to date!
+[https://github.com/astral-sh/ruff-pre-commit] updating v0.15.19 -> v0.15.20
+[https://github.com/abravalheri/validate-pyproject] already up to date!
+[https://github.com/kieran-ryan/pyprojectsort] already up to date!
+[https://github.com/adamchainz/blacken-docs] already up to date!
+[https://github.com/facebook/pyrefly-pre-commit] already up to date!
+[https://github.com/astral-sh/ty-pre-commit] updating v0.0.53 -> v0.0.54
+[https://github.com/rohaquinlop/complexipy-pre-commit] already up to date!
+[https://github.com/asmeurer/removestar] already up to date!
+[https://github.com/PyCQA/bandit] already up to date!
+[https://github.com/PyCQA/docformatter] already up to date!
+[https://github.com/econchick/interrogate] already up to date!
+[https://github.com/asottile/pyupgrade] already up to date!
+[https://github.com/astral-sh/uv-pre-commit] already up to date!
+[https://github.com/numpy/numpydoc] already up to date!
+prek autoupdate -c lang/py/preset.yaml
+```
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, preset guidelines, and the pull request checklist.
