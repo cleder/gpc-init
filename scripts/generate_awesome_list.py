@@ -194,8 +194,8 @@ def build_awesome_list(languages: list[str], frameworks: list[str]) -> str:
     sections += ["---", "", "## Frameworks", ""]
     for fw in frameworks:
         preset = load_preset(FRAMEWORK_DIR / fw / "preset.yaml")
-        primary = preset.get("primary_languages", [])
-        note = f"Primary language(s): {', '.join(primary)}." if primary else ""
+        primary = preset.get("recommended", {}).get("lang", [])
+        note = f"Recommended language(s): {', '.join(primary)}." if primary else ""
         sections.extend(render_section(fw, preset, note=note))
 
     all_lines = header + toc + [""] + sections

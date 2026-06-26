@@ -1,6 +1,7 @@
 ---
-primary_languages:
-  - py
+recommended:
+  lang:
+    - py
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

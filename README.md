@@ -22,6 +22,29 @@ The curated hooks bundled with `pc-init` are also published as a standalone refe
 uv tool install pc-init
 ```
 
+## Quickstart
+
+In an existing repository, let `pc-init` detect what's there and generate a config in one command:
+
+```bash
+cd my-project
+pc-init --detect
+```
+
+Or specify languages and frameworks explicitly:
+
+```bash
+pc-init --lang py --framework django
+```
+
+Then install the hooks:
+
+```bash
+pre-commit install
+# or
+prek install
+```
+
 ## Usage
 
 ```text
@@ -39,6 +62,9 @@ Options:
                      active catalog.
   --force            Overwrite existing .pre-commit-config.yaml without
                      prompting.
+  --detect           Auto-detect languages and frameworks from the current
+                     directory and merge them with any explicitly supplied
+                     --lang/--framework values.
   --output     TEXT  Output file path.  [default: .pre-commit-config.yaml]
   --presets    TEXT  Preset catalog to use. Accepts a local directory path or
                      a git repository URL (https://, git@, git://, ssh://).
@@ -108,19 +134,99 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`
 | `git` | Commit message linting |
 | `k8s` | Kubernetes |
 
+## Auto-detecting languages and frameworks
+
+`--detect` scans the current directory, infers languages from file extensions and frameworks from indicator files, and uses the results exactly as if you had passed them with `--lang` and `--framework`.
+
+```bash
+pc-init --detect
+```
+
+```text
+Detected languages: md, py, yaml, sh, js
+Detected frameworks: git
+Generated .pre-commit-config.yaml with languages: md, py, yaml, sh, js and frameworks: git
+```
+
+Detected values are merged with any explicitly supplied flags — duplicates are dropped:
+
+```bash
+pc-init --detect --lang sql   # adds sql on top of whatever is detected
+```
+
+If the file already exists and differs, the suggested overwrite command uses explicit `--lang` and `--framework` values so the re-run is fully deterministic:
+
+```text
+Run with --force to overwrite '.pre-commit-config.yaml'.
+  Try: pc-init --lang=md,py,yaml,sh,js --framework=git --force
+```
+
+**Language detection** is based on file extensions (common vendored directories such as `.git`, `node_modules`, `.venv`, `__pycache__`, and `dist` are skipped):
+
+| Extension(s) | Language |
+|---|---|
+| `.py`, `.pyi` | `py` |
+| `.js`, `.mjs`, `.cjs`, `.jsx` | `js` |
+| `.ts`, `.tsx` | `ts` |
+| `.go` | `go` |
+| `.rs` | `ru` |
+| `.sh`, `.bash` | `sh` |
+| `.sql` | `sql` |
+| `.tf`, `.tfvars` | `tf` |
+| `.md`, `.markdown` | `md` |
+| `.ipynb` | `nb` |
+| `.yaml`, `.yml` | `yaml` |
+| `.r` | `r` |
+| `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg` | `img` |
+| `Dockerfile` (filename) | `docker` |
+
+**Framework detection** is based on indicator files:
+
+| Indicator | Framework |
+|---|---|
+| `manage.py` at the repo root | `django` |
+| `package.json` with `react` in `dependencies` or `devDependencies` | `react` |
+| `conf.py` (root or `docs/`) containing `sphinx` | `sphinx` |
+| Any `.yaml`/`.yml` file outside `.github/` containing `apiVersion:` and `kind:` | `k8s` |
+| `.github/workflows/` directory with at least one `.yml` file | `git` |
+
 ## Language suggestions for frameworks
 
 Some framework presets declare the languages they are typically used with.
 If none of your `--lang` selections match, `pc-init` prints an informational note and a ready-to-run command that adds the missing languages:
 
 ```text
-Note: framework 'react' is typically used with: js, ts
-      Try: pc-init --lang=py,js,ts --framework=react
+Note: preset 'react' recommends adding: --lang=js,ts
+      Try: pc-init --lang=go,js,ts --framework=react
 ```
 
 The suggested command preserves your existing `--lang` values so it is safe to run with `--force` — no hooks you already selected will be removed.
 
+Pass `--recommended` to apply all suggestions automatically in a single run:
+
+```bash
+pc-init --lang go --framework react --recommended
+```
+
+You can also omit `--lang` entirely when using `--recommended` with at least one framework — the recommended languages are used as the starting set:
+
+```bash
+pc-init --framework django --recommended
+```
+
 ## Examples
+
+Auto-detect everything:
+
+```bash
+pc-init --detect
+```
+
+Auto-detect and add an extra language:
+
+```bash
+pc-init --detect --lang sql
+```
 
 Python project:
 
@@ -145,6 +251,12 @@ Multiple languages (two equivalent forms):
 ```bash
 pc-init --lang py --lang js
 pc-init --lang=py,js
+```
+
+Django project, letting `pc-init` pick the language automatically:
+
+```bash
+pc-init --framework django --recommended
 ```
 
 ## Custom presets
