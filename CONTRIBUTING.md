@@ -36,12 +36,15 @@ repos:
       - id: hook-id
 ```
 
-Framework presets may additionally declare which languages they require:
+Framework presets may additionally declare which languages and frameworks they recommend:
 
 ```yaml
 ---
-primary_languages:
-  - py
+recommended:
+  lang:
+    - py
+  framework:
+    - git
 repos:
   - ...
 ```
@@ -78,6 +81,22 @@ find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
 ### Hook quality bar
 
 Only include hooks that are publicly available, actively maintained, and add clear value over hooks already in the preset.
+
+## Running the CLI locally
+
+After `uv sync`, run the CLI directly without installing:
+
+```bash
+uv run pc-init --help
+uv run pc-init --lang=py --framework=django
+```
+
+Or install it into the project venv once:
+
+```bash
+uv pip install -e .
+pc-init --help
+```
 
 ## Contributing to the Python code
 

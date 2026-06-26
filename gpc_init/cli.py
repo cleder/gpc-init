@@ -42,13 +42,13 @@ def _generate_content(
     frameworks: list[str],
     base_dir: Path | None,
     *,
-    all_recommendations: bool = False,
+    recommended: bool = False,
 ) -> tuple[str, list[str], list[str], list[dict[str, Any]], list[dict[str, Any]]]:
     """
     Validate, load, merge, render.
 
     Returns (yaml_content, final_langs, final_frameworks, lang_presets, fw_presets).
-    When all_recommendations=True the lang/framework lists are expanded with every
+    When recommended=True the lang/framework lists are expanded with every
     recommendation from the selected presets before merging.
     """
     if base_dir is not None and not (base_dir / "lang").is_dir():
@@ -67,7 +67,7 @@ def _generate_content(
             load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
         ]
 
-        if all_recommendations:
+        if recommended:
             langs, frameworks = expand_recommendations(
                 langs,
                 frameworks,
@@ -109,11 +109,11 @@ def _run(
     target: Path,
     base_dir: Path | None,
     *,
-    all_recommendations: bool = False,
+    recommended: bool = False,
 ) -> None:
     """Generate and write the preset config to target."""
     content, langs, frameworks, lang_presets, fw_presets = _generate_content(
-        langs, frameworks, base_dir, all_recommendations=all_recommendations
+        langs, frameworks, base_dir, recommended=recommended
     )
 
     overwritten = target.exists()
@@ -123,7 +123,7 @@ def _run(
         typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-    if not all_recommendations:
+    if not recommended:
         info = get_recommendations_info(langs, frameworks, lang_presets, fw_presets)
         if info:
             typer.echo(info)
@@ -141,17 +141,15 @@ def _dispatch(
     base_dir: Path | None,
     *,
     force: bool,
-    all_recommendations: bool = False,
+    recommended: bool = False,
 ) -> None:
     """Route to diff display or write depending on whether target exists."""
     if target.exists() and not force:
         _handle_existing_file(
-            langs, frameworks, target, base_dir, all_recommendations=all_recommendations
+            langs, frameworks, target, base_dir, recommended=recommended
         )
     else:
-        _run(
-            langs, frameworks, target, base_dir, all_recommendations=all_recommendations
-        )
+        _run(langs, frameworks, target, base_dir, recommended=recommended)
 
 
 def _handle_existing_file(
@@ -160,11 +158,11 @@ def _handle_existing_file(
     target: Path,
     base_dir: Path | None,
     *,
-    all_recommendations: bool = False,
+    recommended: bool = False,
 ) -> None:
     """Show unified diff vs existing file. Always raises typer.Exit."""
     content, *_ = _generate_content(
-        langs, frameworks, base_dir, all_recommendations=all_recommendations
+        langs, frameworks, base_dir, recommended=recommended
     )
     try:
         existing = target.read_text(encoding="utf-8")
@@ -295,10 +293,10 @@ def main(
             help="Output file path. Defaults to .pre-commit-config.yaml.",
         ),
     ] = ".pre-commit-config.yaml",
-    all_recommendations: Annotated[
+    recommended: Annotated[
         bool,
         typer.Option(
-            "--all-recommendations",
+            "--recommended",
             help=(
                 "Automatically include all languages and frameworks recommended "
                 "by the selected presets."
@@ -329,12 +327,14 @@ def main(
     if ctx.invoked_subcommand is not None:
         return
 
-    if not lang:
-        typer.echo(
+    if not lang and not (recommended and framework):
+        msg = (
             "No --lang specified. "
-            "Run `pc-init list` to see available languages and frameworks.",
-            err=True,
+            "Run `pc-init list` to see available languages and frameworks."
         )
+        if framework:
+            msg += " Use --recommended to apply languages suggested by the frameworks."
+        typer.echo(msg, err=True)
         raise typer.Exit(code=1)
 
     langs = _normalize_langs(lang)
@@ -349,7 +349,7 @@ def main(
             target,
             base_dir,
             force=force,
-            all_recommendations=all_recommendations,
+            recommended=recommended,
         )
 
 

@@ -237,6 +237,91 @@ class TestFrameworkGeneration:
         assert "django, react" in result.output
 
 
+class TestAllRecommendations:
+    def test_framework_only_expands_recommended_langs(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--framework",
+                "django",
+                "--recommended",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_framework_only_success_message_includes_expanded_lang(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--framework",
+                "django",
+                "--recommended",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "py" in result.output
+
+    def test_framework_only_no_note_printed(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--framework",
+                "django",
+                "--recommended",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Note:" not in result.output
+
+    def test_no_lang_no_framework_still_errors(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            ["--recommended", "--output", str(output)],
+        )
+        assert result.exit_code != 0
+
+    def test_all_recommendations_without_flag_prints_note(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            ["--lang", "go", "--framework", "react", "--output", str(output)],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Note:" in result.output
+
+    def test_all_recommendations_with_flag_suppresses_note(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "go",
+                "--framework",
+                "react",
+                "--recommended",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "Note:" not in result.output
+
+
 class TestErrorHandling:
     def test_unsupported_lang_exits_nonzero(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"

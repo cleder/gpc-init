@@ -114,11 +114,23 @@ Some framework presets declare the languages they are typically used with.
 If none of your `--lang` selections match, `pc-init` prints an informational note and a ready-to-run command that adds the missing languages:
 
 ```text
-Note: framework 'react' is typically used with: js, ts
-      Try: pc-init --lang=py,js,ts --framework=react
+Note: preset 'react' recommends adding: --lang=js,ts
+      Try: pc-init --lang=go,js,ts --framework=react
 ```
 
 The suggested command preserves your existing `--lang` values so it is safe to run with `--force` — no hooks you already selected will be removed.
+
+Pass `--recommended` to apply all suggestions automatically in a single run:
+
+```bash
+pc-init --lang go --framework react --recommended
+```
+
+You can also omit `--lang` entirely when using `--recommended` with at least one framework — the recommended languages are used as the starting set:
+
+```bash
+pc-init --framework django --recommended
+```
 
 ## Examples
 
@@ -145,6 +157,12 @@ Multiple languages (two equivalent forms):
 ```bash
 pc-init --lang py --lang js
 pc-init --lang=py,js
+```
+
+Django project, letting `pc-init` pick the language automatically:
+
+```bash
+pc-init --framework django --recommended
 ```
 
 ## Custom presets
