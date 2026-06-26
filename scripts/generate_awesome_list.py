@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -22,7 +23,7 @@ LANG_DIR = PROJECT_ROOT / "lang"
 FRAMEWORK_DIR = PROJECT_ROOT / "framework"
 
 
-def load_preset(path: Path) -> dict:
+def load_preset(path: Path) -> dict[str, Any]:
     """Load and parse a preset YAML file, returning an empty dict if missing."""
     if not path.exists():
         return {}
@@ -98,13 +99,13 @@ def repo_link(repo_url: str) -> tuple[str, str]:
     return f"[{repo_name}]({repo_url})", desc
 
 
-def render_repos(repos: list[dict]) -> list[str]:
+def render_repos(repos: list[dict[str, Any]]) -> list[str]:
     """Render a deduplicated, sorted list of repo bullet points."""
     seen: set[str] = set()
     entries: list[tuple[str, str, str]] = []  # (sort_key, link, desc)
     for repo in repos:
         url = repo["repo"]
-        if url not in seen and repo.get("hooks"):
+        if url not in seen and url != "meta" and repo.get("hooks"):
             seen.add(url)
             link, desc = repo_link(url)
             sort_key = url.rstrip("/").split("/")[-1].lower()
@@ -180,9 +181,6 @@ def build_awesome_list(languages: list[str], frameworks: list[str]) -> str:
         "---",
         "",
         "## Common",
-        "",
-        "> Applied to every generated configuration, "
-        "regardless of language or framework.",
         "",
     ]
     sections.extend(render_repos(common.get("repos", [])))
