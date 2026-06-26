@@ -1,6 +1,7 @@
 ---
-primary_languages:
-  - js
+recommended:
+  lang:
+    - js
 repos:
   - repo: local
     hooks:

@@ -5,7 +5,7 @@ import importlib.metadata
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
@@ -26,7 +26,8 @@ from gpc_init.merger import merge_presets
 from gpc_init.renderer import render_yaml
 from gpc_init.resolver import (
     deduplicate_preserving_order,
-    get_primary_languages_info,
+    expand_recommendations,
+    get_recommendations_info,
     get_supported_frameworks,
     get_supported_languages,
     normalize_framework,
@@ -40,8 +41,16 @@ def _generate_content(
     langs: list[str],
     frameworks: list[str],
     base_dir: Path | None,
-) -> tuple[str, list]:
-    """Validate, load, merge, render. Returns (yaml_content, fw_presets)."""
+    *,
+    all_recommendations: bool = False,
+) -> tuple[str, list[str], list[str], list[dict[str, Any]], list[dict[str, Any]]]:
+    """
+    Validate, load, merge, render.
+
+    Returns (yaml_content, final_langs, final_frameworks, lang_presets, fw_presets).
+    When all_recommendations=True the lang/framework lists are expanded with every
+    recommendation from the selected presets before merging.
+    """
     if base_dir is not None and not (base_dir / "lang").is_dir():
         typer.echo(f"Error: '{base_dir}' must contain a 'lang' subdirectory.", err=True)
         raise typer.Exit(code=1)
@@ -58,8 +67,24 @@ def _generate_content(
             load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
         ]
 
+        if all_recommendations:
+            langs, frameworks = expand_recommendations(
+                langs,
+                frameworks,
+                lang_presets,
+                fw_presets,
+                get_supported_languages(base_dir),
+                get_supported_frameworks(base_dir),
+            )
+            lang_presets = [
+                load_language_preset(lang_id, base_dir=base_dir) for lang_id in langs
+            ]
+            fw_presets = [
+                load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
+            ]
+
         merged = merge_presets(common, lang_presets, fw_presets)
-        return render_yaml(merged), fw_presets
+        return render_yaml(merged), langs, frameworks, lang_presets, fw_presets
 
     except UnsupportedLanguageError as exc:
         typer.echo(f"Error: {exc}", err=True)
@@ -83,9 +108,13 @@ def _run(
     frameworks: list[str],
     target: Path,
     base_dir: Path | None,
+    *,
+    all_recommendations: bool = False,
 ) -> None:
     """Generate and write the preset config to target."""
-    content, fw_presets = _generate_content(langs, frameworks, base_dir)
+    content, langs, frameworks, lang_presets, fw_presets = _generate_content(
+        langs, frameworks, base_dir, all_recommendations=all_recommendations
+    )
 
     overwritten = target.exists()
     try:
@@ -94,9 +123,10 @@ def _run(
         typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-    info = get_primary_languages_info(frameworks, fw_presets, langs)
-    if info:
-        typer.echo(info)
+    if not all_recommendations:
+        info = get_recommendations_info(langs, frameworks, lang_presets, fw_presets)
+        if info:
+            typer.echo(info)
 
     lang_str = ", ".join(langs)
     fw_str = (", ".join(frameworks)) if frameworks else "none"
@@ -111,12 +141,17 @@ def _dispatch(
     base_dir: Path | None,
     *,
     force: bool,
+    all_recommendations: bool = False,
 ) -> None:
     """Route to diff display or write depending on whether target exists."""
     if target.exists() and not force:
-        _handle_existing_file(langs, frameworks, target, base_dir)
+        _handle_existing_file(
+            langs, frameworks, target, base_dir, all_recommendations=all_recommendations
+        )
     else:
-        _run(langs, frameworks, target, base_dir)
+        _run(
+            langs, frameworks, target, base_dir, all_recommendations=all_recommendations
+        )
 
 
 def _handle_existing_file(
@@ -124,9 +159,13 @@ def _handle_existing_file(
     frameworks: list[str],
     target: Path,
     base_dir: Path | None,
+    *,
+    all_recommendations: bool = False,
 ) -> None:
     """Show unified diff vs existing file. Always raises typer.Exit."""
-    content, _ = _generate_content(langs, frameworks, base_dir)
+    content, *_ = _generate_content(
+        langs, frameworks, base_dir, all_recommendations=all_recommendations
+    )
     try:
         existing = target.read_text(encoding="utf-8")
     except (PermissionError, OSError) as exc:
@@ -256,6 +295,16 @@ def main(
             help="Output file path. Defaults to .pre-commit-config.yaml.",
         ),
     ] = ".pre-commit-config.yaml",
+    all_recommendations: Annotated[
+        bool,
+        typer.Option(
+            "--all-recommendations",
+            help=(
+                "Automatically include all languages and frameworks recommended "
+                "by the selected presets."
+            ),
+        ),
+    ] = False,
     presets: Annotated[
         str | None,
         typer.Option("--presets", help=_PRESETS_HELP),
@@ -294,7 +343,14 @@ def main(
     target = Path(output)
 
     with _resolved_preset_base(presets) as base_dir:
-        _dispatch(langs, frameworks, target, base_dir, force=force)
+        _dispatch(
+            langs,
+            frameworks,
+            target,
+            base_dir,
+            force=force,
+            all_recommendations=all_recommendations,
+        )
 
 
 @app.command("list")

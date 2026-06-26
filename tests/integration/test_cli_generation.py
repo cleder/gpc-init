@@ -202,7 +202,7 @@ class TestFrameworkGeneration:
             ["--lang", "go", "--framework", "react", "--output", str(output)],
         )
         assert result.exit_code == 0, result.output
-        assert "Note: framework 'react' is typically used with: js" in result.output
+        assert "Note: preset 'react' recommends adding: --lang=js" in result.output
         assert "None" not in result.output
 
     def test_success_message_includes_framework_name(self, tmp_path: Path) -> None:

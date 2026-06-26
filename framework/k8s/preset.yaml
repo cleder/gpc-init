@@ -1,7 +1,8 @@
 ---
-primary_languages:
-  - docker
-  - tf
+recommended:
+  lang:
+    - docker
+    - tf
 repos:
   - repo: https://github.com/stackrox/kube-linter
     rev: v0.8.3

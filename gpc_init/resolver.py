@@ -133,56 +133,129 @@ def validate_frameworks(frameworks: list[str], base_dir: Path | None = None) -> 
             raise UnsupportedFrameworkError(fw, supported)
 
 
-def get_primary_languages_info(
+def expand_recommendations(  # noqa: PLR0913
+    langs: list[str],
     frameworks: list[str],
-    framework_presets: list[dict[str, Any]],
-    selected_langs: list[str],
+    lang_presets: list[dict[str, Any]],
+    fw_presets: list[dict[str, Any]],
+    supported_langs: list[str],
+    supported_frameworks: list[str],
+) -> tuple[list[str], list[str]]:
+    """
+    Return (expanded_langs, expanded_frameworks) with preset recommendations applied.
+
+    Reads the ``recommended`` section from every selected preset and appends any
+    missing langs/frameworks that exist in the catalog. Single-pass — recommendations
+    of newly-added presets are not recursively expanded.
+
+    Args:
+        langs: Currently selected language ids.
+        frameworks: Currently selected framework ids.
+        lang_presets: Loaded lang preset dicts (same order as langs).
+        fw_presets: Loaded framework preset dicts (same order as frameworks).
+        supported_langs: Full list of available language ids in the catalog.
+        supported_frameworks: Full list of available framework ids in the catalog.
+
+    """
+    extra_langs: list[str] = []
+    extra_fws: list[str] = []
+    for preset in [*lang_presets, *fw_presets]:
+        rec = preset.get("recommended", {})
+        for lang in rec.get("lang", []):
+            if (
+                lang not in langs
+                and lang not in extra_langs
+                and lang in supported_langs
+            ):
+                extra_langs.append(lang)
+        for fw in rec.get("framework", []):
+            if (
+                fw not in frameworks
+                and fw not in extra_fws
+                and fw in supported_frameworks
+            ):
+                extra_fws.append(fw)
+    return [*langs, *extra_langs], [*frameworks, *extra_fws]
+
+
+def _missing_recommendations(
+    preset: dict[str, Any],
+    langs: list[str],
+    frameworks: list[str],
+) -> tuple[list[str], list[str]]:
+    rec = preset.get("recommended", {})
+    missing_langs = [lang for lang in rec.get("lang", []) if lang not in langs]
+    missing_fws = [fw for fw in rec.get("framework", []) if fw not in frameworks]
+    return missing_langs, missing_fws
+
+
+def _extend_unique(target: list[str], items: list[str]) -> None:
+    for item in items:
+        if item not in target:
+            target.append(item)
+
+
+def get_recommendations_info(
+    langs: list[str],
+    frameworks: list[str],
+    lang_presets: list[dict[str, Any]],
+    fw_presets: list[dict[str, Any]],
 ) -> str | None:
     """
-    Return a message if selected langs don't match a framework's primary_languages.
+    Return an informational message when selected presets have unmet recommendations.
 
-    This is purely informational and non-blocking. A framework preset may declare
-    ``primary_languages`` listing the languages it is typically used with. When none
-    of the user-selected languages appear in that list, a per-framework note is
-    emitted together with a single consolidated ``Try:`` suggestion.
+    Each preset (lang or framework) may declare a ``recommended`` section listing
+    languages and frameworks it is typically used with. When any recommended item is
+    absent from the current selection, a per-preset note is emitted together with a
+    single consolidated ``Try:`` suggestion.
 
     The suggestion is constructed to be safe to re-run with ``--force``:
     - ``--lang`` starts with all currently-selected languages so no existing hooks
-      are lost, then appends only the missing primary languages.
-    - ``--framework`` lists every framework the user originally specified, not just
-      the mismatched ones.
+      are lost, then appends only the missing recommended languages.
+    - ``--framework`` does the same for frameworks.
 
-    Example output for ``--lang=go --framework=react,django`` where neither matches::
+    Example output for ``--lang=go --framework=react`` where react recommends
+    ``lang: [js, ts]``::
 
-        Note: framework 'react' is typically used with: js, ts
-        Note: framework 'django' is typically used with: py
-              Try: pc-init --lang=go,js,ts,py --framework=react,django
+        Note: preset 'react' recommends adding: --lang=js,ts
+              Try: pc-init --lang=go,js,ts --framework=react
 
-    Returns ``None`` when every framework either declares no ``primary_languages`` or
-    at least one selected language already satisfies it.
+    Returns ``None`` when every preset either has no ``recommended`` section or all
+    recommended items are already selected.
 
     Args:
-        frameworks: Normalized framework ids.
-        framework_presets: Loaded framework preset dicts (same order as frameworks).
-        selected_langs: Normalized selected language ids.
+        langs: Normalized selected language ids.
+        frameworks: Normalized selected framework ids.
+        lang_presets: Loaded language preset dicts (same order as langs).
+        fw_presets: Loaded framework preset dicts (same order as frameworks).
 
     """
     notes: list[str] = []
     extra_langs: list[str] = []
-    for fw_id, fw_preset in zip(frameworks, framework_presets, strict=True):
-        primary = fw_preset.get("primary_languages", [])
-        if primary and not any(lang in primary for lang in selected_langs):
-            primary_str = ", ".join(primary)
-            notes.append(
-                f"Note: framework '{fw_id}' is typically used with: {primary_str}"
-            )
-            for lang in primary:
-                if lang not in selected_langs and lang not in extra_langs:
-                    extra_langs.append(lang)
+    extra_fws: list[str] = []
+
+    for preset_id, preset in [
+        *zip(langs, lang_presets, strict=True),
+        *zip(frameworks, fw_presets, strict=True),
+    ]:
+        missing_langs, missing_fws = _missing_recommendations(preset, langs, frameworks)
+        if not missing_langs and not missing_fws:
+            continue
+
+        parts: list[str] = []
+        if missing_langs:
+            parts.append(f"--lang={','.join(missing_langs)}")
+        if missing_fws:
+            parts.append(f"--framework={','.join(missing_fws)}")
+        notes.append(f"Note: preset '{preset_id}' recommends adding: {' '.join(parts)}")
+
+        _extend_unique(extra_langs, missing_langs)
+        _extend_unique(extra_fws, missing_fws)
+
     if not notes:
         return None
-    all_langs = [*selected_langs, *extra_langs]
-    lang_flag = ",".join(all_langs)
-    fw_flag = ",".join(frameworks)
+
+    lang_flag = ",".join([*langs, *extra_langs])
+    fw_flag = ",".join([*frameworks, *extra_fws])
     suggestion = f"      Try: pc-init --lang={lang_flag} --framework={fw_flag}"
     return "\n".join([*notes, suggestion])

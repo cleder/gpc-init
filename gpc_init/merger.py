@@ -114,7 +114,7 @@ def merge_presets(
 
     For top-level 'repos' key: entries are merged by (repo, rev) key.
     For other top-level keys: higher-precedence values override lower.
-    Framework metadata keys (e.g. 'primary_languages') are excluded from output.
+    Preset metadata keys (e.g. 'recommended') are excluded from output.
 
     Args:
         common: Common baseline preset dict.
@@ -137,9 +137,7 @@ def merge_presets(
         if layer_repos:
             merged_repos = _merge_repos(merged_repos, layer_repos)
         # Merge other top-level keys (skip repos and framework metadata)
-        non_repo = {
-            k: v for k, v in layer.items() if k not in ("repos", "primary_languages")
-        }
+        non_repo = {k: v for k, v in layer.items() if k not in ("repos", "recommended")}
         result = _deep_merge_top_level(result, non_repo)
 
     if merged_repos:
