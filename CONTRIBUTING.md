@@ -86,7 +86,7 @@ find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
 ### Just Runner
 
 The repository includes a `.justfile` for using the [just](https://just.systems/man/en/) runner framework.
-You can install `just` with `uv`.
+You can [install `just`](https://just.systems/man/en/packages.html) with `uv`.
 
 ```bash
 uv tool install rust-just
