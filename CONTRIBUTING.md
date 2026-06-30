@@ -26,6 +26,7 @@ tests/                       # pytest test suite
 ### Adding or updating a hook
 
 Each preset is a standalone `preset.yaml` file that follows the [pre-commit config format](https://pre-commit.com/#pre-commit-configyaml---top-level).
+Every check (hooks id) should have a name and description.
 A language preset looks like this:
 
 ```yaml
@@ -35,6 +36,8 @@ repos:
     rev: v1.2.3
     hooks:
       - id: hook-id
+        name: Example hook
+        description: What this hook does
 ```
 
 Framework presets may additionally declare which languages and frameworks they recommend:
@@ -83,7 +86,13 @@ find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
 ### Just Runner
 
 The repository includes a `.justfile` for using the [just](https://just.systems/man/en/) runner framework.
-If you have this installed you can use `just` to see the available recipes.
+You can install `just` with `uv`.
+
+```bash
+uv tool install rust-just
+```
+
+Once you have this installed you can use `just` to see the available recipes.
 
 ``` bash
 ❱ just
