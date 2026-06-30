@@ -3,6 +3,7 @@ repos:
   - repo: meta
     hooks:
       - id: check-useless-excludes
+      - id: check-hooks-apply
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -12,7 +13,6 @@ repos:
       - id: check-merge-conflict
       - id: check-toml
       - id: check-vcs-permalinks
-      - id: check-xml
       - id: check-yaml
       - id: debug-statements
       - id: end-of-file-fixer
@@ -21,7 +21,6 @@ repos:
         args: ['--django']
       - id: no-commit-to-branch
       - id: pretty-format-json
-      - id: requirements-txt-fixer
       - id: trailing-whitespace
   - repo: https://github.com/MarcoGorelli/absolufy-imports
     rev: v0.3.1
