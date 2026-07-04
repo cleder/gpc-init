@@ -37,7 +37,7 @@ repos:
     hooks:
       - id: pre-commit-sort
   - repo: https://github.com/crate-ci/typos
-    rev: v1.47.2
+    rev: v1.48.0
     hooks:
       - id: typos
   - repo: https://github.com/gitleaks/gitleaks
@@ -49,7 +49,7 @@ repos:
     hooks:
       - id: talisman-commit
   - repo: https://github.com/trufflesecurity/truffleHog
-    rev: v3.95.6
+    rev: v3.95.8
     hooks:
       - id: trufflehog
         args: ["--only-verified"]

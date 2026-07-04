@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.5.1
+    rev: v2.5.2
     hooks:
       - id: biome-check
         additional_dependencies: ["@biomejs/biome@1.9.4"]
@@ -11,7 +11,7 @@ repos:
       - id: prettier
         types_or: [javascript, jsx, json, css, markdown]
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v0.0.0
+    rev: v1.72.0
     hooks:
       - id: oxlint
         verbose: true
