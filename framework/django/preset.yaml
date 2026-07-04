@@ -35,5 +35,4 @@ repos:
     hooks:
       - id: mrt-check
         args: [myapp/migrations/]
-        title: "pytest-mrt verifies that your data survives a rollback"
         description: "Catch database migration rollback failures before they reach production"
