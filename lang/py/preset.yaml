@@ -30,6 +30,10 @@ repos:
     rev: v0.0.56
     hooks:
       - id: ty
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.1.0
+    hooks:
+      - id: mypy
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
     rev: v5.1.0
     hooks:
