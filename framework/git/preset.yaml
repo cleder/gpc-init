@@ -1,5 +1,17 @@
 ---
 repos:
+  - repo: https://github.com/commit-check/commit-check
+    rev: v2.5.0
+    hooks:
+      - id: check-message
+        args:
+          - --subject-imperative=false
+          - --subject-max-length=100
+          - --allow-merge-commits=false
+        stages: [commit-msg]
+      - id: check-branch
+      - id: check-author-name
+      - id: check-author-email
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.16.4
     hooks:
@@ -13,3 +25,34 @@ repos:
     rev: v1.26.1
     hooks:
       - id: zizmor
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.37.3
+    hooks:
+      - id: check-azure-pipelines
+      - id: check-bamboo-spec
+      - id: check-bitbucket-pipelines
+      - id: check-buildkite
+      - id: check-changie
+      - id: check-circle-ci
+      - id: check-citation-file-format
+      - id: check-cloudbuild
+      - id: check-codecov
+      - id: check-compose-spec
+      - id: check-drone-ci
+      - id: check-github-actions
+      - id: check-github-discussion
+      - id: check-github-issue-forms
+      - id: check-github-workflows
+      - id: check-gitlab-ci
+      - id: check-meltano
+      - id: check-mergify
+      - id: check-readthedocs
+      - id: check-renovate
+      - id: check-snapcraft
+      - id: check-taskfile
+      - id: check-travis
+      - id: check-woodpecker-ci

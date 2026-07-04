@@ -10,3 +10,9 @@ repos:
     hooks:
       - id: prettier
         types_or: [javascript, jsx, json, css, markdown]
+  - repo: https://github.com/oxc-project/mirrors-oxlint
+    rev: v0.0.0
+    hooks:
+      - id: oxlint
+        verbose: true
+        description: "oxlint is a linter for JavaScript and TypeScript codebases. It helps identify and fix common issues, enforce coding standards, and improve code quality."
