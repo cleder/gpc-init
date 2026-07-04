@@ -1,4 +1,6 @@
 ---
+ci:
+  skip: [ty]
 repos:
   - repo: meta
     hooks:
