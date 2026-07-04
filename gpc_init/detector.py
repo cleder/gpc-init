@@ -54,6 +54,7 @@ _EXTENSION_TO_LANG: dict[str, str] = {
 # Matched case-insensitively against the file stem (no extension).
 _FILENAME_TO_LANG: dict[str, str] = {
     "dockerfile": "docker",
+    "makefile": "make",
 }
 
 

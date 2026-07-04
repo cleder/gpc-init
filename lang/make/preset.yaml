@@ -1,0 +1,6 @@
+---
+repos:
+  - repo: https://github.com/checkmake/checkmake
+    rev: v0.3.2
+    hooks:
+      - id: checkmake

@@ -34,6 +34,9 @@ class TestNormalizeLang:
     def test_alias_golang(self) -> None:
         assert normalize_lang("golang") == "go"
 
+    def test_alias_makefile(self) -> None:
+        assert normalize_lang("makefile") == "make"
+
     def test_strips_whitespace(self) -> None:
         assert normalize_lang("  py  ") == "py"
 

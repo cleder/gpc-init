@@ -88,7 +88,7 @@ pc-init list
 
 ```text
 Languages:
-  docker, go, img, js, md, nb, py, ru, sh, sql, tf, toml, ts, yaml
+  docker, go, img, js, make, md, nb, py, ru, sh, sql, tf, toml, ts, yaml
 
 Frameworks:
   django, git, k8s, react, sphinx
@@ -121,8 +121,9 @@ pc-init list --presets https://github.com/org/my-presets
 | `tf` | Terraform |
 | `toml` | TOML |
 | `yaml` | YAML |
+| `make` | Makefiles |
 
-Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, and `terraform` are also accepted.
+Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, and `terraform` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -179,6 +180,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.r` | `r` |
 | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg` | `img` |
 | `Dockerfile` (filename) | `docker` |
+| `Makefile` (filename) | `make` |
 
 **Framework detection** is based on indicator files:
 

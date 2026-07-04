@@ -13,6 +13,7 @@ _LANG_ALIASES: dict[str, str] = {
     "image": "img",
     "javascript": "js",
     "jupyter": "nb",
+    "makefile": "make",
     "notebook": "nb",
     "python": "py",
     "rust": "ru",

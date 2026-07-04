@@ -13,6 +13,7 @@ ALL_LANGS = [
     "go",
     "img",
     "js",
+    "make",
     "md",
     "nb",
     "py",
@@ -49,6 +50,14 @@ class TestDetectLanguages:
     def test_detects_dockerfile_case_insensitive(self, tmp_path: Path) -> None:
         (tmp_path / "dockerfile").touch()
         assert "docker" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_makefile_by_filename(self, tmp_path: Path) -> None:
+        (tmp_path / "Makefile").touch()
+        assert "make" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_makefile_case_insensitive(self, tmp_path: Path) -> None:
+        (tmp_path / "makefile").touch()
+        assert "make" in detect_languages(tmp_path, ALL_LANGS)
 
     def test_detects_rust_by_rs_extension(self, tmp_path: Path) -> None:
         (tmp_path / "lib.rs").touch()
