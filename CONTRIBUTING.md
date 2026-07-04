@@ -98,39 +98,39 @@ Once you have this installed you can use `just` to see the available recipes.
 ❱ just
 just --list
 Available recipes:
-    autoupdate target
+    awesome
     default
-    validate target
-    validate_update target
-    validate_update_all
+    test
+    update target="all" type="lang"
+    validate target="all" type="lang"
 ```
 
-These allow you to validate and/or update a given language preset in a slightly more concise manner as the provided language name is inserted into the target path automatically, all you have to do is provide the language alias as the example below shows.
+`validate` and `update` both take an optional `target` (a language or framework alias, defaulting to `all`) and `type` (`lang` or `framework`, defaulting to `lang`).
+This lets you validate and/or update a given preset in a concise manner: just provide the alias, and, for framework presets, the type.
 
 ``` bash
-❱ just validate_update py
-Validating py...
-pre-commit validate-config lang/py/preset.yaml
-prek validate-config lang/py/preset.yaml
+❱ just validate py
+Validating py ...
 success: All configs are valid
+success: All configs are valid
+```
+
+``` bash
+❱ just update py
 Autoupdating py...
-pre-commit autoupdate -c lang/py/preset.yaml
 [https://github.com/MarcoGorelli/absolufy-imports] already up to date!
 [https://github.com/astral-sh/ruff-pre-commit] updating v0.15.19 -> v0.15.20
 [https://github.com/abravalheri/validate-pyproject] already up to date!
-[https://github.com/kieran-ryan/pyprojectsort] already up to date!
-[https://github.com/adamchainz/blacken-docs] already up to date!
-[https://github.com/facebook/pyrefly-pre-commit] already up to date!
-[https://github.com/astral-sh/ty-pre-commit] updating v0.0.53 -> v0.0.54
-[https://github.com/rohaquinlop/complexipy-pre-commit] already up to date!
-[https://github.com/asmeurer/removestar] already up to date!
-[https://github.com/PyCQA/bandit] already up to date!
-[https://github.com/PyCQA/docformatter] already up to date!
-[https://github.com/econchick/interrogate] already up to date!
-[https://github.com/asottile/pyupgrade] already up to date!
-[https://github.com/astral-sh/uv-pre-commit] already up to date!
-[https://github.com/numpy/numpydoc] already up to date!
-prek autoupdate -c lang/py/preset.yaml
+...
+```
+
+For a framework preset, pass `framework` as the second argument, e.g. `just validate django framework`.
+
+To validate or update every preset at once, omit the target (or pass `all`):
+
+``` bash
+just validate
+just update
 ```
 
 ### Hook quality bar
@@ -164,8 +164,8 @@ just test
 which will run:
 
 ```bash
-uv run pytest tests --cov=gpc_init
-uv run complexipy gpc_init
+uv run pytest tests --cov=gpc_init tests
+uv run complexipy --failed gpc_init
 uv run ruff check gpc_init tests
 uv run ruff format gpc_init tests
 uv run pyrefly check gpc_init tests
