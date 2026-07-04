@@ -12,6 +12,10 @@ Each language and framework has its own recommended linters, formatters, and qua
 `pc-init` encodes those choices in version-controlled presets so you run one command instead of copying configs and looking up hook URLs.
 The bundled presets pin specific hook revisions — run `pre-commit autoupdate` or `prek autoupdate` after generation to pull in the latest versions.
 
+## Alternatives
+
+If you'd rather run one all-in-one Docker-based linter instead of wiring up individual pre-commit hooks, see [MegaLinter](https://github.com/oxsecurity/megalinter). `pc-init` takes the opposite approach: it generates a `.pre-commit-config.yaml` of individually-pinned, curated hooks that run natively via `pre-commit`/`prek`, so you can see, version, and update each tool independently.
+
 ## Awesome Pre-commit Hooks
 
 The curated hooks bundled with `pc-init` are also published as a standalone reference at [awesome-pre-commit-hooks](https://github.com/cleder/awesome-pre-commit-hooks) — a browsable list of every hook organised by language and framework.
