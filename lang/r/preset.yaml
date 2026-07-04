@@ -10,6 +10,11 @@ repos:
           tests/testthat/in/.*|
           renv/.*
           )$
+      - id: lintr
+        exclude: >
+          (?x)^(
+          tests/testthat/in/.*
+          )$
       - id: roxygenize
         additional_dependencies:
           - cli
