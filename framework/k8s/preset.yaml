@@ -12,3 +12,8 @@ repos:
     rev: v0.3.0
     hooks:
       - id: kubeconform-helm
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.1.30
+    hooks:
+      - id: helmlint
+        files: (^|/)(Chart\.ya?ml|templates/.*\.(ya?ml|tpl))$
