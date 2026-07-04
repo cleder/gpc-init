@@ -76,3 +76,15 @@ repos:
     rev: 0.4.0
     hooks:
       - id: vercheck
+  - repo: https://github.com/kucherenko/jscpd
+    rev: v5.0.11
+    hooks:
+      - id: jscpd
+  - repo: https://github.com/errata-ai/vale
+    rev: v3.15.1
+    hooks:
+      - id: vale
+  - repo: https://github.com/lycheeverse/lychee
+    rev: lychee-v0.24.2
+    hooks:
+      - id: lychee
