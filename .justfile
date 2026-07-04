@@ -22,3 +22,16 @@ validate_update target type="lang":
     just validate "{{target}}" "{{type}}"
     @echo 'Autoupdating {{target}}...'
     just autoupdate "{{target}}" "{{type}}"
+
+awesome:
+    @echo "Creating awesome list"
+    uv run scripts/generate_awesome_list.py
+    cp AWESOME.md ../awesome-pre-commit-hooks/README.md
+
+test:
+    uv run pytest tests --cov=gpc_init tests
+    uv run complexipy --failed gpc_init
+    uv run ruff check gpc_init tests
+    uv run ruff format gpc_init tests
+    uv run pyrefly check gpc_init tests
+    uv run ty check gpc_init tests
