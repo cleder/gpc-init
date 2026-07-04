@@ -158,12 +158,18 @@ pc-init --help
 Run the test suite and static checks before opening a PR:
 
 ```bash
+just test
+```
+
+which will run:
+
+```bash
 uv run pytest tests --cov=gpc_init
+uv run complexipy gpc_init
 uv run ruff check gpc_init tests
 uv run ruff format gpc_init tests
 uv run pyrefly check gpc_init tests
 uv run ty check gpc_init tests
-uv run complexipy gpc_init
 ```
 
 ## Submitting a pull request
