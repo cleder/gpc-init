@@ -9,50 +9,94 @@ repos:
           - --subject-max-length=100
           - --allow-merge-commits=false
         stages: [commit-msg]
+        description: "ensures commit message to match regex"
       - id: check-branch
+        description: "ensures branch name to match regex"
       - id: check-author-name
+        description: "ensures committer name to match regex"
       - id: check-author-email
+        description: "ensures committer email to match regex"
+      - id: check-no-force-push
+        description: "prevents force pushes to remote branches"
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.16.4
     hooks:
       - id: commitizen
         stages: [commit-msg]
+        description: "Check whether the current commit message follows committing rules. Allow empty commit messages by default, because they typically indicate to Git that the commit should be aborted."
+      - id: commitizen-branch
+        description: "Check all commit messages that are already on the current branch but not the default branch on the origin repository. Useful for checking messages after the fact (e.g., pre-push or in CI) without an expensive check of the entire repository history."
   - repo: https://github.com/jorisroovers/gitlint
     rev: v0.19.1
     hooks:
       - id: gitlint
+        description: "Checks your git commit messages for style."
+      - id: gitlint-ci
+        description: "gitlint"
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: v1.26.1
     hooks:
       - id: zizmor
+        description: "Find security issues in GitHub Actions CI/CD setups"
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
     hooks:
       - id: actionlint
+        description: "Runs actionlint to lint GitHub Actions workflow files"
   - repo: https://github.com/python-jsonschema/check-jsonschema
     rev: 0.37.4
     hooks:
       - id: check-azure-pipelines
+        description: "Validate Azure Pipelines config against the schema provided by Microsoft"
       - id: check-bamboo-spec
+        description: "Validate Bamboo Specs against the schema provided by SchemaStore"
       - id: check-bitbucket-pipelines
+        description: "Validate Bitbucket Pipelines against the schema provided by SchemaStore"
       - id: check-buildkite
+        description: "Validate Buildkite Pipelines against the schema provided by Buildkite"
       - id: check-changie
+        description: "Validate Changie configuration"
       - id: check-circle-ci
+        description: "Validate CircleCI config against the schema provided by SchemaStore"
       - id: check-citation-file-format
+        description: "Validate Citation File Format"
       - id: check-cloudbuild
+        description: "Validate Google Cloud Build config against the schema provided by SchemaStore"
       - id: check-codecov
+        description: "Validate Codecov config against the schema provided by SchemaStore"
       - id: check-compose-spec
+        description: "Validate Docker Compose files against the schema provided by SchemaStore"
       - id: check-drone-ci
+        description: "Validate Drone-CI Config against the schema provided by SchemaStore"
       - id: check-github-actions
+        description: "Validate GitHub Actions against the schema provided by SchemaStore"
       - id: check-github-discussion
+        description: "Validate GitHub discussion against the schema provided by SchemaStore"
       - id: check-github-issue-forms
+        description: "Validate GitHub issue forms against the schema provided by SchemaStore"
       - id: check-github-workflows
+        description: "Validate GitHub Workflows against the schema provided by SchemaStore"
       - id: check-gitlab-ci
+        description: "Validate GitLab CI config against the schema provided by SchemaStore"
       - id: check-meltano
+        description: "Validate Meltano config against the schema provided by Meltano"
       - id: check-mergify
+        description: "Validate Mergify config against the schema provided by SchemaStore"
       - id: check-readthedocs
+        description: "Validate ReadTheDocs config against the schema provided by ReadTheDocs"
       - id: check-renovate
+        description: "Validate Renovate config against the schema provided by Renovate (does not support renovate config in package.json)"
       - id: check-snapcraft
+        description: "Validate snapcraft files against the schema provided by Canonical"
       - id: check-taskfile
+        description: "Validate Taskfile config against the schema provided by Task"
       - id: check-travis
+        description: "Validate Travis Config against the schema provided by SchemaStore"
       - id: check-woodpecker-ci
+        description: "Validate Woodpecker Config against the schema provided by SchemaStore"
+      - id: check-dependabot
+        description: "Validate Dependabot Config (v2) against the schema provided by SchemaStore"
+      - id: check-github-issue-config
+        description: "Validate GitHub issue config against the schema provided by SchemaStore"
+      - id: check-metaschema
+        description: "Validate JSON Schema files against their matching metaschema"
