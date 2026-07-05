@@ -4,4 +4,12 @@ repos:
     rev: v1.71.0
     hooks:
       - id: buf-format
+        description: "Format .proto files"
       - id: buf-lint
+        description: "Lint .proto files against buf's style rules"
+      - id: buf-build
+        description: "Build the buf module, validating that it resolves correctly"
+      - id: buf-dep-prune
+        description: "Remove unused dependencies from buf.lock"
+      - id: buf-dep-update
+        description: "Update buf module dependencies in buf.lock"
