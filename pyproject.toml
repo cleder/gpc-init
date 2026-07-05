@@ -1,6 +1,7 @@
 [dependency-groups]
 dev = [
     "deptry>=0.24.0",
+    "ruamel.yaml>=0.18.0",
     { include-group = "lint" },
     { include-group = "test" },
 ]
