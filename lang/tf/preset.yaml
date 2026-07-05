@@ -4,11 +4,30 @@ repos:
     rev: v1.108.0
     hooks:
       - id: terraform_docs
+        description: "Inserts input and output documentation into README.md (using terraform-docs)."
       - id: terraform_fmt
+        description: "Rewrites all Terraform configuration files to a canonical format."
       - id: terraform_tflint
+        description: "Validates all Terraform configuration files with TFLint."
       - id: terraform_validate
+        description: "Validates all Terraform configuration files."
+      - id: terraform_providers_lock
+        description: "Updates provider signatures in dependency lock files."
+      - id: terraform_trivy
+        description: "Static analysis of Terraform templates to spot potential security issues."
+      - id: terragrunt_fmt
+        description: "Rewrites all Terragrunt configuration files to a canonical format."
+      - id: terragrunt_providers_lock
+        description: "Updates provider signatures in dependency lock files using terragrunt."
+      - id: terragrunt_validate
+        description: "Validates all Terragrunt configuration files."
+      - id: terragrunt_validate_inputs
+        description: "Validates Terragrunt unused and undefined inputs."
+      - id: tfupdate
+        description: "Runs tfupdate on Terraform templates."
   - repo: https://github.com/bridgecrewio/checkov
     rev: 3.3.6
     hooks:
       - id: checkov_diff
         args: [--framework, terraform]
+        description: "This hook runs checkov against all changed files."
