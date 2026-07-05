@@ -4,3 +4,4 @@ repos:
     rev: v1.88.1
     hooks:
       - id: rubocop
+        description: "Enforce the community Ruby Style Guide with RuboCop"
