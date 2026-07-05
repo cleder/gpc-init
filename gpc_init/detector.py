@@ -32,6 +32,22 @@ _EXTENSION_TO_LANG: dict[str, str] = {
     ".tsx": "ts",
     ".go": "go",
     ".rs": "ru",
+    ".rb": "rb",
+    ".c": "cpp",
+    ".h": "cpp",
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
+    ".hh": "cpp",
+    ".hxx": "cpp",
+    ".proto": "proto",
+    ".swift": "swift",
+    ".kt": "kt",
+    ".kts": "kt",
+    ".css": "css",
+    ".scss": "css",
+    ".sass": "css",
     ".sh": "sh",
     ".bash": "sh",
     ".sql": "sql",
@@ -54,17 +70,15 @@ _EXTENSION_TO_LANG: dict[str, str] = {
 # Matched case-insensitively against the file stem (no extension).
 _FILENAME_TO_LANG: dict[str, str] = {
     "dockerfile": "docker",
+    "makefile": "make",
 }
 
 
 def _walk(repo_dir: Path) -> Generator[Path]:
     """Yield all files under repo_dir, skipping directories in _SKIP_DIRS."""
-    for entry in repo_dir.iterdir():
-        if entry.is_dir():
-            if entry.name not in _SKIP_DIRS:
-                yield from _walk(entry)
-        else:
-            yield entry
+    for root, dirs, files in repo_dir.walk(on_error=lambda _: None):
+        dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
+        yield from (root / f for f in files)
 
 
 def detect_languages(repo_dir: Path, supported_langs: list[str]) -> list[str]:
@@ -94,7 +108,9 @@ def _has_package_json_dep(repo_dir: Path, dep: str) -> bool:
         data = json.loads(pkg.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return False
-    deps = {*data.get("dependencies", {}), *data.get("devDependencies", {})}
+    if not isinstance(data, dict):
+        return False
+    deps = {*(data.get("dependencies") or {}), *(data.get("devDependencies") or {})}
     return dep in deps
 
 
@@ -131,11 +147,14 @@ def _has_github_workflows(repo_dir: Path) -> bool:
     workflows = repo_dir / ".github" / "workflows"
     if not workflows.is_dir():
         return False
-    return any(
-        f.suffix.lower() in {".yaml", ".yml"}
-        for f in workflows.iterdir()
-        if f.is_file()
-    )
+    try:
+        return any(
+            f.suffix.lower() in {".yaml", ".yml"}
+            for f in workflows.iterdir()
+            if f.is_file()
+        )
+    except OSError:
+        return False
 
 
 # Ordered list of (framework_id, detector) pairs.
@@ -145,6 +164,7 @@ _FRAMEWORK_DETECTORS: list[tuple[str, Callable[[Path], bool]]] = [
     ("sphinx", _has_sphinx_conf),
     ("k8s", _has_kubernetes_files),
     ("git", _has_github_workflows),
+    ("ansible", lambda d: (d / "ansible.cfg").is_file()),
 ]
 
 

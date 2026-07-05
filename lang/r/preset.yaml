@@ -10,6 +10,13 @@ repos:
           tests/testthat/in/.*|
           renv/.*
           )$
+        description: "style files with {styler}"
+      - id: lintr
+        exclude: >
+          (?x)^(
+          tests/testthat/in/.*
+          )$
+        description: "check if a `.R` file is lint free (using {lintr})"
       - id: roxygenize
         additional_dependencies:
           - cli
@@ -25,7 +32,9 @@ repos:
           - yaml
       # codemeta must be above use-tidy-description when both are used
       # - id: codemeta-description-updated
+        description: "run `roxygen2::roxygenize()`"
       - id: use-tidy-description
+        description: "run `usethis::use_tidy_description()`"
       - id: spell-check
         exclude: >
           (?x)^(
@@ -60,22 +69,27 @@ repos:
           revdep/.*|
           tests/testthat/in/.
           )$
+        description: "perform a spell check with `spelling::spell_check_files()`"
       - id: readme-rmd-rendered
+        description: "make sure README.Rmd hasn't been edited more recently than `README.md`"
       - id: parsable-R
         exclude: >
           (?x)^(
           tests/testthat/in/.*
           )$
+        description: "check if a .R file is parsable"
       - id: no-browser-statement
         exclude: >
           (?x)^(
           tests/testthat/in/.*
           )$
+        description: "check if a .R file contains a `browser()` statement"
       - id: no-debug-statement
         exclude: >
           (?x)^(
           tests/testthat/in/.*
           )$
+        description: "check if a .R file contains a `debug()` or `debugonce()` statement"
       - id: deps-in-desc
         exclude: >
           (?x)^(
@@ -88,4 +102,12 @@ repos:
           renv/activate.R|
           vignettes/FAQ\.Rmd
           )$
+        description: "Check if dependencies that can be parsed from code are in `DESCRIPTION`"
       - id: pkgdown
+        description: "check if your {pkgdown} config file has the correct entries for references and articles"
+      - id: no-print-statement
+        description: "check if a .R file contains a `print()` statement"
+      - id: parsable-roxygen
+        description: "check if roxygen comments in a .R file are parsable"
+      - id: renv-lockfile-validate
+        description: "Validate that your `renv.lock` file is valid json and fits the default or provided schema"

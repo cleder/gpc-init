@@ -5,3 +5,4 @@ repos:
     hooks:
       - id: oxipng
         args: [-o, "4", --strip, safe]
+        description: "Multithreaded PNG optimizer written in Rust."

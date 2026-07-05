@@ -6,12 +6,15 @@ repos:
       - id: cargo-check
         args:
           - --workspace
+        description: "Check the package for errors."
       - id: clippy
         args:
           - --
           - -D
           - warnings
+        description: "Lint rust sources"
       - id: fmt
         args:
           - --
           - --check
+        description: "Format files with cargo fmt."

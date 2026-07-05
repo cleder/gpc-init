@@ -1,12 +1,20 @@
 ---
 repos:
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.5.1
+    rev: v2.5.2
     hooks:
       - id: biome-check
         additional_dependencies: ["@biomejs/biome@1.9.4"]
+        description: "Biome's pre-commit hooks."
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types_or: [javascript, jsx, json, css, markdown]
+        description: "mirror of the `prettier` npm package for pre-commit"
+  - repo: https://github.com/oxc-project/mirrors-oxlint
+    rev: v1.72.0
+    hooks:
+      - id: oxlint
+        verbose: true
+        description: "oxlint is a linter for JavaScript and TypeScript codebases. It helps identify and fix common issues, enforce coding standards, and improve code quality."

@@ -9,23 +9,30 @@ from gpc_init import detector as _detector
 from gpc_init.detector import detect_frameworks, detect_languages
 
 ALL_LANGS = [
+    "cpp",
+    "css",
     "docker",
     "go",
     "img",
     "js",
+    "kt",
+    "make",
     "md",
     "nb",
+    "proto",
     "py",
     "r",
+    "rb",
     "ru",
     "sh",
     "sql",
+    "swift",
     "tf",
     "toml",
     "ts",
     "yaml",
 ]
-ALL_FRAMEWORKS = ["django", "git", "k8s", "react", "sphinx"]
+ALL_FRAMEWORKS = ["ansible", "django", "git", "k8s", "react", "sphinx"]
 
 
 class TestDetectLanguages:
@@ -50,9 +57,53 @@ class TestDetectLanguages:
         (tmp_path / "dockerfile").touch()
         assert "docker" in detect_languages(tmp_path, ALL_LANGS)
 
+    def test_detects_makefile_by_filename(self, tmp_path: Path) -> None:
+        (tmp_path / "Makefile").touch()
+        assert "make" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_makefile_case_insensitive(self, tmp_path: Path) -> None:
+        (tmp_path / "makefile").touch()
+        assert "make" in detect_languages(tmp_path, ALL_LANGS)
+
     def test_detects_rust_by_rs_extension(self, tmp_path: Path) -> None:
         (tmp_path / "lib.rs").touch()
         assert "ru" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_ruby_by_rb_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.rb").touch()
+        assert "rb" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_cpp_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.cpp").touch()
+        assert "cpp" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_c_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.c").touch()
+        assert "cpp" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_proto_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "service.proto").touch()
+        assert "proto" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_swift_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.swift").touch()
+        assert "swift" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_kotlin_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "Main.kt").touch()
+        assert "kt" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_kotlin_script_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "build.gradle.kts").touch()
+        assert "kt" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_css_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "styles.css").touch()
+        assert "css" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_scss_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "styles.scss").touch()
+        assert "css" in detect_languages(tmp_path, ALL_LANGS)
 
     def test_detects_markdown(self, tmp_path: Path) -> None:
         (tmp_path / "README.md").touch()
@@ -146,6 +197,13 @@ class TestDetectFrameworks:
 
     def test_no_django_without_manage_py(self, tmp_path: Path) -> None:
         assert "django" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_detects_ansible_by_ansible_cfg(self, tmp_path: Path) -> None:
+        (tmp_path / "ansible.cfg").touch()
+        assert "ansible" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_no_ansible_without_ansible_cfg(self, tmp_path: Path) -> None:
+        assert "ansible" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
     def test_detects_react_from_package_json(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text(
@@ -437,3 +495,44 @@ class TestDetectFrameworks:
         workflows.mkdir(parents=True)
         (workflows / "ci.yaml").touch()
         assert "git" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    # mutmut_16: encoding=None instead of encoding="utf-8" in _has_kubernetes_files
+    def test_k8s_reads_yaml_file_with_utf8_encoding(self, tmp_path: Path) -> None:
+        (tmp_path / "deployment.yaml").write_text(
+            "apiVersion: apps/v1\nkind: Deployment\n", encoding="utf-8"
+        )
+
+        recorded: dict = {}
+        _original_read_text = Path.read_text
+
+        def tracking_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
+            if self.suffix.lower() in {".yaml", ".yml"}:
+                recorded.update(kwargs)
+            return _original_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+
+        with patch.object(Path, "read_text", tracking_read_text):
+            result = detect_frameworks(tmp_path, ["k8s"])
+
+        assert "k8s" in result
+        assert recorded.get("encoding") == "utf-8"
+
+    # mutmut_18:
+    # encoding="utf-8" removed from file.read_text call in _has_kubernetes_files
+    def test_k8s_yaml_read_uses_utf8_encoding(self, tmp_path: Path) -> None:
+        (tmp_path / "deployment.yaml").write_text(
+            "apiVersion: apps/v1\nkind: Deployment\n", encoding="utf-8"
+        )
+
+        _original_read_text = Path.read_text
+        recorded: dict[str, Any] = {}
+
+        def tracking_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
+            if self.suffix in (".yaml", ".yml"):
+                recorded.update(kwargs)
+            return _original_read_text(self, *args, **kwargs)  # type: ignore[arg-type]
+
+        with patch.object(Path, "read_text", tracking_read_text):
+            result = detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+        assert "k8s" in result
+        assert recorded.get("encoding") == "utf-8"

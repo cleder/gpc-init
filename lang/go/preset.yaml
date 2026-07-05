@@ -35,9 +35,13 @@ repos:
       # Go Build
       #
       - id: go-build-mod
+        description: "Run 'cd $(mod_root $FILE); go build -o /dev/null [$ARGS] ./...' for each staged .go file"
       - id: go-build-pkg
+        description: "Run 'go build -o /dev/null [$ARGS] ./$(dirname $FILE)' for each staged .go file"
       - id: go-build-repo-mod
+        description: "Run 'cd $(mod_root); go build -o /dev/null [$ARGS] ./...' for each module in the repo"
       - id: go-build-repo-pkg
+        description: "Run 'go build -o /dev/null [$ARGS] ./...' in repo root folder"
       #
       # Go Tool (Go 1.24+)
       #
@@ -49,71 +53,109 @@ repos:
       # Go Mod Tidy
       #
       - id: go-mod-tidy
+        description: "Run 'cd $(mod_root $FILE); go mod tidy [$ARGS]' for each staged .go file"
       - id: go-mod-tidy-repo
+        description: "Run 'cd $(mod_root); go mod tidy [$ARGS]' for each module in the repo"
       #
       # Go Test
       #
       - id: go-test-mod
+        description: "Run 'cd $(mod_root $FILE); go test [$ARGS] ./...' for each staged .go file"
       - id: go-test-pkg
+        description: "Run 'go test [$ARGS] ./$(dirname $FILE)' for each staged .go file"
       - id: go-test-repo-mod
+        description: "Run 'cd $(mod_root); go test [$ARGS] ./...' for each module in the repo"
       - id: go-test-repo-pkg
+        description: "Run 'go test [$ARGS] ./...' in repo root folder"
       #
       # Go Vet
       #
       - id: go-vet
+        description: "Run 'go vet [$ARGS] $FILE' for each staged .go file"
       - id: go-vet-mod
+        description: "Run 'cd $(mod_root $FILE); go vet [$ARGS] ./...' for each staged .go file"
       - id: go-vet-pkg
+        description: "Run 'go vet [$ARGS] ./$(dirname $FILE)' for each staged .go file"
       - id: go-vet-repo-mod
+        description: "Run 'cd $(mod_root); go vet [$ARGS] ./...' for each module in the repo"
       - id: go-vet-repo-pkg
+        description: "Run 'go vet [$ARGS] ./...' in repo root folder"
       #
       # Go Vulncheck
       # note: Only works with Go modules
       #
       - id: go-vulncheck-mod
+        description: "Run 'cd $(mod_root $FILE); govulncheck [$ARGS] ./...' for each staged .go file"
       - id: go-vulncheck-repo-mod
+        description: "Run 'cd $(mod_root); govulncheck [$ARGS] ./...' for each module in the repo"
       #
       # Revive
       #
       - id: go-revive
+        description: "Run 'revive [$ARGS] $FILE' for each staged .go file"
       - id: go-revive-mod
+        description: "Run 'cd $(mod_root $FILE); revive [$ARGS] ./...' for each staged .go file"
       - id: go-revive-repo-mod
+        description: "Run 'cd $(mod_root); revive [$ARGS] ./...' for each module in the repo"
       #
       # GoSec
       #
       - id: go-sec-mod
+        description: "Run 'cd $(mod_root $FILE); gosec [$ARGS] ./...' for each staged .go file"
       - id: go-sec-pkg
+        description: "Run 'gosec [$ARGS] ./$(dirname $FILE)' for each staged .go file"
       - id: go-sec-repo-mod
+        description: "Run 'cd $(mod_root); gosec [$ARGS] ./...' for each module in the repo"
       - id: go-sec-repo-pkg
+        description: "Run 'gosec [$ARGS] ./...' in repo root folder"
       #
       # StaticCheck
       #
       - id: go-staticcheck-mod
+        description: "Run 'cd $(mod_root $FILE); staticcheck [$ARGS] ./...' for each staged .go file"
       - id: go-staticcheck-pkg
+        description: "Run 'staticcheck [$ARGS] ./$(dirname $FILE)' for each staged .go file"
       - id: go-staticcheck-repo-mod
+        description: "Run 'cd $(mod_root); staticcheck [$ARGS] ./...' for each module in the repo"
       - id: go-staticcheck-repo-pkg
+        description: "Run 'staticcheck [$ARGS] ./...' in repo root folder"
       #
       # StructSlop
       #
       - id: go-structslop-mod
+        description: "Run 'cd $(mod_root $FILE); structslop [$ARGS] ./...' for each staged .go file"
       - id: go-structslop-pkg
+        description: "Run 'structslop [$ARGS] ./$(dirname $FILE)' for each staged .go file"
       - id: go-structslop-repo-mod
+        description: "Run 'cd $(mod_root); structslop [$ARGS] ./...' for each module in the repo"
       - id: go-structslop-repo-pkg
+        description: "Run 'structslop [$ARGS] ./...' in repo root folder"
       #
       # Formatters
       #
       - id: go-fmt
+        description: "Run 'gofmt -l -d [$ARGS] $FILE' for each staged .go file"
       - id: go-fmt-repo
-      - id: go-fumpt        # replaces go-fmt
-      - id: go-fumpt-repo   # replaces go-fmt-repo
-      - id: go-imports      # replaces go-fmt
-      - id: go-imports-repo  # replaces go-fmt-repo
-      - id: go-returns      # replaces go-imports & go-fmt
-      - id: go-returns-repo  # replaces go-imports-repo & go-fmt-repo
+        description: "Run 'gofmt -l -d [$ARGS] .' in repo root folder"
+      - id: go-fumpt
+        description: "Run 'fumpt -l -d [$ARGS] $FILE' for each staged .go file (replaces go-fmt)"
+      - id: go-fumpt-repo
+        description: "Run 'fumpt -l -d [$ARGS] .' in repo root folder (replaces go-fmt-repo)"
+      - id: go-imports
+        description: "Run 'goimports -l -d [$ARGS] $FILE' for each staged .go file (replaces go-fmt)"
+      - id: go-imports-repo
+        description: "Run 'goimports -l -d [$ARGS] .' in repo root folder (replaces go-fmt-repo)"
+      - id: go-returns
+        description: "Run 'goreturns -l -d [$ARGS] $FILE' for each staged .go file (replaces go-imports & go-fmt)"
+      - id: go-returns-repo
+        description: "Run 'goreturns -l -d [$ARGS] .' in repo root folder (replaces go-imports-repo & go-fmt-repo)"
       #
       # Style Checkers
       #
       - id: go-lint
+        description: "Run 'golint -set_exit_status [$ARGS] $FILE' for each staged .go file"
       - id: go-critic
+        description: "Run 'go-critic check [$ARGS] $FILE' for each staged .go file"
       #
       # GolangCI-Lint
       # - Fast Multi-Linter
@@ -122,10 +164,15 @@ repos:
       # - https://github.com/golangci/golangci-lint
       #
       - id: golangci-lint
+        description: "Run 'golangci-lint run [$ARGS] $FILE' for each staged .go file"
       - id: golangci-lint-mod
+        description: "Run 'cd $(mod_root $FILE); golangci-lint run [$ARGS] ./...' for each staged .go file"
       - id: golangci-lint-pkg
+        description: "Run 'golangci-lint run [$ARGS] ./$(dirname $FILE)' for each staged .go file"
       - id: golangci-lint-repo-mod
+        description: "Run 'cd $(mod_root); golangci-lint run [$ARGS] ./...' for each module in the repo"
       - id: golangci-lint-repo-pkg
+        description: "Run 'golangci-lint run [$ARGS] ./...' in repo root folder"
       #
       # Invoking Custom Go Tools
       # - Configured *entirely* through the `args` attribute, ie:
@@ -136,8 +183,14 @@ repos:
       # - Use the `alias` attribute to invoke your hook via `pre-commit run`
       #
       - id: my-cmd
+        description: "Run '$ARGS[0] [$ARGS[1:]] $FILE' for each staged .go file"
       - id: my-cmd-mod
+        description: "Run 'cd $(mod_root $FILE); $ARGS[0] [$ARGS[1:]] ./...' for each staged .go file"
       - id: my-cmd-pkg
+        description: "Run '$ARGS[0] [$ARGS[1:]] ./$(dirname $FILE)' for each staged .go file"
       - id: my-cmd-repo
+        description: "Run '$ARGS[0] [$ARGS[1:]]' in the repo root folder"
       - id: my-cmd-repo-mod
+        description: "Run 'cd $(mod_root); $ARGS[0] [$ARGS[1:]] /...' for each module in the repo"
       - id: my-cmd-repo-pkg
+        description: "Run '$ARGS[0] [$ARGS[1:]] ./...' in repo root folder"

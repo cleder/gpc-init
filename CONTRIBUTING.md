@@ -26,6 +26,7 @@ tests/                       # pytest test suite
 ### Adding or updating a hook
 
 Each preset is a standalone `preset.yaml` file that follows the [pre-commit config format](https://pre-commit.com/#pre-commit-configyaml---top-level).
+**Every hook (by `id`) MUST have a `description`** explaining what it does — a `name` is encouraged too, but `description` is what makes generated `.pre-commit-config.yaml` files self-documenting and is not optional.
 A language preset looks like this:
 
 ```yaml
@@ -35,6 +36,8 @@ repos:
     rev: v1.2.3
     hooks:
       - id: hook-id
+        name: Example hook
+        description: What this hook does
 ```
 
 Framework presets may additionally declare which languages and frameworks they recommend:
@@ -80,9 +83,60 @@ find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
 find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
 ```
 
+### Just Runner
+
+The repository includes a `.justfile` for using the [just](https://just.systems/man/en/) runner framework.
+You can [install `just`](https://just.systems/man/en/packages.html) with `uv`.
+
+```bash
+uv tool install rust-just
+```
+
+Once you have this installed you can use `just` to see the available recipes.
+
+``` bash
+❱ just
+just --list
+Available recipes:
+    awesome
+    default
+    test
+    update target="all" type="lang"
+    validate target="all" type="lang"
+```
+
+`validate` and `update` both take an optional `target` (a language or framework alias, defaulting to `all`) and `type` (`lang` or `framework`, defaulting to `lang`).
+This lets you validate and/or update a given preset in a concise manner: just provide the alias, and, for framework presets, the type.
+
+``` bash
+❱ just validate py
+Validating py ...
+success: All configs are valid
+success: All configs are valid
+```
+
+``` bash
+❱ just update py
+Autoupdating py...
+[https://github.com/MarcoGorelli/absolufy-imports] already up to date!
+[https://github.com/astral-sh/ruff-pre-commit] updating v0.15.19 -> v0.15.20
+[https://github.com/abravalheri/validate-pyproject] already up to date!
+...
+```
+
+For a framework preset, pass `framework` as the second argument, e.g. `just validate django framework`.
+
+To validate or update every preset at once, omit the target (or pass `all`):
+
+``` bash
+just validate
+just update
+```
+
 ### Hook quality bar
 
 Only include hooks that are publicly available, actively maintained, and add clear value over hooks already in the preset.
+Every hook MUST have a `description`, harvested from its own `.pre-commit-hooks.yaml` where possible.
 
 ## Running the CLI locally
 
@@ -105,12 +159,18 @@ pc-init --help
 Run the test suite and static checks before opening a PR:
 
 ```bash
-uv run pytest tests --cov=gpc_init
+just test
+```
+
+which will run:
+
+```bash
+uv run pytest tests --cov=gpc_init tests
+uv run complexipy --failed gpc_init
 uv run ruff check gpc_init tests
 uv run ruff format gpc_init tests
 uv run pyrefly check gpc_init tests
 uv run ty check gpc_init tests
-uv run complexipy gpc_init
 ```
 
 ## Submitting a pull request

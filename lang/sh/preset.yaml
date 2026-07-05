@@ -4,7 +4,14 @@ repos:
     rev: 2.1.1
     hooks:
       - id: bashate
+        description: "This hook runs bashate for linting shell scripts"
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
+        description: "Test shell scripts with shellcheck"
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.13.1-1
+    hooks:
+      - id: shfmt
+        description: "Shell source code formatter (prebuilt upstream executable)"

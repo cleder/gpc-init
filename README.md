@@ -12,6 +12,10 @@ Each language and framework has its own recommended linters, formatters, and qua
 `pc-init` encodes those choices in version-controlled presets so you run one command instead of copying configs and looking up hook URLs.
 The bundled presets pin specific hook revisions — run `pre-commit autoupdate` or `prek autoupdate` after generation to pull in the latest versions.
 
+## Alternatives
+
+If you'd rather run one all-in-one Docker-based linter instead of wiring up individual pre-commit hooks, see [MegaLinter](https://github.com/oxsecurity/megalinter). `pc-init` takes the opposite approach: it generates a `.pre-commit-config.yaml` of individually-pinned, curated hooks that run natively via `pre-commit`/`prek`, so you can see, version, and update each tool independently.
+
 ## Awesome Pre-commit Hooks
 
 The curated hooks bundled with `pc-init` are also published as a standalone reference at [awesome-pre-commit-hooks](https://github.com/cleder/awesome-pre-commit-hooks) — a browsable list of every hook organised by language and framework.
@@ -88,10 +92,10 @@ pc-init list
 
 ```text
 Languages:
-  docker, go, img, js, md, nb, py, ru, sh, sql, tf, toml, ts, yaml
+  cpp, css, docker, go, img, js, kt, make, md, nb, proto, py, rb, ru, sh, sql, swift, tf, toml, ts, yaml
 
 Frameworks:
-  django, git, k8s, react, sphinx
+  ansible, django, git, k8s, react, sphinx
 ```
 
 Use `--presets` to list what a custom catalog provides:
@@ -121,8 +125,15 @@ pc-init list --presets https://github.com/org/my-presets
 | `tf` | Terraform |
 | `toml` | TOML |
 | `yaml` | YAML |
+| `make` | Makefiles |
+| `rb` | Ruby |
+| `cpp` | C / C++ |
+| `proto` | Protocol Buffers |
+| `swift` | Swift |
+| `kt` | Kotlin |
+| `css` | CSS / SCSS / Sass |
 
-Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, and `terraform` are also accepted.
+Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, and `kotlin` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -133,6 +144,7 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`
 | `sphinx` | Sphinx documentation |
 | `git` | Commit message linting |
 | `k8s` | Kubernetes |
+| `ansible` | Ansible |
 
 ## Auto-detecting languages and frameworks
 
@@ -170,6 +182,12 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.ts`, `.tsx` | `ts` |
 | `.go` | `go` |
 | `.rs` | `ru` |
+| `.rb` | `rb` |
+| `.c`, `.h`, `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hh`, `.hxx` | `cpp` |
+| `.proto` | `proto` |
+| `.swift` | `swift` |
+| `.kt`, `.kts` | `kt` |
+| `.css`, `.scss`, `.sass` | `css` |
 | `.sh`, `.bash` | `sh` |
 | `.sql` | `sql` |
 | `.tf`, `.tfvars` | `tf` |
@@ -179,6 +197,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.r` | `r` |
 | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg` | `img` |
 | `Dockerfile` (filename) | `docker` |
+| `Makefile` (filename) | `make` |
 
 **Framework detection** is based on indicator files:
 
@@ -189,6 +208,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `conf.py` (root or `docs/`) containing `sphinx` | `sphinx` |
 | Any `.yaml`/`.yml` file outside `.github/` containing `apiVersion:` and `kind:` | `k8s` |
 | `.github/workflows/` directory with at least one `.yml` file | `git` |
+| `ansible.cfg` at the repo root | `ansible` |
 
 ## Language suggestions for frameworks
 
@@ -273,35 +293,6 @@ Git repository:
 
 ```bash
 pc-init --lang py --presets https://github.com/org/my-presets
-```
-
-## Check the config files
-
-To check the config files with `pre-commit` and `prek` for a specific language or framework:
-
-```bash
-pre-commit validate-config lang/py/preset.yaml
-prek validate-config lang/py/preset.yaml
-```
-
-## Update bundled presets
-
-Update a config file with the command:
-
-```bash
-pre-commit autoupdate lang/py/preset.yaml
-prek autoupdate lang/py/preset.yaml
-```
-
-## Check and update all presets
-
-To pull the latest hook revisions into all bundled preset files:
-
-```bash
-find . -name "preset*.yaml" | xargs -I{} prek validate-config {}
-find . -name "preset*.yaml" | xargs -I{} prek autoupdate -c {}
-find . -name "preset*.yaml" | xargs -I{} pre-commit validate-config {}
-find . -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {}
 ```
 
 ## Contributing

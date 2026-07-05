@@ -3,6 +3,7 @@ recommended:
   lang:
     - js
     - ts
+    - css
 repos:
   - repo: local
     hooks:

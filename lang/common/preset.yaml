@@ -3,52 +3,97 @@ repos:
   - repo: meta
     hooks:
       - id: check-useless-excludes
+        description: "Check for useless excludes in the pre-commit configuration"
+      - id: check-hooks-apply
+        description: "Check hooks apply to the repository"
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
       - id: check-added-large-files
+        description: "prevents giant files from being committed."
       - id: check-case-conflict
+        description: "checks for files that would conflict in case-insensitive filesystems."
       - id: check-docstring-first
+        description: "checks a common error of defining a docstring after code."
       - id: check-executables-have-shebangs
+        description: "ensures that (non-binary) executables have a shebang."
       - id: check-json
+        description: "checks json files for parseable syntax."
       - id: check-merge-conflict
+        description: "checks for files that contain merge conflict strings."
       - id: check-shebang-scripts-are-executable
+        description: "ensures that (non-binary) files with a shebang are executable."
       - id: check-symlinks
+        description: "checks for symlinks which do not point to anything."
       - id: check-toml
+        description: "checks toml files for parseable syntax."
       - id: check-vcs-permalinks
+        description: "ensures that links to vcs websites are permalinks."
       - id: check-xml
+        description: "checks xml files for parseable syntax."
       - id: check-yaml
+        description: "checks yaml files for parseable syntax."
       - id: debug-statements
+        description: "checks for debugger imports and py37+ `breakpoint()` calls in python source."
       - id: destroyed-symlinks
+        description: "detects symlinks which are changed to regular files with a content of a path which that symlink was pointing to."
       - id: detect-private-key
+        description: "detects the presence of private keys."
       - id: end-of-file-fixer
+        description: "ensures that a file is either empty, or ends with one newline."
       - id: file-contents-sorter
+        description: "sorts the lines in specified files (defaults to alphabetical). you must provide list of target files as input in your .pre-commit-config.yaml file."
       - id: fix-byte-order-marker
+        description: "removes utf-8 byte order marker."
       - id: forbid-new-submodules
+        description: "prevents addition of new git submodules."
       - id: mixed-line-ending
+        description: "replaces or checks mixed line ending."
       - id: name-tests-test
+        args: ['--django']
+        description: "verifies that test files are named correctly."
       - id: no-commit-to-branch
+        description: "don't commit to branch"
       - id: pretty-format-json
+        description: "sets a standard for formatting json files."
       - id: requirements-txt-fixer
+        description: "sorts entries in requirements.txt."
       - id: trailing-whitespace
+        description: "trims trailing whitespace."
+      - id: check-ast
+        description: "simply checks whether the files parse as valid python."
+      - id: check-builtin-literals
+        description: "requires literal syntax when initializing empty or zero python builtin types."
+      - id: check-illegal-windows-names
+        description: "Check for filenames that are illegal on Windows"
+      - id: detect-aws-credentials
+        description: "detects *your* aws credentials from the aws cli credentials file."
+      - id: sort-simple-yaml
+        description: "sorts simple yaml files which consist only of top-level keys, preserving comments and blocks."
   - repo: https://github.com/nim65s/pre-commit-sort
     rev: v1.0.0
     hooks:
       - id: pre-commit-sort
+        description: "Sort .pre-commit-config.yaml & .pre-commit-hooks.yaml"
   - repo: https://github.com/crate-ci/typos
-    rev: v1.47.2
+    rev: v1.48.0
     hooks:
       - id: typos
+        description: "Source code spell checker, binary install"
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
       - id: gitleaks
+        description: "Detect hardcoded secrets using Gitleaks"
   - repo: https://github.com/thoughtworks/talisman
     rev: v1.37.0
     hooks:
       - id: talisman-commit
+        description: "talisman"
+      - id: talisman-push
+        description: "talisman"
   - repo: https://github.com/trufflesecurity/truffleHog
-    rev: v3.95.6
+    rev: v3.95.8
     hooks:
       - id: trufflehog
         args: ["--only-verified"]
@@ -60,13 +105,36 @@ repos:
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
+        description: "Detects high entropy strings that are likely to be passwords."
   - repo: https://github.com/semgrep/semgrep
     rev: v1.168.0
     hooks:
       - id: semgrep
         args: [--config, auto, --error]
+        description: "Lightweight static analysis for many languages. Find bug variants with patterns that look like source code."
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.2
     hooks:
       - id: codespell
         args: ["--ignore-words-list", "foobar", "--skip=*.pyc,*.svg,*.json"]
+        description: "Checks for common misspellings in text files."
+  - repo: https://github.com/cleder/vercheck
+    rev: 0.4.0
+    hooks:
+      - id: vercheck
+        description: "Check that the version in pyproject.toml/Cargo.toml is PEP-440 compliant (auto-detects whichever manifest is present; if both exist, they must agree)."
+  - repo: https://github.com/kucherenko/jscpd
+    rev: v5.0.11
+    hooks:
+      - id: jscpd
+        description: "Check for duplicated code"
+  - repo: https://github.com/errata-ai/vale
+    rev: v3.15.1
+    hooks:
+      - id: vale
+        description: "Run vale on your text"
+  - repo: https://github.com/lycheeverse/lychee
+    rev: nightly
+    hooks:
+      - id: lychee
+        description: "Run 'lychee' for fast, async, stream-based link checking (auto-installs)"

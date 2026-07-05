@@ -1,12 +1,18 @@
 ---
 repos:
-  - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.12
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
     hooks:
-      - id: actionlint
-  - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.37.3
+      - id: taplo-format
+        description: "Format TOML documents"
+      - id: taplo-lint
+        description: "Lint TOML documents"
+  - repo: https://github.com/tombi-toml/tombi-pre-commit
+    rev: v1.1.7
     hooks:
-      - id: check-github-workflows
-      - id: check-renovate
-      - id: check-readthedocs
+      - id: tombi-format
+        args: ["--offline"]
+        description: "A TOML formatter"
+      - id: tombi-lint
+        args: ["--offline"]
+        description: "A TOML linter"

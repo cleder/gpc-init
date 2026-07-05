@@ -4,75 +4,101 @@ repos:
     rev: v0.3.1
     hooks:
       - id: absolufy-imports
+        description: "Automatically convert relative imports to absolute"
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.20
     hooks:
       - id: ruff-check
+        description: "Run 'ruff check' for extremely fast Python linting"
       - id: ruff-format
+        description: "Run 'ruff format' for extremely fast Python formatting"
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.25
     hooks:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
+        description: "Validation library for a simple check on pyproject.toml, including optional dependencies"
   - repo: https://github.com/kieran-ryan/pyprojectsort
     rev: v0.4.0
     hooks:
       - id: pyprojectsort
+        description: "`pyprojectsort` is a formatter for pyproject.toml files"
   - repo: https://github.com/adamchainz/blacken-docs
     rev: 1.20.0
     hooks:
       - id: blacken-docs
+        description: "Run `black` on python code blocks in documentation files"
   - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: 1.1.1
+    rev: 1.2.0.dev1
     hooks:
       - id: pyrefly-check
+        description: "Run `pyrefly check` for Python type checking."
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.54
+    rev: v0.0.56
     hooks:
       - id: ty
+        description: "Run 'ty' for extremely fast Python type checking"
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.1.0
+    hooks:
+      - id: mypy
+        description: "Mirror of mypy for pre-commit"
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
     rev: v5.1.0
     hooks:
       - id: complexipy
+        description: "Run 'complexipy' for extremely fast calculation of cognitive complexity of Python files"
   - repo: https://github.com/asmeurer/removestar
     rev: 1.5.2
     hooks:
       - id: removestar
         args: [-i]
+        description: "Automatically replace `import *` imports in Python files with explicit imports"
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.4
     hooks:
       - id: bandit
         args: ["-ll"]
         files: \.py$
+        description: "Bandit is a tool for finding common security issues in Python code"
   - repo: https://github.com/PyCQA/docformatter
     rev: v1.7.8
     hooks:
       - id: docformatter
         args: [--in-place]
+        description: "Formats docstrings to follow PEP 257."
   - repo: https://github.com/econchick/interrogate
     rev: 1.7.0
     hooks:
       - id: interrogate
         args: ["--quiet", "--fail-under=70"]
+        description: "interrogate your code base for missing docstrings"
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.21.2
     hooks:
       - id: pyupgrade
         args: [--py313-plus]
+        description: "Automatically upgrade syntax for newer versions."
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.24
+    rev: 0.11.26
     hooks:
       - id: uv-lock
+        description: "Automatically run 'uv lock' on your project dependencies"
       - id: uv-sync
+        description: "Automatically run 'uv sync' on your repository after a checkout, pull or rebase"
       - id: uv-audit
         files: ^(uv\.lock|pyproject\.toml)$
+        description: "Automatically run 'uv audit' on your project dependencies"
+      - id: uv-export
+        description: "Automatically run 'uv export' on your project dependencies"
   - repo: https://github.com/numpy/numpydoc
     rev: v1.11.0rc0
     hooks:
       - id: numpydoc-validation
         exclude: "tests/"
+        description: "This hook validates that docstrings in committed files adhere to numpydoc standards."
   - repo: https://github.com/osprey-oss/deptry.git
     rev: "0.25.1"
     hooks:
       - id: deptry
+        description: "deptry is a command line tool to check for issues with dependencies in a Python project, such as unused or missing dependencies."
