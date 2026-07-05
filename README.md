@@ -92,7 +92,7 @@ pc-init list
 
 ```text
 Languages:
-  docker, go, img, js, make, md, nb, py, ru, sh, sql, tf, toml, ts, yaml
+  docker, go, img, js, make, md, nb, py, rb, ru, sh, sql, tf, toml, ts, yaml
 
 Frameworks:
   django, git, k8s, react, sphinx
@@ -126,8 +126,9 @@ pc-init list --presets https://github.com/org/my-presets
 | `toml` | TOML |
 | `yaml` | YAML |
 | `make` | Makefiles |
+| `rb` | Ruby |
 
-Language aliases `python`, `javascript`, `typescript`, `rust`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, and `terraform` are also accepted.
+Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, and `terraform` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -175,6 +176,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.ts`, `.tsx` | `ts` |
 | `.go` | `go` |
 | `.rs` | `ru` |
+| `.rb` | `rb` |
 | `.sh`, `.bash` | `sh` |
 | `.sql` | `sql` |
 | `.tf`, `.tfvars` | `tf` |

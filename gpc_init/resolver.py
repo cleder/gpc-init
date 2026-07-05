@@ -16,6 +16,7 @@ _LANG_ALIASES: dict[str, str] = {
     "makefile": "make",
     "notebook": "nb",
     "python": "py",
+    "ruby": "rb",
     "rust": "ru",
     "shell": "sh",
     "terraform": "tf",
