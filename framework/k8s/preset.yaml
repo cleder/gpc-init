@@ -8,12 +8,15 @@ repos:
     rev: v0.8.3
     hooks:
       - id: kube-linter
+        description: "This hook installs (using Go) and runs the KubeLinter utility to lint Helm charts and Kubernetes YAML files."
   - repo: https://github.com/jtyr/kubeconform-helm
     rev: v0.3.0
     hooks:
       - id: kubeconform-helm
+        description: "Run kubeconform for Helm charts"
   - repo: https://github.com/gruntwork-io/pre-commit
     rev: v0.1.30
     hooks:
       - id: helmlint
         files: (^|/)(Chart\.ya?ml|templates/.*\.(ya?ml|tpl))$
+        description: "Run helm lint, a linter for helm charts"
