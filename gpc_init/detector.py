@@ -164,6 +164,7 @@ _FRAMEWORK_DETECTORS: list[tuple[str, Callable[[Path], bool]]] = [
     ("sphinx", _has_sphinx_conf),
     ("k8s", _has_kubernetes_files),
     ("git", _has_github_workflows),
+    ("ansible", lambda d: (d / "ansible.cfg").is_file()),
 ]
 
 

@@ -95,7 +95,7 @@ Languages:
   cpp, css, docker, go, img, js, kt, make, md, nb, proto, py, rb, ru, sh, sql, swift, tf, toml, ts, yaml
 
 Frameworks:
-  django, git, k8s, react, sphinx
+  ansible, django, git, k8s, react, sphinx
 ```
 
 Use `--presets` to list what a custom catalog provides:
@@ -144,6 +144,7 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`,
 | `sphinx` | Sphinx documentation |
 | `git` | Commit message linting |
 | `k8s` | Kubernetes |
+| `ansible` | Ansible |
 
 ## Auto-detecting languages and frameworks
 
@@ -207,6 +208,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `conf.py` (root or `docs/`) containing `sphinx` | `sphinx` |
 | Any `.yaml`/`.yml` file outside `.github/` containing `apiVersion:` and `kind:` | `k8s` |
 | `.github/workflows/` directory with at least one `.yml` file | `git` |
+| `ansible.cfg` at the repo root | `ansible` |
 
 ## Language suggestions for frameworks
 

@@ -1,0 +1,9 @@
+---
+recommended:
+  lang:
+    - yaml
+repos:
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v26.6.0
+    hooks:
+      - id: ansible-lint

@@ -32,7 +32,7 @@ ALL_LANGS = [
     "ts",
     "yaml",
 ]
-ALL_FRAMEWORKS = ["django", "git", "k8s", "react", "sphinx"]
+ALL_FRAMEWORKS = ["ansible", "django", "git", "k8s", "react", "sphinx"]
 
 
 class TestDetectLanguages:
@@ -197,6 +197,13 @@ class TestDetectFrameworks:
 
     def test_no_django_without_manage_py(self, tmp_path: Path) -> None:
         assert "django" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_detects_ansible_by_ansible_cfg(self, tmp_path: Path) -> None:
+        (tmp_path / "ansible.cfg").touch()
+        assert "ansible" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_no_ansible_without_ansible_cfg(self, tmp_path: Path) -> None:
+        assert "ansible" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
     def test_detects_react_from_package_json(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text(
