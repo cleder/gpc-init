@@ -8,6 +8,8 @@ from gpc_init.exceptions import UnsupportedFrameworkError, UnsupportedLanguageEr
 # Language name aliases -> canonical id
 _LANG_ALIASES: dict[str, str] = {
     "bash": "sh",
+    "c": "cpp",
+    "c++": "cpp",
     "dockerfile": "docker",
     "golang": "go",
     "image": "img",

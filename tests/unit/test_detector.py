@@ -9,6 +9,7 @@ from gpc_init import detector as _detector
 from gpc_init.detector import detect_frameworks, detect_languages
 
 ALL_LANGS = [
+    "cpp",
     "docker",
     "go",
     "img",
@@ -67,6 +68,14 @@ class TestDetectLanguages:
     def test_detects_ruby_by_rb_extension(self, tmp_path: Path) -> None:
         (tmp_path / "main.rb").touch()
         assert "rb" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_cpp_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.cpp").touch()
+        assert "cpp" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_c_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.c").touch()
+        assert "cpp" in detect_languages(tmp_path, ALL_LANGS)
 
     def test_detects_markdown(self, tmp_path: Path) -> None:
         (tmp_path / "README.md").touch()

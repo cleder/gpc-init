@@ -34,6 +34,12 @@ class TestNormalizeLang:
     def test_alias_ruby(self) -> None:
         assert normalize_lang("ruby") == "rb"
 
+    def test_alias_cplusplus(self) -> None:
+        assert normalize_lang("c++") == "cpp"
+
+    def test_alias_c(self) -> None:
+        assert normalize_lang("c") == "cpp"
+
     def test_alias_golang(self) -> None:
         assert normalize_lang("golang") == "go"
 
