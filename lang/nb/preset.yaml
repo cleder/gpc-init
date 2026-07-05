@@ -4,13 +4,22 @@ repos:
     rev: 0.9.1
     hooks:
       - id: nbstripout
+        description: "nbstripout: strip output from Jupyter and IPython notebooks"
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.9.1
     hooks:
       - id: nbqa-mypy
         additional_dependencies: [mypy]
+        description: "Run 'mypy' on a Jupyter Notebook"
       - id: nbqa-ruff
         additional_dependencies: [ruff]
+        description: "Run 'ruff check' on a Jupyter Notebook"
       - id: nbqa-check-ast
+        description: "Run 'check-ast' on a Jupyter Notebook"
       - id: nbqa-isort
         additional_dependencies: [isort]
+        description: "Run 'isort' on a Jupyter Notebook"
+      - id: nbqa-pyupgrade
+        description: "Run 'pyupgrade' on a Jupyter Notebook"
+      - id: nbqa-ruff-format
+        description: "Run 'ruff format' on a Jupyter Notebook"
