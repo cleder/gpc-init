@@ -26,7 +26,7 @@ tests/                       # pytest test suite
 ### Adding or updating a hook
 
 Each preset is a standalone `preset.yaml` file that follows the [pre-commit config format](https://pre-commit.com/#pre-commit-configyaml---top-level).
-Every check (hooks id) should have a name and description.
+**Every hook (by `id`) MUST have a `description`** explaining what it does — a `name` is encouraged too, but `description` is what makes generated `.pre-commit-config.yaml` files self-documenting and is not optional.
 A language preset looks like this:
 
 ```yaml
@@ -136,6 +136,7 @@ just update
 ### Hook quality bar
 
 Only include hooks that are publicly available, actively maintained, and add clear value over hooks already in the preset.
+Every hook MUST have a `description`, harvested from its own `.pre-commit-hooks.yaml` where possible.
 
 ## Running the CLI locally
 

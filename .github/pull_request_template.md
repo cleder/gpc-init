@@ -15,6 +15,7 @@ Run the following commands against the preset file and confirm each passes.
 - [ ] `pre-commit autoupdate -c <preset-file>` was run and hook revisions are up to date
 - [ ] `prek autoupdate -c <preset-file>` was run and hook revisions are up to date
 - [ ] All hooks listed in the preset are publicly available and actively maintained
+- [ ] Every hook in this preset has a `description` field
 
 ### Code contributions
 
