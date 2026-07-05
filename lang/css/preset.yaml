@@ -4,3 +4,4 @@ repos:
     rev: v17.14.0
     hooks:
       - id: stylelint
+        description: "Mirrors all Stylelint releases for the pre-commit hooks framework."
