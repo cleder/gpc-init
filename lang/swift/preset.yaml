@@ -1,0 +1,10 @@
+---
+repos:
+  - repo: https://github.com/realm/SwiftLint
+    rev: 0.65.0
+    hooks:
+      - id: swiftlint
+  - repo: https://github.com/nicklockwood/SwiftFormat
+    rev: 0.61.1
+    hooks:
+      - id: swiftformat

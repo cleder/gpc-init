@@ -24,6 +24,7 @@ ALL_LANGS = [
     "ru",
     "sh",
     "sql",
+    "swift",
     "tf",
     "toml",
     "ts",
@@ -81,6 +82,10 @@ class TestDetectLanguages:
     def test_detects_proto_by_extension(self, tmp_path: Path) -> None:
         (tmp_path / "service.proto").touch()
         assert "proto" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_swift_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.swift").touch()
+        assert "swift" in detect_languages(tmp_path, ALL_LANGS)
 
     def test_detects_markdown(self, tmp_path: Path) -> None:
         (tmp_path / "README.md").touch()
