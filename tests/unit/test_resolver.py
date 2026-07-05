@@ -40,6 +40,9 @@ class TestNormalizeLang:
     def test_alias_c(self) -> None:
         assert normalize_lang("c") == "cpp"
 
+    def test_alias_kotlin(self) -> None:
+        assert normalize_lang("kotlin") == "kt"
+
     def test_alias_golang(self) -> None:
         assert normalize_lang("golang") == "go"
 

@@ -15,6 +15,7 @@ _LANG_ALIASES: dict[str, str] = {
     "image": "img",
     "javascript": "js",
     "jupyter": "nb",
+    "kotlin": "kt",
     "makefile": "make",
     "notebook": "nb",
     "python": "py",

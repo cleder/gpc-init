@@ -43,6 +43,8 @@ _EXTENSION_TO_LANG: dict[str, str] = {
     ".hxx": "cpp",
     ".proto": "proto",
     ".swift": "swift",
+    ".kt": "kt",
+    ".kts": "kt",
     ".sh": "sh",
     ".bash": "sh",
     ".sql": "sql",
