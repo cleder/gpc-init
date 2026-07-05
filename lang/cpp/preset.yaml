@@ -4,4 +4,12 @@ repos:
     rev: v1.3.5
     hooks:
       - id: clang-format
+        description: "Formats C, C++, Objective-C, and Java code"
       - id: cppcheck
+        description: "Find warnings/errors in C, C++, and Objective-C code"
+      - id: clang-tidy
+        description: "Find warnings/errors in C, C++, and Objective-C code"
+      - id: cpplint
+        description: "Find warnings/errors in C/CPP code"
+      - id: include-what-you-use
+        description: "Runs Include-What-You-Use (iwyu) in C/CPP code"
