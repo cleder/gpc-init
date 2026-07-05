@@ -327,6 +327,12 @@ class TestDetectFrameworks:
         (tmp_path / "package.json").write_text("{ invalid json !!!", encoding="utf-8")
         assert "react" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
+    # mutmut_14: return True instead of return False in
+    # _has_package_json_dep when parsed JSON is not a dict
+    def test_no_react_when_package_json_is_not_a_dict(self, tmp_path: Path) -> None:
+        (tmp_path / "package.json").write_text(json.dumps(["react"]), encoding="utf-8")
+        assert "react" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
     # mutmut_14: encoding=None instead of encoding="utf-8" in _has_sphinx_conf
     def test_sphinx_conf_reads_file_with_utf8_encoding(self, tmp_path: Path) -> None:
         conf = tmp_path / "conf.py"
@@ -536,3 +542,15 @@ class TestDetectFrameworks:
 
         assert "k8s" in result
         assert recorded.get("encoding") == "utf-8"
+
+    # mutmut_17 (_has_github_workflows): return True instead of return False
+    # in the OSError except block
+    def test_no_git_framework_when_workflows_dir_iterdir_raises_oserror(
+        self, tmp_path: Path
+    ) -> None:
+        workflows = tmp_path / ".github" / "workflows"
+        workflows.mkdir(parents=True)
+        (workflows / "ci.yml").touch()
+
+        with patch.object(Path, "iterdir", side_effect=OSError):
+            assert "git" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
