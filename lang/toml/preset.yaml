@@ -4,11 +4,15 @@ repos:
     rev: v0.9.3
     hooks:
       - id: taplo-format
+        description: "Format TOML documents"
       - id: taplo-lint
+        description: "Lint TOML documents"
   - repo: https://github.com/tombi-toml/tombi-pre-commit
     rev: v1.1.7
     hooks:
       - id: tombi-format
         args: ["--offline"]
+        description: "A TOML formatter"
       - id: tombi-lint
         args: ["--offline"]
+        description: "A TOML linter"
