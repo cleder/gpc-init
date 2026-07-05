@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,76 @@ import yaml
 PROJECT_ROOT = Path(__file__).parent.parent
 LANG_DIR = PROJECT_ROOT / "lang"
 FRAMEWORK_DIR = PROJECT_ROOT / "framework"
+
+_DISPLAY_NAMES: dict[str, str] = {
+    "py": "Python",
+    "js": "JavaScript",
+    "ts": "TypeScript",
+    "go": "Go",
+    "ru": "Rust",
+    "rb": "Ruby",
+    "sh": "Shell / Bash",
+    "sql": "SQL",
+    "nb": "Jupyter Notebooks",
+    "md": "Markdown",
+    "img": "Images",
+    "docker": "Docker",
+    "tf": "Terraform",
+    "toml": "TOML",
+    "yaml": "YAML",
+    "make": "Makefiles",
+    "cpp": "C / C++",
+    "proto": "Protocol Buffers",
+    "swift": "Swift",
+    "kt": "Kotlin",
+    "css": "CSS / SCSS / Sass",
+    "r": "R",
+    "react": "React",
+    "django": "Django",
+    "sphinx": "Sphinx Documentation",
+    "git": "Git Workflow",
+    "k8s": "Kubernetes",
+    "ansible": "Ansible",
+}
+
+_EMOJIS: dict[str, str] = {
+    "py": "🐍",
+    "js": "🟨",
+    "ts": "🔷",
+    "go": "🐹",
+    "ru": "🦀",
+    "rb": "💎",
+    "sh": "🐚",
+    "sql": "🗄️",
+    "nb": "📓",
+    "md": "📝",
+    "img": "🖼️",
+    "docker": "🐳",
+    "tf": "🏗️",
+    "toml": "🔧",
+    "yaml": "📄",
+    "make": "🛠️",
+    "cpp": "🔩",
+    "proto": "📦",
+    "swift": "🐦",
+    "kt": "🟣",
+    "css": "🎨",
+    "r": "📊",
+    "react": "⚛️",
+    "django": "🎸",
+    "sphinx": "📚",
+    "git": "🔀",
+    "k8s": "☸️",
+    "ansible": "🤖",
+}
+
+
+def display_label(item_id: str) -> str:
+    """Return the emoji + long-form name + id label for a language/framework."""
+    emoji = _EMOJIS.get(item_id, "")
+    name = _DISPLAY_NAMES.get(item_id, item_id)
+    prefix = f"{emoji} " if emoji else ""
+    return f"{prefix}{name} (`{item_id}`)"
 
 
 def load_preset(path: Path) -> dict[str, Any]:
@@ -128,9 +199,22 @@ def render_section(title: str, preset: dict, note: str = "") -> list[str]:
     return lines
 
 
-def toc_anchor(name: str) -> str:
-    """Convert a section title to a GitHub markdown anchor."""
-    return name.lower().replace(" ", "-")
+def github_slug(text: str, seen: dict[str, int]) -> str:
+    """
+    Convert heading text to the anchor GitHub would generate for it.
+
+    Mirrors GitHub's actual heading-slug algorithm (as implemented by
+    github-slugger): lowercase, strip anything that isn't a word character,
+    space, or hyphen (dropping emoji, backticks, parens, etc.), then replace
+    spaces with hyphens. A heading that starts with "emoji + space" ends up
+    with a leading hyphen once the emoji is stripped — that's an intentional
+    GitHub quirk being replicated here, not a bug. Duplicate slugs get a
+    "-1", "-2", ... suffix, same as GitHub does.
+    """
+    slug = re.sub(r"[^\w\s-]", "", text.lower()).replace(" ", "-")
+    count = seen.get(slug, 0)
+    seen[slug] = count + 1
+    return slug if count == 0 else f"{slug}-{count}"
 
 
 def count_unique_repos(languages: list[str], frameworks: list[str]) -> int:
@@ -151,6 +235,7 @@ def count_unique_repos(languages: list[str], frameworks: list[str]) -> int:
 def build_awesome_list(languages: list[str], frameworks: list[str]) -> str:
     """Build the full AWESOME.md content string."""
     common = load_preset(LANG_DIR / "common" / "preset.yaml")
+    seen_slugs: dict[str, int] = {}
 
     toc = [
         "## Contents",
@@ -158,9 +243,15 @@ def build_awesome_list(languages: list[str], frameworks: list[str]) -> str:
         "- [Common](#common)",
         "- [Languages](#languages)",
     ]
-    toc.extend(f"  - [{lang}](#{toc_anchor(lang)})" for lang in languages)
+    toc.extend(
+        f"  - [{display_label(lang)}](#{github_slug(display_label(lang), seen_slugs)})"
+        for lang in languages
+    )
     toc += ["- [Frameworks](#frameworks)"]
-    toc.extend(f"  - [{fw}](#{toc_anchor(fw)})" for fw in frameworks)
+    toc.extend(
+        f"  - [{display_label(fw)}](#{github_slug(display_label(fw), seen_slugs)})"
+        for fw in frameworks
+    )
 
     header = [
         "# Awesome Pre-commit Hooks",
@@ -189,14 +280,14 @@ def build_awesome_list(languages: list[str], frameworks: list[str]) -> str:
     sections += ["---", "", "## Languages", ""]
     for lang in languages:
         preset = load_preset(LANG_DIR / lang / "preset.yaml")
-        sections.extend(render_section(lang, preset))
+        sections.extend(render_section(display_label(lang), preset))
 
     sections += ["---", "", "## Frameworks", ""]
     for fw in frameworks:
         preset = load_preset(FRAMEWORK_DIR / fw / "preset.yaml")
         primary = (preset.get("recommended") or {}).get("lang") or []
         note = f"Recommended language(s): {', '.join(primary)}." if primary else ""
-        sections.extend(render_section(fw, preset, note=note))
+        sections.extend(render_section(display_label(fw), preset, note=note))
 
     all_lines = header + toc + [""] + sections
     return "\n".join(all_lines) + "\n"
