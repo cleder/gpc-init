@@ -92,7 +92,7 @@ pc-init list
 
 ```text
 Languages:
-  cpp, docker, go, img, js, kt, make, md, nb, proto, py, rb, ru, sh, sql, swift, tf, toml, ts, yaml
+  cpp, css, docker, go, img, js, kt, make, md, nb, proto, py, rb, ru, sh, sql, swift, tf, toml, ts, yaml
 
 Frameworks:
   django, git, k8s, react, sphinx
@@ -131,6 +131,7 @@ pc-init list --presets https://github.com/org/my-presets
 | `proto` | Protocol Buffers |
 | `swift` | Swift |
 | `kt` | Kotlin |
+| `css` | CSS / SCSS / Sass |
 
 Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, and `kotlin` are also accepted.
 
@@ -185,6 +186,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.proto` | `proto` |
 | `.swift` | `swift` |
 | `.kt`, `.kts` | `kt` |
+| `.css`, `.scss`, `.sass` | `css` |
 | `.sh`, `.bash` | `sh` |
 | `.sql` | `sql` |
 | `.tf`, `.tfvars` | `tf` |

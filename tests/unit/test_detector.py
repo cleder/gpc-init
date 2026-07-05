@@ -10,6 +10,7 @@ from gpc_init.detector import detect_frameworks, detect_languages
 
 ALL_LANGS = [
     "cpp",
+    "css",
     "docker",
     "go",
     "img",
@@ -95,6 +96,14 @@ class TestDetectLanguages:
     def test_detects_kotlin_script_by_extension(self, tmp_path: Path) -> None:
         (tmp_path / "build.gradle.kts").touch()
         assert "kt" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_css_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "styles.css").touch()
+        assert "css" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_scss_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "styles.scss").touch()
+        assert "css" in detect_languages(tmp_path, ALL_LANGS)
 
     def test_detects_markdown(self, tmp_path: Path) -> None:
         (tmp_path / "README.md").touch()

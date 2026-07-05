@@ -1,0 +1,6 @@
+---
+repos:
+  - repo: https://github.com/thibaudcolas/pre-commit-stylelint
+    rev: v17.14.0
+    hooks:
+      - id: stylelint
