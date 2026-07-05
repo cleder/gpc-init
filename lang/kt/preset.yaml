@@ -4,3 +4,4 @@ repos:
     rev: v2.16.0
     hooks:
       - id: pretty-format-kotlin
+        description: "Runs KTLint (or ktfmt) over Kotlin source files"
