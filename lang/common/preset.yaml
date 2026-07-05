@@ -134,7 +134,7 @@ repos:
       - id: vale
         description: "Run vale on your text"
   - repo: https://github.com/lycheeverse/lychee
-    rev: lychee-v0.24.2
+    rev: nightly
     hooks:
       - id: lychee
         description: "Run 'lychee' for fast, async, stream-based link checking (auto-installs)"
