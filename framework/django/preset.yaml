@@ -8,28 +8,37 @@ repos:
     hooks:
       - id: check-untracked-migrations
         args: ["--branches", "main", "other_branch"]
+        description: "Forbid untracked Django migrations"
       - id: check-unapplied-migrations
+        description: "Check unapplied migrations with manage.py migrate --check"
       - id: check-absent-migrations
+        description: "Check absent migrations with manage.py makemigrations --check --dry-run"
       - id: po-location-format
         args: ["--add-location", "file"]
+        description: "Changes location format for .po files"
   - repo: https://github.com/AliSayyah/django-urlconfchecks
     rev: v0.13.2
     hooks:
       - id: django-urlconfchecks
+        description: "a pre-commit for type checking the urls and associated views"
   - repo: https://github.com/browniebroke/django-codemod
     rev: v2.4.6
     hooks:
       - id: djcodemod
+        description: "A tool to automatically fix Django deprecations."
   - repo: https://github.com/adamchainz/django-upgrade
     rev: 1.31.1
     hooks:
       - id: django-upgrade
         args: ["run", "--deprecated-in", "3.0"]
+        description: "Automatically upgrade your Django project code."
   - repo: https://github.com/djlint/djLint
     rev: v1.40.3
     hooks:
       - id: djlint-reformat-django
+        description: "djLint formatting for Django"
       - id: djlint-django
+        description: "djLint linting for Django"
   - repo: https://github.com/croc100/pytest-mrt
     rev: v1.6.0
     hooks:
