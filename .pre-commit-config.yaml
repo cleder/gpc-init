@@ -58,6 +58,7 @@ repos:
         additional_dependencies:
           - pytest>=8.0
           - pyyaml>=6.0
+          - ruamel.yaml>=0.18.0
           - typer>=0.26.7
   - repo: https://github.com/rvben/rumdl-pre-commit
     rev: v0.2.26
