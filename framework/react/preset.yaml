@@ -3,6 +3,7 @@ recommended:
   lang:
     - js
     - ts
+    - css
 repos:
   - repo: local
     hooks:
@@ -16,7 +17,3 @@ repos:
           - eslint@9.28.0
           - eslint-plugin-react@7.37.5
           - eslint-plugin-react-hooks@5.2.0
-  - repo: https://github.com/thibaudcolas/pre-commit-stylelint
-    rev: v17.14.0
-    hooks:
-      - id: stylelint
