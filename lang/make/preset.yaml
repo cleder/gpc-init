@@ -4,3 +4,4 @@ repos:
     rev: v0.3.2
     hooks:
       - id: checkmake
+        description: "Makefile linter/analyzer"
