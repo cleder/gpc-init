@@ -5,5 +5,7 @@ repos:
     hooks:
       - id: sqlfluff-fix
         args: [--dialect, ansi]
+        description: "Fixes sql lint errors with `SQLFluff`"
       - id: sqlfluff-lint
         args: [--dialect, ansi]
+        description: "Lints sql files with `SQLFluff`"
