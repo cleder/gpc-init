@@ -17,6 +17,7 @@ ALL_LANGS = [
     "make",
     "md",
     "nb",
+    "proto",
     "py",
     "r",
     "rb",
@@ -76,6 +77,10 @@ class TestDetectLanguages:
     def test_detects_c_by_extension(self, tmp_path: Path) -> None:
         (tmp_path / "main.c").touch()
         assert "cpp" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_proto_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "service.proto").touch()
+        assert "proto" in detect_languages(tmp_path, ALL_LANGS)
 
     def test_detects_markdown(self, tmp_path: Path) -> None:
         (tmp_path / "README.md").touch()
