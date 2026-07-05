@@ -6,7 +6,9 @@ repos:
       - id: checkov_diff
         files: Dockerfile
         args: [--framework, dockerfile]
+        description: "This hook runs checkov against all changed files."
   - repo: https://github.com/hadolint/hadolint
     rev: v2.14.0
     hooks:
       - id: hadolint
+        description: "Runs hadolint to lint Dockerfiles"
