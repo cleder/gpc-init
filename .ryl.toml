@@ -10,7 +10,6 @@ anchors = "enable"
 braces = "enable"
 brackets = "enable"
 colons = "enable"
-commas = "enable"
 document-end = "disable"
 empty-lines = "enable"
 empty-values = "disable"
@@ -25,6 +24,12 @@ new-lines = "enable"
 octal-values = "disable"
 quoted-strings = "disable"
 trailing-spaces = "enable"
+
+[rules.commas]
+level = "error"
+max-spaces-before = 0
+min-spaces-after = 0
+max-spaces-after = 1
 
 [rules.comments]
 level = "warning"
