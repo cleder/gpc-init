@@ -13,3 +13,12 @@ repos:
         description: "Find warnings/errors in C/CPP code"
       - id: include-what-you-use
         description: "Runs Include-What-You-Use (iwyu) in C/CPP code"
+  - repo: https://github.com/cpp-linter/cpp-linter-hooks
+    rev: v1.6.0  # Use the tag or commit you want
+    hooks:
+      - id: clang-format
+        args: [--style=Google]  # Other coding style: LLVM, GNU, Chromium, Microsoft, Mozilla, WebKit.
+        description: Automatically install any specific version of clang-format and format C/C++ code
+      - id: clang-tidy
+        args: [--checks='boost-*,bugprone-*,performance-*,readability-*,portability-*,modernize-*,clang-analyzer-*,cppcoreguidelines-*']
+        description: Automatically install any specific version of clang-tidy and diagnose/fix typical programming errors
