@@ -14,11 +14,9 @@ validate target="all" type="lang":
 # Autoupdate target configurations. Usage: just update [target] [type]. defaults to all.
 update target="all" type="lang":
     @if [ "{{target}}" = "all" ]; then \
-        find lang framework -name "preset*.yaml" | xargs -I{} pre-commit autoupdate -c {};\
         find lang framework -name "preset*.yaml" | xargs -I{} prek autoupdate -c {};\
     else \
         echo 'Autoupdating {{target}}...';\
-        pre-commit autoupdate -c "{{type}}/{{target}}/preset.yaml";\
         prek autoupdate -c "{{type}}/{{target}}/preset.yaml";\
     fi
 

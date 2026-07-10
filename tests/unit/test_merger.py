@@ -236,6 +236,14 @@ class TestMergePresets:
         result = merge_presets({}, [], [fw])
         assert "recommended" not in result
 
+    def test_primary_languages_metadata_excluded_from_output(self) -> None:
+        lang = {
+            "primary_languages": ["py"],
+            "repos": [make_repo("https://lang.com", "v1", [make_hook("lang-hook")])],
+        }
+        result = merge_presets({}, [lang], [])
+        assert "primary_languages" not in result
+
     def test_duplicate_repo_rev_merges_hooks_across_layers(self) -> None:
         lang1 = {"repos": [make_repo("https://shared.com", "v1", [make_hook("ha")])]}
         lang2 = {"repos": [make_repo("https://shared.com", "v1", [make_hook("hb")])]}

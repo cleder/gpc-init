@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/rubocop/rubocop
-    rev: v1.88.1
+    rev: v1.88.2
     hooks:
       - id: rubocop
         description: "Enforce the community Ruby Style Guide with RuboCop"

@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/commit-check/commit-check
-    rev: v2.10.1
+    rev: v2.11.1
     hooks:
       - id: check-message
         args:

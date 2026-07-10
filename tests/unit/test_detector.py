@@ -12,10 +12,13 @@ ALL_LANGS = [
     "cpp",
     "css",
     "docker",
+    "env",
     "go",
+    "groovy",
     "img",
     "js",
     "kt",
+    "lua",
     "make",
     "md",
     "nb",
@@ -189,6 +192,52 @@ class TestDetectLanguages:
         (tmp_path / "deploy.bash").touch()
         assert "sh" in detect_languages(tmp_path, ALL_LANGS)
 
+    def test_detects_lua_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.lua").touch()
+        assert "lua" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "script.groovy").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_gvy_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "script.gvy").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_from_gradle_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "build.gradle").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_from_jenkinsfile(self, tmp_path: Path) -> None:
+        (tmp_path / "Jenkinsfile").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_from_jenkinsfile_case_insensitive(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / "jenkinsfile").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_env_file(self, tmp_path: Path) -> None:
+        (tmp_path / ".env").touch()
+        assert "env" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_env_local_file(self, tmp_path: Path) -> None:
+        (tmp_path / ".env.local").touch()
+        assert "env" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_env_production_file(self, tmp_path: Path) -> None:
+        (tmp_path / ".env.production").touch()
+        assert "env" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_env_skip_dir_does_not_falsely_detect_env_lang(
+        self, tmp_path: Path
+    ) -> None:
+        venv = tmp_path / "env"
+        venv.mkdir()
+        (venv / "pyvenv.cfg").touch()
+        assert "env" not in detect_languages(tmp_path, ALL_LANGS)
+
 
 class TestDetectFrameworks:
     def test_detects_django_by_manage_py(self, tmp_path: Path) -> None:
@@ -325,6 +374,12 @@ class TestDetectFrameworks:
     # _has_package_json_dep except block
     def test_no_react_when_package_json_is_invalid_json(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text("{ invalid json !!!", encoding="utf-8")
+        assert "react" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    # mutmut_14: return True instead of return False in
+    # _has_package_json_dep when parsed JSON is not a dict
+    def test_no_react_when_package_json_is_not_a_dict(self, tmp_path: Path) -> None:
+        (tmp_path / "package.json").write_text(json.dumps(["react"]), encoding="utf-8")
         assert "react" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
     # mutmut_14: encoding=None instead of encoding="utf-8" in _has_sphinx_conf
@@ -536,3 +591,15 @@ class TestDetectFrameworks:
 
         assert "k8s" in result
         assert recorded.get("encoding") == "utf-8"
+
+    # mutmut_17 (_has_github_workflows): return True instead of return False
+    # in the OSError except block
+    def test_no_git_framework_when_workflows_dir_iterdir_raises_oserror(
+        self, tmp_path: Path
+    ) -> None:
+        workflows = tmp_path / ".github" / "workflows"
+        workflows.mkdir(parents=True)
+        (workflows / "ci.yml").touch()
+
+        with patch.object(Path, "iterdir", side_effect=OSError):
+            assert "git" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)

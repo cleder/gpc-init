@@ -26,7 +26,7 @@ repos:
       - id: tfupdate
         description: "Runs tfupdate on Terraform templates."
   - repo: https://github.com/bridgecrewio/checkov
-    rev: 3.3.6
+    rev: 3.3.8
     hooks:
       - id: checkov_diff
         args: [--framework, terraform]

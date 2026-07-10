@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0]
+
+Expanded the language catalog further and taught `--detect` to recognize the new languages.
+
+### New Features
+
+- Add `env` (`dotenv-linter`), `groovy` (`npm-groovy-lint`), and `lua` (`luacheck`) language presets.
+- Auto-detect the new languages via `.env`/`.env.*` files, `.groovy`/`.gvy`/`.gradle` extensions and `Jenkinsfile`, and the `.lua` extension, respectively.
+
+## [0.5.0]
+
+Expanded the language/framework catalog, made every bundled hook self-documenting, and closed gaps found by cross-referencing MegaLinter's bundled linters.
+
+### New Features
+
+- Add `make` language preset (`checkmake`) for Makefile linting.
+- Add `rb` (Ruby), `cpp` (C/C++), `proto` (Protocol Buffers), `swift`, `kt` (Kotlin), and `css` (CSS/SCSS/Sass) language presets.
+- Add `ansible` framework preset (`ansible-lint`), detected via an `ansible.cfg` file at the repo root.
+
+### Enhancements
+
+- Cross-reference MegaLinter's bundled linters against every existing preset and add genuine gaps with verified, actively-maintained pre-commit hooks: `shfmt` (sh), `lintr` (R), `mypy` (Python), `stylelint` (react), `rstcheck`/`rstfmt` (Sphinx), Helm lint (k8s), and `jscpd`/`vale`/`lychee` (common).
+- Refactor the `react` preset to recommend the new `css` language preset instead of hardcoding a duplicate `stylelint` hook.
+- Backfill a `description:` field on every hook across all presets (~250 hooks), harvested from each hook's own upstream `.pre-commit-hooks.yaml` manifest (falling back to the hook's name, then the repo's GitHub description) via a new `scripts/harvest_hook_docs.py` maintainer script.
+  Generated `.pre-commit-config.yaml` files are now self-documenting.
+- Add roughly three dozen additional hook ids discovered from repos already in use, limited to genuinely distinct capabilities — skipping alternate install-method variants, upstream-deprecated ids, and hooks from "grab-bag" repos that are unrelated to the preset they'd land in.
+- Add long-form names and emoji to `AWESOME.md`'s table of contents and section headings (e.g. "🦀 Rust (`ru`)"), with anchors generated to match GitHub's actual heading-slug algorithm.
+
+### CI
+
+- Enable the `vercheck` tag-name/version check on release tag pushes, verifying the git tag matches the version declared in `pyproject.toml`.
+
+### Documentation
+
+- Add an "Alternatives" section to the README pointing to MegaLinter for users who want a single all-in-one linter instead of curated pre-commit hooks.
+- Add `CONTEXT.md` documenting the "hook capability" vs. "hook variant" distinction used when deciding which additional hook ids to include.
+- Require every hook to declare a `description` in `CONTRIBUTING.md`'s hook quality bar, with a matching pull request checklist item.
+
+### Build
+
+- Add `ruamel.yaml` as a dev dependency, used by the new hook-description harvesting script to edit `preset.yaml` files without disturbing hand-written comments.
+
 ## [0.4.0]
 
 Enhanced preset support with detection and recommendations, improved YAML rendering, and code quality improvements.
