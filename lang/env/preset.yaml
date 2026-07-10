@@ -1,0 +1,7 @@
+---
+repos:
+  - repo: https://github.com/dotenv-linter/dotenv-linter
+    rev: v4.0.0
+    hooks:
+      - id: dotenv-linter
+        description: "Checks the style of Dotenv files."

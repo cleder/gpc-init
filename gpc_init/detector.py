@@ -65,12 +65,17 @@ _EXTENSION_TO_LANG: dict[str, str] = {
     ".gif": "img",
     ".webp": "img",
     ".svg": "img",
+    ".lua": "lua",
+    ".groovy": "groovy",
+    ".gvy": "groovy",
+    ".gradle": "groovy",
 }
 
 # Matched case-insensitively against the file stem (no extension).
 _FILENAME_TO_LANG: dict[str, str] = {
     "dockerfile": "docker",
     "makefile": "make",
+    "jenkinsfile": "groovy",
 }
 
 
@@ -79,6 +84,12 @@ def _walk(repo_dir: Path) -> Generator[Path]:
     for root, dirs, files in repo_dir.walk(on_error=lambda _: None):
         dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
         yield from (root / f for f in files)
+
+
+def _is_dotenv_file(name: str) -> bool:
+    """Match .env, .env.local, .env.production, etc. (no fixed extension)."""
+    lname = name.lower()
+    return lname == ".env" or lname.startswith(".env.")
 
 
 def detect_languages(repo_dir: Path, supported_langs: list[str]) -> list[str]:
@@ -95,6 +106,8 @@ def detect_languages(repo_dir: Path, supported_langs: list[str]) -> list[str]:
         lang = _FILENAME_TO_LANG.get(file.stem.lower())
         if lang is None:
             lang = _EXTENSION_TO_LANG.get(file.suffix.lower())
+        if lang is None and _is_dotenv_file(file.name):
+            lang = "env"
         if lang and lang in supported:
             seen.append(lang)
     return deduplicate_preserving_order(seen)

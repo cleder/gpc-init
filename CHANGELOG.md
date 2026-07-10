@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0]
+
+Expanded the language catalog further and taught `--detect` to recognize the new languages.
+
+### New Features
+
+- Add `env` (`dotenv-linter`), `groovy` (`npm-groovy-lint`), and `lua` (`luacheck`) language presets.
+- Auto-detect the new languages via `.env`/`.env.*` files, `.groovy`/`.gvy`/`.gradle` extensions and `Jenkinsfile`, and the `.lua` extension, respectively.
+
 ## [0.5.0]
 
 Expanded the language/framework catalog, made every bundled hook self-documenting, and closed gaps found by cross-referencing MegaLinter's bundled linters.

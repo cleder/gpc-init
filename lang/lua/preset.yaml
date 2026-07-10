@@ -1,0 +1,7 @@
+---
+repos:
+  - repo: https://github.com/lunarmodules/luacheck
+    rev: v1.2.0
+    hooks:
+      - id: luacheck
+        description: Lint and static analysis of Lua code

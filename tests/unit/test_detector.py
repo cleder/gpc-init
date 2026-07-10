@@ -12,10 +12,13 @@ ALL_LANGS = [
     "cpp",
     "css",
     "docker",
+    "env",
     "go",
+    "groovy",
     "img",
     "js",
     "kt",
+    "lua",
     "make",
     "md",
     "nb",
@@ -188,6 +191,52 @@ class TestDetectLanguages:
     def test_bash_extension_maps_to_sh(self, tmp_path: Path) -> None:
         (tmp_path / "deploy.bash").touch()
         assert "sh" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_lua_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "main.lua").touch()
+        assert "lua" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "script.groovy").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_gvy_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "script.gvy").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_from_gradle_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "build.gradle").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_from_jenkinsfile(self, tmp_path: Path) -> None:
+        (tmp_path / "Jenkinsfile").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_groovy_from_jenkinsfile_case_insensitive(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / "jenkinsfile").touch()
+        assert "groovy" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_env_file(self, tmp_path: Path) -> None:
+        (tmp_path / ".env").touch()
+        assert "env" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_env_local_file(self, tmp_path: Path) -> None:
+        (tmp_path / ".env.local").touch()
+        assert "env" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_detects_env_production_file(self, tmp_path: Path) -> None:
+        (tmp_path / ".env.production").touch()
+        assert "env" in detect_languages(tmp_path, ALL_LANGS)
+
+    def test_env_skip_dir_does_not_falsely_detect_env_lang(
+        self, tmp_path: Path
+    ) -> None:
+        venv = tmp_path / "env"
+        venv.mkdir()
+        (venv / "pyvenv.cfg").touch()
+        assert "env" not in detect_languages(tmp_path, ALL_LANGS)
 
 
 class TestDetectFrameworks:

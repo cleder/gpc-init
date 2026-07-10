@@ -93,7 +93,7 @@ repos:
       - id: talisman-push
         description: "talisman"
   - repo: https://github.com/trufflesecurity/truffleHog
-    rev: v3.95.8
+    rev: v3.95.9
     hooks:
       - id: trufflehog
         args: ["--only-verified"]
@@ -107,7 +107,7 @@ repos:
         args: ["--baseline", ".secrets.baseline"]
         description: "Detects high entropy strings that are likely to be passwords."
   - repo: https://github.com/semgrep/semgrep
-    rev: v1.168.0
+    rev: v1.169.0
     hooks:
       - id: semgrep
         args: [--config, auto, --error]
@@ -124,7 +124,7 @@ repos:
       - id: vercheck
         description: "Check that the version in pyproject.toml/Cargo.toml is PEP-440 compliant (auto-detects whichever manifest is present; if both exist, they must agree)."
   - repo: https://github.com/kucherenko/jscpd
-    rev: v5.0.11
+    rev: v5.0.12
     hooks:
       - id: jscpd
         description: "Check for duplicated code"

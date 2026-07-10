@@ -6,7 +6,7 @@ repos:
       - id: absolufy-imports
         description: "Automatically convert relative imports to absolute"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.15.21
     hooks:
       - id: ruff-check
         description: "Run 'ruff check' for extremely fast Python linting"
@@ -34,12 +34,12 @@ repos:
       - id: pyrefly-check
         description: "Run `pyrefly check` for Python type checking."
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.56
+    rev: v0.0.58
     hooks:
       - id: ty
         description: "Run 'ty' for extremely fast Python type checking"
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.1.0
+    rev: v2.2.0
     hooks:
       - id: mypy
         description: "Mirror of mypy for pre-commit"
@@ -80,7 +80,7 @@ repos:
         args: [--py313-plus]
         description: "Automatically upgrade syntax for newer versions."
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.26
+    rev: 0.11.28
     hooks:
       - id: uv-lock
         description: "Automatically run 'uv lock' on your project dependencies"

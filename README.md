@@ -92,7 +92,7 @@ pc-init list
 
 ```text
 Languages:
-  cpp, css, docker, go, img, js, kt, make, md, nb, proto, py, rb, ru, sh, sql, swift, tf, toml, ts, yaml
+  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, r, rb, ru, sh, sql, swift, tf, toml, ts, yaml
 
 Frameworks:
   ansible, django, git, k8s, react, sphinx
@@ -132,6 +132,10 @@ pc-init list --presets https://github.com/org/my-presets
 | `swift` | Swift |
 | `kt` | Kotlin |
 | `css` | CSS / SCSS / Sass |
+| `r` | R |
+| `env` | Env / Dotenv Files |
+| `groovy` | Groovy |
+| `lua` | Lua |
 
 Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, and `kotlin` are also accepted.
 
@@ -196,8 +200,12 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.yaml`, `.yml` | `yaml` |
 | `.r` | `r` |
 | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg` | `img` |
+| `.lua` | `lua` |
+| `.groovy`, `.gvy`, `.gradle` | `groovy` |
+| `.env`, `.env.*` (filename) | `env` |
 | `Dockerfile` (filename) | `docker` |
 | `Makefile` (filename) | `make` |
+| `Jenkinsfile` (filename) | `groovy` |
 
 **Framework detection** is based on indicator files:
 

@@ -1,0 +1,11 @@
+---
+repos:
+  - repo: https://github.com/nvuillam/npm-groovy-lint
+    rev: v18.0.0
+    hooks:
+      - id: npm-groovy-lint
+        description: Groovy & Jenkinsfile Linter
+      - id: format-npm-groovy-lint
+        description: Groovy & Jenkinsfile Formatter
+      - id: fix-npm-groovy-lint
+        description: Groovy & Jenkinsfile Auto-fixer

@@ -6,7 +6,7 @@ repos:
       - id: swiftlint
         description: "Check Swift files for issues with SwiftLint"
   - repo: https://github.com/nicklockwood/SwiftFormat
-    rev: 0.61.1
+    rev: 0.62.1
     hooks:
       - id: swiftformat
         description: "Check swift files for formatting issues with SwiftFormat"
