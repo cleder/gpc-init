@@ -31,7 +31,7 @@ _EXTENSION_TO_LANG: dict[str, str] = {
     ".ts": "ts",
     ".tsx": "ts",
     ".go": "go",
-    ".rs": "ru",
+    ".rs": "rs",
     ".rb": "rb",
     ".c": "cpp",
     ".h": "cpp",

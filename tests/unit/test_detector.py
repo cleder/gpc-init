@@ -26,7 +26,7 @@ ALL_LANGS = [
     "py",
     "r",
     "rb",
-    "ru",
+    "rs",
     "sh",
     "sql",
     "swift",
@@ -70,7 +70,7 @@ class TestDetectLanguages:
 
     def test_detects_rust_by_rs_extension(self, tmp_path: Path) -> None:
         (tmp_path / "lib.rs").touch()
-        assert "ru" in detect_languages(tmp_path, ALL_LANGS)
+        assert "rs" in detect_languages(tmp_path, ALL_LANGS)
 
     def test_detects_ruby_by_rb_extension(self, tmp_path: Path) -> None:
         (tmp_path / "main.rb").touch()

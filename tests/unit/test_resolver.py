@@ -29,7 +29,7 @@ class TestNormalizeLang:
         assert normalize_lang("javascript") == "js"
 
     def test_alias_rust(self) -> None:
-        assert normalize_lang("rust") == "ru"
+        assert normalize_lang("rust") == "rs"
 
     def test_alias_ruby(self) -> None:
         assert normalize_lang("ruby") == "rb"

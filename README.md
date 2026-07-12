@@ -92,7 +92,7 @@ pc-init list
 
 ```text
 Languages:
-  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, r, rb, ru, sh, sql, swift, tf, toml, ts, yaml
+  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, r, rb, rs, sh, sql, swift, tf, toml, ts, yaml
 
 Frameworks:
   ansible, django, git, k8s, react, sphinx
@@ -114,7 +114,7 @@ pc-init list --presets https://github.com/org/my-presets
 | `py` | Python |
 | `js` | JavaScript |
 | `go` | Go |
-| `ru` | Rust |
+| `rs` | Rust |
 | `sh` | Shell / Bash |
 | `ts` | TypeScript |
 | `nb` | Jupyter Notebooks |
@@ -185,7 +185,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.js`, `.mjs`, `.cjs`, `.jsx` | `js` |
 | `.ts`, `.tsx` | `ts` |
 | `.go` | `go` |
-| `.rs` | `ru` |
+| `.rs` | `rs` |
 | `.rb` | `rb` |
 | `.c`, `.h`, `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hh`, `.hxx` | `cpp` |
 | `.proto` | `proto` |

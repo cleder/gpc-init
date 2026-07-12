@@ -108,7 +108,7 @@ For every behavior change, tests MUST be written first and fail before implement
 - [ ] T038 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --lang=js --framework=django --framework=react` merges in deterministic order (common → py → js → django → react)
 - [ ] T039 Write `tests/integration/test_cli_generation.py` test for Scenario B2 from quickstart: `pc-init --lang=py --lang=js --framework=django --framework=react` produces valid config with all four contributions
 - [ ] T040 [P] [US2] Populate `framework/react/preset.yaml` with React-specific hooks and `primary_languages: [js]` metadata (informational only)
-- [ ] T041 [P] [US2] Populate `framework/bevy/preset.yaml` with Bevy-specific hooks and `primary_languages: [ru]` metadata (informational only)
+- [ ] T041 [P] [US2] Populate `framework/bevy/preset.yaml` with Bevy-specific hooks and `primary_languages: [rs]` metadata (informational only)
 - [ ] T042 [P] [US2] Implement framework merging in `gpc_init/merger.py` to handle optional frameworks; framework presets are purely additive
 
 ### Framework Validation (Informational Only)
@@ -126,7 +126,7 @@ For every behavior change, tests MUST be written first and fail before implement
 
 - [ ] T045 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=unsupported-lang` fails with exit code non-zero; stderr includes list of supported languages
 - [ ] T046 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --framework=unsupported-fw` fails with exit code non-zero; stderr includes list of supported frameworks
-- [ ] T047 [P] Implement `gpc_init/cli.py` error handling to catch `UnsupportedLanguageError` and `UnsupportedFrameworkError`; format as `"Error: unsupported language 'xxx'. Supported: py, js, go, ru"` and similar for frameworks
+- [ ] T047 [P] Implement `gpc_init/cli.py` error handling to catch `UnsupportedLanguageError` and `UnsupportedFrameworkError`; format as `"Error: unsupported language 'xxx'. Supported: py, js, go, rs"` and similar for frameworks
 - [ ] T048 [P] Implement `gpc_init/cli.py` error handling for YAML parse errors; output `"Error: failed to parse preset YAML: <detail>"`
 
 ### Overwrite Behavior

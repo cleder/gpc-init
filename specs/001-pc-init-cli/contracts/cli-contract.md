@@ -7,8 +7,8 @@
 ## Inputs
 
 - `--lang` (required, repeatable)
-  - Canonical language ids: `py`, `js`, `go`, `ru`.
-  - Accepted aliases: `python` -> `py`, `javascript` -> `js`, `rust` -> `ru`.
+  - Canonical language ids: `py`, `js`, `go`, `rs`.
+  - Accepted aliases: `python` -> `py`, `javascript` -> `js`, `rust` -> `rs`.
   - At least one value is required.
   - Values must exist in language profile catalog after normalization.
 - `--framework` (optional, repeatable)

@@ -20,7 +20,7 @@ _LANG_ALIASES: dict[str, str] = {
     "notebook": "nb",
     "python": "py",
     "ruby": "rb",
-    "rust": "ru",
+    "rust": "rs",
     "shell": "sh",
     "terraform": "tf",
     "typescript": "ts",

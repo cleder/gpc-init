@@ -56,7 +56,7 @@ def load_language_preset(lang_id: str, base_dir: Path | None = None) -> dict[str
     Load the preset for a language (lang/<lang_id>/preset.yaml).
 
     Args:
-        lang_id: Canonical language identifier (e.g. 'py', 'js', 'go', 'ru').
+        lang_id: Canonical language identifier (e.g. 'py', 'js', 'go', 'rs').
         base_dir: Override base directory for presets (used in tests).
 
     Returns:
