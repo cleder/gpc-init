@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Enhancements
+
+- Auto-detect the `behave` framework preset (added in 0.7.0) via a `features/steps/` directory or a `behave.ini`/`.behaverc` file at the repo root, and add it to the generated `AWESOME.md` list with a display name and emoji.
+
 ## [0.6.0]
 
 Expanded the language catalog further and taught `--detect` to recognize the new languages.

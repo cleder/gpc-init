@@ -708,7 +708,7 @@ class TestArgumentNormalization:
         result = runner.invoke(app, ["--lang", "javascript", "--output", str(output)])
         assert result.exit_code == 0, result.output
 
-    def test_rust_alias_normalized_to_ru(self, tmp_path: Path) -> None:
+    def test_rust_alias_normalized_to_rs(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(app, ["--lang", "rust", "--output", str(output)])
         assert result.exit_code == 0, result.output

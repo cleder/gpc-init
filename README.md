@@ -1,6 +1,6 @@
 # pc-init
 
-[![Tests](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml/badge.svg?branch=main)](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml) [![codecov](https://codecov.io/gh/cleder/gpc-init/graph/badge.svg?token=3enkN1Q8JM)](https://codecov.io/gh/cleder/gpc-init) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![pyrefly](https://img.shields.io/badge/type_checker-pyrefly-blue)](https://github.com/facebook/pyrefly) [![ty](https://img.shields.io/badge/type_checker-ty-blue)](https://github.com/astral-sh/ty) [![GPLv3 License](https://img.shields.io/pypi/l/pc-init)](https://opensource.org/license/gpl-3-0/) [![Python Version](https://img.shields.io/pypi/pyversions/pc-init)](https://www.python.org/) [![PyPI - Version](https://img.shields.io/pypi/v/pc-init)](https://pypi.org/project/pc-init/) [![Status](https://img.shields.io/pypi/status/pc-init)](https://pypi.org/project/pc-init/)
+[![Tests](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml/badge.svg?branch=main)](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml) [![codecov](https://codecov.io/gh/cleder/gpc-init/graph/badge.svg?token=3enkN1Q8JM)](https://codecov.io/gh/cleder/gpc-init) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![pyrefly](https://img.shields.io/badge/type_checker-pyrefly-blue)](https://github.com/facebook/pyrefly) [![ty](https://img.shields.io/badge/type_checker-ty-blue)](https://github.com/astral-sh/ty) [![GPLv3 License](https://img.shields.io/pypi/l/pc-init)](https://opensource.org/license/gpl-3-0/) [![Python Version](https://img.shields.io/pypi/pyversions/pc-init)](https://www.python.org/) [![PyPI - Version](https://img.shields.io/pypi/v/pc-init)](https://pypi.org/project/pc-init/) [![Status](https://img.shields.io/pypi/status/pc-init)](https://pypi.org/project/pc-init/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pc-init?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads%2Fmonth)](https://pepy.tech/projects/pc-init)
 
 Generate a [pre-commit](https://pre-commit.com/) or [prek](https://github.com/j178/prek/) `.pre-commit-config.yaml` for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
 Works with [prek](https://github.com/j178/prek/) and [pre-commit](https://pre-commit.com/)
@@ -92,10 +92,10 @@ pc-init list
 
 ```text
 Languages:
-  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, r, rb, ru, sh, sql, swift, tf, toml, ts, yaml
+  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, r, rb, rs, sh, sql, swift, tf, toml, ts, yaml
 
 Frameworks:
-  ansible, django, git, k8s, react, sphinx
+  ansible, behave, django, git, k8s, react, sphinx
 ```
 
 Use `--presets` to list what a custom catalog provides:
@@ -114,7 +114,7 @@ pc-init list --presets https://github.com/org/my-presets
 | `py` | Python |
 | `js` | JavaScript |
 | `go` | Go |
-| `ru` | Rust |
+| `rs` | Rust |
 | `sh` | Shell / Bash |
 | `ts` | TypeScript |
 | `nb` | Jupyter Notebooks |
@@ -149,6 +149,7 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`,
 | `git` | Commit message linting |
 | `k8s` | Kubernetes |
 | `ansible` | Ansible |
+| `behave` | Behave BDD for Python |
 
 ## Auto-detecting languages and frameworks
 
@@ -185,7 +186,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.js`, `.mjs`, `.cjs`, `.jsx` | `js` |
 | `.ts`, `.tsx` | `ts` |
 | `.go` | `go` |
-| `.rs` | `ru` |
+| `.rs` | `rs` |
 | `.rb` | `rb` |
 | `.c`, `.h`, `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hh`, `.hxx` | `cpp` |
 | `.proto` | `proto` |
@@ -217,6 +218,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | Any `.yaml`/`.yml` file outside `.github/` containing `apiVersion:` and `kind:` | `k8s` |
 | `.github/workflows/` directory with at least one `.yml` file | `git` |
 | `ansible.cfg` at the repo root | `ansible` |
+| `features/steps/` directory, or `behave.ini`/`.behaverc` at the repo root | `behave` |
 
 ## Language suggestions for frameworks
 

@@ -54,7 +54,7 @@ license = "GPL-3.0-only"
 name = "pc-init"
 readme = "README.md"
 requires-python = ">=3.13"
-version = "0.6.0"
+version = "0.7.0"
 
 [project.scripts]
 pc-init = "gpc_init.cli:entry_point"
@@ -112,6 +112,7 @@ extend-safe-fixes = [
 ignore = [
     "ANN401",
     "COM812",
+    "CPY001",
     "D203",
     "D212",
 ]

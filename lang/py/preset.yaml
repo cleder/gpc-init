@@ -6,7 +6,7 @@ repos:
       - id: absolufy-imports
         description: "Automatically convert relative imports to absolute"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.21
+    rev: v0.16.0
     hooks:
       - id: ruff-check
         description: "Run 'ruff check' for extremely fast Python linting"
@@ -29,22 +29,22 @@ repos:
       - id: blacken-docs
         description: "Run `black` on python code blocks in documentation files"
   - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: 1.2.0.dev1
+    rev: 1.2.0.dev3
     hooks:
       - id: pyrefly-check
         description: "Run `pyrefly check` for Python type checking."
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.58
+    rev: v0.0.64
     hooks:
       - id: ty
         description: "Run 'ty' for extremely fast Python type checking"
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v2.2.0
+    rev: v2.3.0
     hooks:
       - id: mypy
         description: "Mirror of mypy for pre-commit"
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
-    rev: v5.1.0
+    rev: v6.2.0
     hooks:
       - id: complexipy
         description: "Run 'complexipy' for extremely fast calculation of cognitive complexity of Python files"
@@ -80,7 +80,7 @@ repos:
         args: [--py313-plus]
         description: "Automatically upgrade syntax for newer versions."
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.28
+    rev: 0.12.0
     hooks:
       - id: uv-lock
         description: "Automatically run 'uv lock' on your project dependencies"
@@ -102,3 +102,32 @@ repos:
     hooks:
       - id: deptry
         description: "deptry is a command line tool to check for issues with dependencies in a Python project, such as unused or missing dependencies."
+  - repo: https://github.com/shelkesays/safelint
+    rev: v2.10.0  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
+    hooks:
+      - id: safelint
+        # Required in v2.0.0+, pick the line for the language(s) your repo lints:
+        additional_dependencies: ['safelint[python]']               # Python-only repo
+        # additional_dependencies: ['safelint[javascript]']         # JS-only repo (Node / browser / Deno / Cloudflare Workers / Bun)
+        # additional_dependencies: ['safelint[typescript]']         # TypeScript repo (bundles tree-sitter-javascript too)
+        # additional_dependencies: ['safelint[java]']               # Java repo (Spring Boot via [tool.safelint.java] framework = "spring-boot")
+        # additional_dependencies: ['safelint[rust]']               # Rust repo
+        # additional_dependencies: ['safelint[php]']                # PHP repo
+        # additional_dependencies: ['safelint[python,javascript]']  # mixed monorepo
+        # additional_dependencies: ['safelint[python,rust]']        # Python + Rust (e.g. PyO3 / maturin projects)
+        # additional_dependencies: ['safelint[all]']                # kitchen-sink
+
+        args: [--fail-on=error]   # or --fail-on=warning for stricter CI
+        files: ^src/              # optional, scope to a directory
+        description: >
+          Checks source files against safety-critical coding rules inspired by
+          Gerard J. Holzmann's Power of Ten (NASA/JPL). Catches oversized functions,
+          deep nesting, bare excepts, global mutation, unbounded loops, and more.
+          Every supported language ships as an opt-in extra in v2.0.0+ - pick the
+          matching one via ``additional_dependencies`` in your
+          ``.pre-commit-config.yaml``: ``['safelint[python]']``,
+          ``['safelint[javascript]']``, ``['safelint[typescript]']``,
+          ``['safelint[java]']``, ``['safelint[rust]']``, ``['safelint[go]']``,
+          ``['safelint[php]']``, ``['safelint[c]']``, ``['safelint[cpp]']``, or
+          ``['safelint[all]']``. Without an extra, the hook installs only the
+          engine and exits with a clear install hint on first run.

@@ -20,7 +20,7 @@ _LANG_ALIASES: dict[str, str] = {
     "notebook": "nb",
     "python": "py",
     "ruby": "rb",
-    "rust": "ru",
+    "rust": "rs",
     "shell": "sh",
     "terraform": "tf",
     "typescript": "ts",
@@ -146,6 +146,7 @@ def _normalize_rec(preset: dict[str, Any]) -> dict[str, Any]:
 
 
 def expand_recommendations(  # noqa: PLR0913
+    *,
     langs: list[str],
     frameworks: list[str],
     lang_presets: list[dict[str, Any]],

@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/thibaudcolas/pre-commit-stylelint
-    rev: v17.14.0
+    rev: v17.14.1
     hooks:
       - id: stylelint
         description: "Mirrors all Stylelint releases for the pre-commit hooks framework."

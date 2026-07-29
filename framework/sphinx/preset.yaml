@@ -6,7 +6,7 @@ repos:
       - id: sphinx-lint
         description: "Searches for common problems in Sphinx-flavored reST files"
   - repo: https://github.com/rstcheck/rstcheck
-    rev: v6.2.5
+    rev: v6.3.0
     hooks:
       - id: rstcheck
         description: "Checks syntax of reStructuredText and code blocks nested within it"

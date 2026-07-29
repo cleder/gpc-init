@@ -31,7 +31,7 @@ _EXTENSION_TO_LANG: dict[str, str] = {
     ".ts": "ts",
     ".tsx": "ts",
     ".go": "go",
-    ".rs": "ru",
+    ".rs": "rs",
     ".rb": "rb",
     ".c": "cpp",
     ".h": "cpp",
@@ -156,6 +156,12 @@ def _has_kubernetes_files(repo_dir: Path) -> bool:
     return False
 
 
+def _has_behave_structure(repo_dir: Path) -> bool:
+    if (repo_dir / "features" / "steps").is_dir():
+        return True
+    return any((repo_dir / name).is_file() for name in ("behave.ini", ".behaverc"))
+
+
 def _has_github_workflows(repo_dir: Path) -> bool:
     workflows = repo_dir / ".github" / "workflows"
     if not workflows.is_dir():
@@ -178,6 +184,7 @@ _FRAMEWORK_DETECTORS: list[tuple[str, Callable[[Path], bool]]] = [
     ("k8s", _has_kubernetes_files),
     ("git", _has_github_workflows),
     ("ansible", lambda d: (d / "ansible.cfg").is_file()),
+    ("behave", _has_behave_structure),
 ]
 
 
