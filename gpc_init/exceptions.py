@@ -40,6 +40,17 @@ class TargetFileExistsError(Exception):
         super().__init__(f"'{path}' already exists. Use --force to overwrite.")
 
 
+class UnsupportedProfileError(Exception):
+    """Raised when a requested profile is not defined."""
+
+    def __init__(self, profile: str, supported: list[str]) -> None:
+        """Initialize with the unsupported profile and supported profile list."""
+        self.profile = profile
+        self.supported = supported
+        supported_str = ", ".join(sorted(supported))
+        super().__init__(f"Unsupported profile '{profile}'. Supported: {supported_str}")
+
+
 class PresetFetchError(Exception):
     """Raised when a remote preset repository cannot be fetched."""
 

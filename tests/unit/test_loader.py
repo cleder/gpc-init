@@ -140,3 +140,124 @@ class TestLoadFrameworkPreset:
         (fw_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
         result = load_framework_preset("custom_fw", base_dir=tmp_path)
         assert result == {"repos": []}
+
+
+class TestLoadLanguagePresetForProfile:
+    def test_preset_profile_loads_preset_yaml(self, tmp_preset_dir: Path) -> None:
+        from gpc_init.loader import load_language_preset_for_profile
+
+        result = load_language_preset_for_profile("py", "preset", base_dir=tmp_preset_dir)
+        assert "repos" in result
+        assert len(result["repos"]) > 0
+
+    def test_preset_profile_equivalent_to_load_language_preset(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        from gpc_init.loader import load_language_preset_for_profile
+
+        preset_only = load_language_preset("py", base_dir=tmp_preset_dir)
+        profile_result = load_language_preset_for_profile(
+            "py", "preset", base_dir=tmp_preset_dir
+        )
+        assert preset_only == profile_result
+
+    def test_experimental_profile_merges_preset_and_experimental(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        from gpc_init.loader import load_language_preset_for_profile
+
+        result = load_language_preset_for_profile(
+            "py", "experimental", base_dir=tmp_preset_dir
+        )
+        assert "repos" in result
+        repo_ids = [r["repo"] for r in result["repos"]]
+        # ruff from preset.yaml
+        assert any("ruff" in r for r in repo_ids)
+        # experimental-hook from experimental.yaml
+        assert any("experimental" in r for r in repo_ids)
+
+    def test_legacy_profile_loads_legacy_yaml(self, tmp_preset_dir: Path) -> None:
+        from gpc_init.loader import load_language_preset_for_profile
+
+        result = load_language_preset_for_profile(
+            "py", "legacy", base_dir=tmp_preset_dir
+        )
+        assert "repos" in result
+        repo_ids = [r["repo"] for r in result["repos"]]
+        assert any("legacy" in r for r in repo_ids)
+
+    def test_profile_missing_optional_file_loads_only_preset(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        from gpc_init.loader import load_language_preset_for_profile
+
+        # js does not have an experimental.yaml in fixtures
+        result = load_language_preset_for_profile(
+            "js", "experimental", base_dir=tmp_preset_dir
+        )
+        assert "repos" in result
+        # Should load js/preset.yaml (prettier) but no error for missing experimental
+        repo_ids = [r["repo"] for r in result["repos"]]
+        assert any("prettier" in str(r) or "local" in str(r) for r in repo_ids)
+
+    def test_exhaustive_profile_loads_all_available_files(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        from gpc_init.loader import load_language_preset_for_profile
+
+        result = load_language_preset_for_profile(
+            "py", "exhaustive", base_dir=tmp_preset_dir
+        )
+        assert "repos" in result
+        repo_ids = [r["repo"] for r in result["repos"]]
+        assert any("ruff" in r for r in repo_ids)
+        assert any("experimental" in r for r in repo_ids)
+        assert any("legacy" in r for r in repo_ids)
+
+    def test_missing_preset_yaml_raises(self, tmp_preset_dir: Path) -> None:
+        from gpc_init.loader import load_language_preset_for_profile
+
+        with pytest.raises(PresetNotFoundError):
+            load_language_preset_for_profile(
+                "unknown_lang", "preset", base_dir=tmp_preset_dir
+            )
+
+
+class TestLoadFrameworkPresetForProfile:
+    def test_preset_profile_loads_preset_yaml(self, tmp_preset_dir: Path) -> None:
+        from gpc_init.loader import load_framework_preset_for_profile
+
+        result = load_framework_preset_for_profile(
+            "react", "preset", base_dir=tmp_preset_dir
+        )
+        assert "repos" in result
+
+    def test_preset_profile_equivalent_to_load_framework_preset(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        from gpc_init.loader import load_framework_preset_for_profile
+
+        base = load_framework_preset("react", base_dir=tmp_preset_dir)
+        profile_result = load_framework_preset_for_profile(
+            "react", "preset", base_dir=tmp_preset_dir
+        )
+        assert base == profile_result
+
+    def test_experimental_profile_with_no_experimental_file(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        from gpc_init.loader import load_framework_preset_for_profile
+
+        # react fixture has no experimental.yaml; should still succeed
+        result = load_framework_preset_for_profile(
+            "react", "experimental", base_dir=tmp_preset_dir
+        )
+        assert "repos" in result
+
+    def test_missing_framework_raises(self, tmp_preset_dir: Path) -> None:
+        from gpc_init.loader import load_framework_preset_for_profile
+
+        with pytest.raises(PresetNotFoundError):
+            load_framework_preset_for_profile(
+                "unknown_fw", "preset", base_dir=tmp_preset_dir
+            )

@@ -1,0 +1,21 @@
+---
+# Experimental Python pre-commit hooks
+# These hooks are new, not yet widely adopted, or under active development.
+# Use with --profile=experimental to include these on top of the preset baseline.
+repos:
+  - repo: https://github.com/microsoft/pyright
+    rev: v1.1.400
+    hooks:
+      - id: pyright
+        description: "Run 'pyright' for Python type checking (Microsoft)"
+  - repo: https://github.com/jendrikseipp/vulture
+    rev: v2.14
+    hooks:
+      - id: vulture
+        description: "Find dead Python code"
+  - repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        additional_dependencies: ["tomli"]
+        description: "pydocstyle is a static analysis tool to check compliance with Python docstring conventions"

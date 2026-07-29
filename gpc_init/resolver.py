@@ -3,7 +3,11 @@
 from pathlib import Path
 from typing import Any
 
-from gpc_init.exceptions import UnsupportedFrameworkError, UnsupportedLanguageError
+from gpc_init.exceptions import (
+    UnsupportedFrameworkError,
+    UnsupportedLanguageError,
+    UnsupportedProfileError,
+)
 
 # Language name aliases -> canonical id
 _LANG_ALIASES: dict[str, str] = {
@@ -31,9 +35,77 @@ _LANG_ALIASES: dict[str, str] = {
 # from a wheel the real copies are present at the same location.
 _DEFAULT_PRESETS_BASE = Path(__file__).parent
 
+# Profile definitions: each profile has an optional icon and an optional list of
+# other profiles it includes.  Profiles that only include others (e.g. "exhaustive")
+# need not have their own preset file.
+#
+# Inclusion is recursive but cycle-safe: a profile is never expanded twice.
+#   preset      ⭐  – the curated baseline
+#   legacy      🕰️  – older / less-maintained hooks
+#   experimental ⚗️  – new hooks not yet widely adopted; also includes preset
+#   exhaustive      – all profiles combined (no hooks of its own)
+_PROFILES: dict[str, dict[str, object]] = {
+    "preset": {"icon": "⭐", "includes": []},
+    "legacy": {"icon": "🕰️", "includes": []},
+    "experimental": {"icon": "⚗️", "includes": ["preset"]},
+    "exhaustive": {"icon": "", "includes": ["preset", "legacy", "experimental"]},
+}
+
+DEFAULT_PROFILE = "preset"
+
 
 def _resolve_base(base_dir: Path | None) -> Path:
     return base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
+
+
+def _expand_profile(profile_id: str, result: list[str], visited: set[str]) -> None:
+    """Recursively expand a profile into an ordered list of profile ids."""
+    if profile_id in visited:
+        return
+    visited.add(profile_id)
+    includes: list[str] = list(_PROFILES.get(profile_id, {}).get("includes", []))  # type: ignore[arg-type]
+    for included in includes:
+        _expand_profile(included, result, visited)
+    if profile_id not in result:
+        result.append(profile_id)
+
+
+def get_supported_profiles() -> list[str]:
+    """Return sorted list of supported profile ids."""
+    return sorted(_PROFILES.keys())
+
+
+def validate_profile(profile_id: str) -> None:
+    """
+    Validate that a profile id is supported.
+
+    Raises:
+        UnsupportedProfileError: If the profile is not defined.
+
+    """
+    if profile_id not in _PROFILES:
+        raise UnsupportedProfileError(profile_id, get_supported_profiles())
+
+
+def resolve_profile_file_names(profile_id: str) -> list[str]:
+    """
+    Return the ordered list of preset file names to load for a profile.
+
+    File names follow the convention ``{profile_id}.yaml``.  Included profiles
+    are expanded recursively (depth-first) before the requesting profile itself,
+    so lower-precedence files come first and higher-precedence files last.
+
+    Args:
+        profile_id: A valid profile identifier (e.g. ``"preset"``,
+            ``"experimental"``).
+
+    Returns:
+        Ordered list such as ``["preset.yaml", "experimental.yaml"]``.
+
+    """
+    expanded: list[str] = []
+    _expand_profile(profile_id, expanded, set())
+    return [f"{pid}.yaml" for pid in expanded]
 
 
 def _discover_languages(base_dir: Path) -> list[str]:

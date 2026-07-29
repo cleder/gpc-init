@@ -6,6 +6,8 @@ from typing import Any
 import yaml
 
 from gpc_init.exceptions import PresetNotFoundError, PresetParseError
+from gpc_init.merger import merge_presets
+from gpc_init.resolver import resolve_profile_file_names
 
 # Base directory containing lang/ and framework/ preset folders.
 # In development the symlinks gpc_init/lang -> ../lang resolve here; when installed
@@ -39,6 +41,13 @@ def _load_yaml_file(path: Path) -> dict[str, Any]:
     return data
 
 
+def _load_optional_yaml_file(path: Path) -> dict[str, Any] | None:
+    """Load a YAML file if it exists, returning None when absent."""
+    if not path.exists():
+        return None
+    return _load_yaml_file(path)
+
+
 def load_common_preset(base_dir: Path | None = None) -> dict[str, Any]:
     """
     Load the common baseline preset (lang/common/preset.yaml).
@@ -70,6 +79,57 @@ def load_language_preset(lang_id: str, base_dir: Path | None = None) -> dict[str
     return _load_yaml_file(_resolve_base(base_dir) / "lang" / lang_id / "preset.yaml")
 
 
+def load_language_preset_for_profile(
+    lang_id: str,
+    profile_id: str,
+    base_dir: Path | None = None,
+) -> dict[str, Any]:
+    """
+    Load and merge all profile files for a language.
+
+    For each file name produced by :func:`resolve_profile_file_names`, the
+    corresponding ``lang/<lang_id>/<file>`` is loaded if it exists.  The
+    ``preset.yaml`` file is always required; profile-specific files are
+    optional and silently skipped when absent.
+
+    The loaded presets are merged in inclusion order (lower-precedence first)
+    using the standard :func:`merge_presets` semantics.
+
+    Args:
+        lang_id: Canonical language identifier (e.g. 'py').
+        profile_id: Profile identifier (e.g. 'preset', 'experimental').
+        base_dir: Override base directory for presets (used in tests).
+
+    Returns:
+        Merged preset dict for the requested profile.
+
+    Raises:
+        PresetNotFoundError: If ``preset.yaml`` for the language does not exist.
+        PresetParseError: If any loaded YAML file is invalid.
+
+    """
+    base = _resolve_base(base_dir)
+    lang_dir = base / "lang" / lang_id
+    file_names = resolve_profile_file_names(profile_id)
+
+    presets: list[dict[str, Any]] = []
+    for fname in file_names:
+        path = lang_dir / fname
+        if fname == "preset.yaml":
+            # preset.yaml is required; raises PresetNotFoundError when missing
+            presets.append(_load_yaml_file(path))
+        else:
+            loaded = _load_optional_yaml_file(path)
+            if loaded is not None:
+                presets.append(loaded)
+
+    if not presets:
+        return {}
+    if len(presets) == 1:
+        return presets[0]
+    return merge_presets({}, presets, [])
+
+
 def load_framework_preset(
     framework_id: str, base_dir: Path | None = None
 ) -> dict[str, Any]:
@@ -91,3 +151,48 @@ def load_framework_preset(
     return _load_yaml_file(
         _resolve_base(base_dir) / "framework" / framework_id / "preset.yaml"
     )
+
+
+def load_framework_preset_for_profile(
+    framework_id: str,
+    profile_id: str,
+    base_dir: Path | None = None,
+) -> dict[str, Any]:
+    """
+    Load and merge all profile files for a framework.
+
+    Follows the same semantics as :func:`load_language_preset_for_profile` but
+    for framework presets stored under ``framework/<framework_id>/``.
+
+    Args:
+        framework_id: Canonical framework identifier (e.g. 'react').
+        profile_id: Profile identifier (e.g. 'preset', 'experimental').
+        base_dir: Override base directory for presets (used in tests).
+
+    Returns:
+        Merged preset dict for the requested profile.
+
+    Raises:
+        PresetNotFoundError: If ``preset.yaml`` for the framework does not exist.
+        PresetParseError: If any loaded YAML file is invalid.
+
+    """
+    base = _resolve_base(base_dir)
+    fw_dir = base / "framework" / framework_id
+    file_names = resolve_profile_file_names(profile_id)
+
+    presets: list[dict[str, Any]] = []
+    for fname in file_names:
+        path = fw_dir / fname
+        if fname == "preset.yaml":
+            presets.append(_load_yaml_file(path))
+        else:
+            loaded = _load_optional_yaml_file(path)
+            if loaded is not None:
+                presets.append(loaded)
+
+    if not presets:
+        return {}
+    if len(presets) == 1:
+        return presets[0]
+    return merge_presets({}, presets, [])

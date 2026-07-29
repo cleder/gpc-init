@@ -1,0 +1,7 @@
+---
+repos:
+  - repo: https://github.com/example/experimental-hook
+    rev: v0.1.0
+    hooks:
+      - id: experimental-hook
+        description: "An experimental hook for testing"

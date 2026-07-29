@@ -1,0 +1,7 @@
+---
+repos:
+  - repo: https://github.com/example/legacy-hook
+    rev: v1.0.0
+    hooks:
+      - id: legacy-hook
+        description: "A legacy hook for testing"

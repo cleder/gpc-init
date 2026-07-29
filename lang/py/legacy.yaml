@@ -1,0 +1,27 @@
+---
+# Legacy Python pre-commit hooks
+# These hooks are older or superseded by newer alternatives in the preset profile.
+# Use with --profile=legacy for projects that have not yet migrated.
+repos:
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.2.0
+    hooks:
+      - id: flake8
+        description: "Your Tool For Style Guide Enforcement (superseded by ruff)"
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+        description: "A Python utility to sort imports (superseded by ruff-check I-rules)"
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3
+        description: "The uncompromising Python code formatter (superseded by ruff-format)"
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.3.7
+    hooks:
+      - id: pylint
+        description: "Pylint: a Python static code analysis tool (verbose, slow)"

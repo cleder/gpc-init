@@ -1318,7 +1318,7 @@ class TestErrorPaths:
     def test_preset_not_found_error(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
-            "gpc_init.cli.load_language_preset",
+            "gpc_init.cli.load_language_preset_for_profile",
             side_effect=PresetNotFoundError("preset not found"),
         ):
             result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
@@ -1328,7 +1328,7 @@ class TestErrorPaths:
     def test_preset_not_found_error_goes_to_stderr(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
-            "gpc_init.cli.load_language_preset",
+            "gpc_init.cli.load_language_preset_for_profile",
             side_effect=PresetNotFoundError("preset not found"),
         ):
             result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
@@ -1358,7 +1358,7 @@ class TestErrorPaths:
     def test_preset_parse_error_writes_to_stderr(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
-            "gpc_init.cli.load_language_preset",
+            "gpc_init.cli.load_language_preset_for_profile",
             side_effect=PresetParseError("bad yaml"),
         ):
             result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
@@ -2346,3 +2346,163 @@ class TestDetect:
             runner.invoke(app, ["--detect", "--output", str(output)])
 
         assert cwd in captured
+
+
+class TestProfileOption:
+    def test_default_profile_is_preset(self, tmp_path: Path) -> None:
+        """Without --profile, the preset profile is used by default."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+
+    def test_explicit_preset_profile_succeeds(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "preset", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+
+    def test_experimental_profile_succeeds(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "experimental", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+
+    def test_legacy_profile_succeeds(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "legacy", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+
+    def test_exhaustive_profile_succeeds(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "exhaustive", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+
+    def test_invalid_profile_exits_with_error(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "nonexistent", "--output", str(output)]
+        )
+        assert result.exit_code == 1
+        assert "Unsupported profile" in result.output
+
+    def test_invalid_profile_error_goes_to_stderr(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "nonexistent", "--output", str(output)]
+        )
+        assert "Unsupported profile" in result.stderr
+        assert "Unsupported profile" not in result.stdout
+
+    def test_experimental_profile_includes_more_hooks_than_preset(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        """experimental profile loads preset.yaml + experimental.yaml hooks."""
+        output_preset = tmp_path / "preset.yaml"
+        output_experimental = tmp_path / "experimental.yaml"
+        runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--profile",
+                "preset",
+                "--presets",
+                str(tmp_preset_dir),
+                "--output",
+                str(output_preset),
+            ],
+        )
+        runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--profile",
+                "experimental",
+                "--presets",
+                str(tmp_preset_dir),
+                "--output",
+                str(output_experimental),
+            ],
+        )
+        import yaml
+
+        preset_content = yaml.safe_load(output_preset.read_text(encoding="utf-8"))
+        experimental_content = yaml.safe_load(
+            output_experimental.read_text(encoding="utf-8")
+        )
+        # Experimental should have more repos than preset alone
+        assert len(experimental_content["repos"]) > len(preset_content["repos"])
+
+    def test_exhaustive_profile_includes_all_profiles(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        """exhaustive profile combines preset + legacy + experimental hooks."""
+        output = tmp_path / "exhaustive.yaml"
+        runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--profile",
+                "exhaustive",
+                "--presets",
+                str(tmp_preset_dir),
+                "--output",
+                str(output),
+            ],
+        )
+        import yaml
+
+        content = yaml.safe_load(output.read_text(encoding="utf-8"))
+        repo_ids = [r["repo"] for r in content["repos"]]
+        # From preset.yaml
+        assert any("ruff" in r for r in repo_ids)
+        # From experimental.yaml
+        assert any("experimental" in r for r in repo_ids)
+        # From legacy.yaml
+        assert any("legacy" in r for r in repo_ids)
+
+    def test_profile_passed_to_generate_content(self, tmp_path: Path) -> None:
+        """The --profile value is forwarded through the call chain."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        with patch(
+            "gpc_init.cli._generate_content",
+            return_value=("repos: []\n", [], [], [], []),
+        ) as mock_gen:
+            runner.invoke(
+                app,
+                ["--lang", "py", "--profile", "experimental", "--output", str(output)],
+            )
+        mock_gen.assert_called_once()
+        _, kwargs = mock_gen.call_args
+        assert kwargs.get("profile") == "experimental"
+
+
+class TestListProfilesCommand:
+    def test_list_shows_profiles_section(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert result.exit_code == 0, result.output
+        assert "Profiles:" in result.output
+
+    def test_list_shows_preset_profile(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "preset" in result.output
+
+    def test_list_shows_experimental_profile(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "experimental" in result.output
+
+    def test_list_shows_legacy_profile(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "legacy" in result.output
+
+    def test_list_shows_exhaustive_profile(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "exhaustive" in result.output

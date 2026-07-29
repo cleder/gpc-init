@@ -539,3 +539,84 @@ class TestExpandRecommendations:
         )
         assert "js" in langs
         assert "ts" in langs
+
+
+class TestProfiles:
+    def test_get_supported_profiles_returns_all_profiles(self) -> None:
+        from gpc_init.resolver import get_supported_profiles
+
+        profiles = get_supported_profiles()
+        assert "preset" in profiles
+        assert "legacy" in profiles
+        assert "experimental" in profiles
+        assert "exhaustive" in profiles
+
+    def test_get_supported_profiles_sorted(self) -> None:
+        from gpc_init.resolver import get_supported_profiles
+
+        profiles = get_supported_profiles()
+        assert profiles == sorted(profiles)
+
+    def test_validate_profile_valid(self) -> None:
+        from gpc_init.resolver import validate_profile
+
+        validate_profile("preset")
+        validate_profile("legacy")
+        validate_profile("experimental")
+        validate_profile("exhaustive")
+
+    def test_validate_profile_invalid_raises(self) -> None:
+        from gpc_init.exceptions import UnsupportedProfileError
+        from gpc_init.resolver import validate_profile
+
+        with pytest.raises(UnsupportedProfileError, match="Unsupported profile 'unknown'"):
+            validate_profile("unknown")
+
+    def test_validate_profile_error_lists_supported(self) -> None:
+        from gpc_init.exceptions import UnsupportedProfileError
+        from gpc_init.resolver import validate_profile
+
+        with pytest.raises(UnsupportedProfileError) as exc_info:
+            validate_profile("bad")
+        assert "preset" in str(exc_info.value)
+        assert "experimental" in str(exc_info.value)
+
+    def test_resolve_profile_file_names_preset(self) -> None:
+        from gpc_init.resolver import resolve_profile_file_names
+
+        files = resolve_profile_file_names("preset")
+        assert files == ["preset.yaml"]
+
+    def test_resolve_profile_file_names_legacy(self) -> None:
+        from gpc_init.resolver import resolve_profile_file_names
+
+        files = resolve_profile_file_names("legacy")
+        assert files == ["legacy.yaml"]
+
+    def test_resolve_profile_file_names_experimental_includes_preset(self) -> None:
+        from gpc_init.resolver import resolve_profile_file_names
+
+        files = resolve_profile_file_names("experimental")
+        assert "preset.yaml" in files
+        assert "experimental.yaml" in files
+        # preset must come before experimental (lower precedence first)
+        assert files.index("preset.yaml") < files.index("experimental.yaml")
+
+    def test_resolve_profile_file_names_exhaustive_includes_all(self) -> None:
+        from gpc_init.resolver import resolve_profile_file_names
+
+        files = resolve_profile_file_names("exhaustive")
+        assert "preset.yaml" in files
+        assert "legacy.yaml" in files
+        assert "experimental.yaml" in files
+
+    def test_resolve_profile_file_names_exhaustive_no_duplicates(self) -> None:
+        from gpc_init.resolver import resolve_profile_file_names
+
+        files = resolve_profile_file_names("exhaustive")
+        assert len(files) == len(set(files))
+
+    def test_default_profile_is_preset(self) -> None:
+        from gpc_init.resolver import DEFAULT_PROFILE
+
+        assert DEFAULT_PROFILE == "preset"
