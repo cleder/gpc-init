@@ -35,7 +35,7 @@ ALL_LANGS = [
     "ts",
     "yaml",
 ]
-ALL_FRAMEWORKS = ["ansible", "django", "git", "k8s", "react", "sphinx"]
+ALL_FRAMEWORKS = ["ansible", "behave", "django", "git", "k8s", "react", "sphinx"]
 
 
 class TestDetectLanguages:
@@ -253,6 +253,25 @@ class TestDetectFrameworks:
 
     def test_no_ansible_without_ansible_cfg(self, tmp_path: Path) -> None:
         assert "ansible" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_detects_behave_by_features_steps_dir(self, tmp_path: Path) -> None:
+        (tmp_path / "features" / "steps").mkdir(parents=True)
+        assert "behave" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_detects_behave_by_behave_ini(self, tmp_path: Path) -> None:
+        (tmp_path / "behave.ini").touch()
+        assert "behave" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_detects_behave_by_dot_behaverc(self, tmp_path: Path) -> None:
+        (tmp_path / ".behaverc").touch()
+        assert "behave" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_no_behave_without_indicators(self, tmp_path: Path) -> None:
+        assert "behave" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_no_behave_from_features_dir_without_steps(self, tmp_path: Path) -> None:
+        (tmp_path / "features").mkdir()
+        assert "behave" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
     def test_detects_react_from_package_json(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text(

@@ -549,6 +549,7 @@ def _build_candidate_hook(
 
 
 def _add_candidate_hooks(  # noqa: PLR0913
+    *,
     hooks_list: list[Any],
     existing_ids: set[str],
     hooks_by_id: dict[str, dict[str, str]],
@@ -556,7 +557,6 @@ def _add_candidate_hooks(  # noqa: PLR0913
     owner_repo: str,
     raw_text: str,
     file_report: dict[str, list[Any]],
-    *,
     write: bool,
 ) -> bool:
     """Add genuinely new hook ids from hooks_by_id. Returns True if changed."""
@@ -623,13 +623,13 @@ def process_preset(path: Path, report: dict[str, Any], *, write: bool) -> None:
             hooks_list, hooks_by_id, owner_repo, file_report, write=write
         )
         changed |= _add_candidate_hooks(
-            hooks_list,
-            existing_ids,
-            hooks_by_id,
-            deprecated_ids,
-            owner_repo,
-            raw_text,
-            file_report,
+            hooks_list=hooks_list,
+            existing_ids=existing_ids,
+            hooks_by_id=hooks_by_id,
+            deprecated_ids=deprecated_ids,
+            owner_repo=owner_repo,
+            raw_text=raw_text,
+            file_report=file_report,
             write=write,
         )
 

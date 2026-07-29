@@ -218,6 +218,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | Any `.yaml`/`.yml` file outside `.github/` containing `apiVersion:` and `kind:` | `k8s` |
 | `.github/workflows/` directory with at least one `.yml` file | `git` |
 | `ansible.cfg` at the repo root | `ansible` |
+| `features/steps/` directory, or `behave.ini`/`.behaverc` at the repo root | `behave` |
 
 ## Language suggestions for frameworks
 

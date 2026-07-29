@@ -112,6 +112,7 @@ extend-safe-fixes = [
 ignore = [
     "ANN401",
     "COM812",
+    "CPY001",
     "D203",
     "D212",
 ]

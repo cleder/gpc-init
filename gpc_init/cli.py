@@ -78,12 +78,12 @@ def _generate_content(
 
         if recommended:
             langs, frameworks = expand_recommendations(
-                langs,
-                frameworks,
-                lang_presets,
-                fw_presets,
-                get_supported_languages(base_dir),
-                get_supported_frameworks(base_dir),
+                langs=langs,
+                frameworks=frameworks,
+                lang_presets=lang_presets,
+                fw_presets=fw_presets,
+                supported_langs=get_supported_languages(base_dir),
+                supported_frameworks=get_supported_frameworks(base_dir),
             )
             lang_presets = [
                 load_language_preset(lang_id, base_dir=base_dir) for lang_id in langs
@@ -322,7 +322,7 @@ _PRESETS_HELP = (
 
 
 @app.callback(invoke_without_command=True)
-def main(
+def main(  # noqa: PLR0917
     ctx: typer.Context,
     lang: Annotated[
         list[str] | None,
