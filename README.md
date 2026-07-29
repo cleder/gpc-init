@@ -95,7 +95,7 @@ Languages:
   cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, r, rb, rs, sh, sql, swift, tf, toml, ts, yaml
 
 Frameworks:
-  ansible, django, git, k8s, react, sphinx
+  ansible, behave, django, git, k8s, react, sphinx
 ```
 
 Use `--presets` to list what a custom catalog provides:
@@ -149,6 +149,7 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`,
 | `git` | Commit message linting |
 | `k8s` | Kubernetes |
 | `ansible` | Ansible |
+| `behave` | Behave BDD for Python |
 
 ## Auto-detecting languages and frameworks
 
