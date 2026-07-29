@@ -33,14 +33,14 @@ repos:
         args: ["run", "--deprecated-in", "3.0"]
         description: "Automatically upgrade your Django project code."
   - repo: https://github.com/djlint/djLint
-    rev: v1.40.4
+    rev: v1.43.1
     hooks:
       - id: djlint-reformat-django
         description: "djLint formatting for Django"
       - id: djlint-django
         description: "djLint linting for Django"
   - repo: https://github.com/croc100/pytest-mrt
-    rev: v1.6.0
+    rev: v1.7.0
     hooks:
       - id: mrt-check
         args: [myapp/migrations/]

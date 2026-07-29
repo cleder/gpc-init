@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/commit-check/commit-check
-    rev: v2.11.1
+    rev: v2.12.0
     hooks:
       - id: check-message
         args:
@@ -19,7 +19,7 @@ repos:
       - id: check-no-force-push
         description: "prevents force pushes to remote branches"
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.16.4
+    rev: v4.17.0
     hooks:
       - id: commitizen
         stages: [commit-msg]
@@ -34,7 +34,7 @@ repos:
       - id: gitlint-ci
         description: "gitlint"
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.26.1
+    rev: v1.28.0
     hooks:
       - id: zizmor
         description: "Find security issues in GitHub Actions CI/CD setups"

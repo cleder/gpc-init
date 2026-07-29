@@ -8,7 +8,7 @@ repos:
       - id: taplo-lint
         description: "Lint TOML documents"
   - repo: https://github.com/tombi-toml/tombi-pre-commit
-    rev: v1.2.0
+    rev: v1.2.4
     hooks:
       - id: tombi-format
         args: ["--offline"]
