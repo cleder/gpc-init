@@ -1,0 +1,20 @@
+---
+recommended:
+  lang:
+    - py
+repos:
+  - repo: https://github.com/MathiasPaulenko/behave-format
+    rev: v1.0.2
+    hooks:
+      - id: behave-format
+        description: "The opinionated formatter for Behave .feature files"
+  - repo: https://github.com/MathiasPaulenko/behave-lint
+    rev: v2.4.1
+    hooks:
+      - id: behave-lint
+        description: "A fast, opinionated, extensible linter for Gherkin .feature files"
+  - repo: https://github.com/MathiasPaulenko/behave-doctor
+    rev: v1.2.1
+    hooks:
+      - id: behave-doctor
+        description: "Static analysis and diagnostics for Behave BDD suites"
