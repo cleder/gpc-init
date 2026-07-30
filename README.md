@@ -309,4 +309,4 @@ pc-init --lang py --presets https://github.com/org/my-presets
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, preset guidelines, and the pull request checklist.
+See [CONTRIBUTING.md](https://github.com/cleder/gpc-init/blob/main/CONTRIBUTING.md) for development setup, preset guidelines, and the pull request checklist.
