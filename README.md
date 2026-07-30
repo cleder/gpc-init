@@ -150,6 +150,7 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`,
 | `k8s` | Kubernetes |
 | `ansible` | Ansible |
 | `behave` | Behave BDD for Python |
+| `nika` | Nika AI workflow auditing |
 
 ## Auto-detecting languages and frameworks
 
@@ -219,6 +220,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.github/workflows/` directory with at least one `.yml` file | `git` |
 | `ansible.cfg` at the repo root | `ansible` |
 | `features/steps/` directory, or `behave.ini`/`.behaverc` at the repo root | `behave` |
+| Any `*.nika.yaml` file | `nika` |
 
 ## Language suggestions for frameworks
 

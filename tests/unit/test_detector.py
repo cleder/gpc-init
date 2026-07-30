@@ -35,7 +35,16 @@ ALL_LANGS = [
     "ts",
     "yaml",
 ]
-ALL_FRAMEWORKS = ["ansible", "behave", "django", "git", "k8s", "react", "sphinx"]
+ALL_FRAMEWORKS = [
+    "ansible",
+    "behave",
+    "django",
+    "git",
+    "k8s",
+    "nika",
+    "react",
+    "sphinx",
+]
 
 
 class TestDetectLanguages:
@@ -272,6 +281,13 @@ class TestDetectFrameworks:
     def test_no_behave_from_features_dir_without_steps(self, tmp_path: Path) -> None:
         (tmp_path / "features").mkdir()
         assert "behave" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_detects_nika_by_nika_yaml_file(self, tmp_path: Path) -> None:
+        (tmp_path / "workflow.nika.yaml").touch()
+        assert "nika" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_no_nika_without_nika_yaml_file(self, tmp_path: Path) -> None:
+        assert "nika" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
     def test_detects_react_from_package_json(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text(

@@ -162,6 +162,10 @@ def _has_behave_structure(repo_dir: Path) -> bool:
     return any((repo_dir / name).is_file() for name in ("behave.ini", ".behaverc"))
 
 
+def _has_nika_files(repo_dir: Path) -> bool:
+    return any(f.name.endswith(".nika.yaml") for f in _walk(repo_dir))
+
+
 def _has_github_workflows(repo_dir: Path) -> bool:
     workflows = repo_dir / ".github" / "workflows"
     if not workflows.is_dir():
@@ -185,6 +189,7 @@ _FRAMEWORK_DETECTORS: list[tuple[str, Callable[[Path], bool]]] = [
     ("git", _has_github_workflows),
     ("ansible", lambda d: (d / "ansible.cfg").is_file()),
     ("behave", _has_behave_structure),
+    ("nika", _has_nika_files),
 ]
 
 

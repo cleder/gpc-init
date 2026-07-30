@@ -56,6 +56,7 @@ _DISPLAY_NAMES: dict[str, str] = {
     "k8s": "Kubernetes",
     "ansible": "Ansible",
     "behave": "Behave BDD",
+    "nika": "Nika AI Workflow Auditing",
 }
 
 _EMOJIS: dict[str, str] = {
@@ -91,6 +92,7 @@ _EMOJIS: dict[str, str] = {
     "k8s": "☸️",
     "ansible": "🤖",
     "behave": "🥒",
+    "nika": "🧭",
 }
 
 
