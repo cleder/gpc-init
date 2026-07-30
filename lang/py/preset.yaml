@@ -44,6 +44,31 @@ repos:
       - id: mypy
         category: legacy
         description: "Mirror of mypy for pre-commit"
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.411
+    hooks:
+      - id: pyright
+        category: experimental
+        description: "Run 'pyright' for Python type checking (Microsoft)"
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        category: legacy
+        description: "Style guide enforcement (superseded by ruff-check)"
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        category: legacy
+        description: "Sort Python imports (superseded by ruff-check's import-sorting rules)"
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 26.5.1
+    hooks:
+      - id: black
+        category: legacy
+        language_version: python3
+        description: "The uncompromising Python code formatter (superseded by ruff-format)"
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
     rev: v6.2.0
     hooks:

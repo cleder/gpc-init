@@ -585,6 +585,15 @@ class TestListCommand:
         result = runner.invoke(app, ["list"])
         assert "react" in result.output
 
+    def test_list_output_contains_profiles_header(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "Profiles" in result.output
+
+    def test_list_output_contains_known_profiles(self) -> None:
+        result = runner.invoke(app, ["list"])
+        assert "legacy" in result.output
+        assert "experimental" in result.output
+
     def test_list_with_custom_presets_dir(self, tmp_preset_dir: Path) -> None:
         result = runner.invoke(app, ["list", "--presets", str(tmp_preset_dir)])
         assert result.exit_code == 0, result.output
@@ -2364,6 +2373,16 @@ class TestProfileFlag:
         assert result.exit_code == 0, result.output
         assert "mypy" not in _hook_ids(output.read_text(encoding="utf-8"))
 
+    def test_legacy_and_experimental_hooks_excluded_by_default(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        hook_ids = _hook_ids(output.read_text(encoding="utf-8"))
+        for hook_id in ("mypy", "flake8", "isort", "black", "pyright"):
+            assert hook_id not in hook_ids
+
     def test_mypy_included_with_legacy_profile(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(
@@ -2371,6 +2390,43 @@ class TestProfileFlag:
         )
         assert result.exit_code == 0, result.output
         assert "mypy" in _hook_ids(output.read_text(encoding="utf-8"))
+
+    def test_legacy_profile_includes_flake8_isort_black(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "legacy", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        hook_ids = _hook_ids(output.read_text(encoding="utf-8"))
+        assert "flake8" in hook_ids
+        assert "isort" in hook_ids
+        assert "black" in hook_ids
+
+    def test_legacy_profile_excludes_experimental_pyright(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "legacy", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "pyright" not in _hook_ids(output.read_text(encoding="utf-8"))
+
+    def test_experimental_profile_includes_pyright(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "experimental", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "pyright" in _hook_ids(output.read_text(encoding="utf-8"))
+
+    def test_experimental_profile_excludes_legacy_hooks(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "experimental", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        hook_ids = _hook_ids(output.read_text(encoding="utf-8"))
+        assert "mypy" not in hook_ids
+        assert "flake8" not in hook_ids
 
     def test_comma_delimited_profiles_parsed(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
@@ -2386,7 +2442,9 @@ class TestProfileFlag:
             ],
         )
         assert result.exit_code == 0, result.output
-        assert "mypy" in _hook_ids(output.read_text(encoding="utf-8"))
+        hook_ids = _hook_ids(output.read_text(encoding="utf-8"))
+        assert "mypy" in hook_ids
+        assert "pyright" in hook_ids
 
     def test_repeated_profile_flags_parsed(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
@@ -2404,7 +2462,9 @@ class TestProfileFlag:
             ],
         )
         assert result.exit_code == 0, result.output
-        assert "mypy" in _hook_ids(output.read_text(encoding="utf-8"))
+        hook_ids = _hook_ids(output.read_text(encoding="utf-8"))
+        assert "mypy" in hook_ids
+        assert "pyright" in hook_ids
 
     def test_unknown_profile_exits_nonzero_with_message(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"

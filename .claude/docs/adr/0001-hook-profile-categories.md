@@ -30,6 +30,8 @@ Before this change, `gpc-init` had no notion of hook categories at all: every ho
   That avoidance is removed and a new "Hook category / profile" glossary term is added, since `--profile` now has its own, distinct meaning.
 - The existing, unused `gpc_init/profiles.py` dataclass module (unrelated `HookConfig`/`RepoConfig`/`GenerationRequest`/`GenerationResult`, dead code) is left untouched — different concept, same word, low real collision risk since it isn't wired into the CLI.
 - `mypy` in `lang/py/preset.yaml` is reclassified as `category: legacy`, since `ty` (already present in the same preset) supersedes it — the concrete example raised in the issue thread.
+- Real `legacy` and `experimental` content was added to `lang/py/preset.yaml` (verified against each repo's actual `.pre-commit-hooks.yaml` manifest and tags, not just plausible-looking values): `flake8`, `isort`, and `black` (via the maintainer-recommended `psf/black-pre-commit-mirror`, not the slower `psf/black`) as `legacy` — superseded by `ruff-check`/`ruff-format` — and `pyright` (via `RobertCraigie/pyright-python`, the actual community pre-commit wrapper) as `experimental`, an alternate type checker alongside `ty`/`pyrefly-check`.
+- `pc-init list` now prints a `Profiles:` section listing the selectable categories, for discoverability alongside `Languages:`/`Frameworks:`.
 - `AWESOME.md`'s generator (`scripts/generate_awesome_list.py`) annotates legacy/experimental hooks with their category emoji, so the categorization is discoverable in the docs, not just via `--help`.
 
 ## Consequences

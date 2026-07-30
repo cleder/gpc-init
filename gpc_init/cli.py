@@ -27,6 +27,7 @@ from gpc_init.loader import (
 from gpc_init.merger import DEFAULT_CATEGORY, filter_by_category, merge_presets
 from gpc_init.renderer import render_yaml
 from gpc_init.resolver import (
+    SELECTABLE_PROFILES,
     deduplicate_preserving_order,
     expand_recommendations,
     get_recommendations_info,
@@ -503,6 +504,8 @@ def list_presets(
     typer.echo("  " + ", ".join(langs))
     typer.echo("\nFrameworks:")
     typer.echo("  " + ", ".join(frameworks))
+    typer.echo("\nProfiles (opt in with --profile; preset is always included):")
+    typer.echo("  " + ", ".join(sorted(SELECTABLE_PROFILES)))
 
 
 def entry_point() -> None:

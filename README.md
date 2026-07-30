@@ -100,6 +100,9 @@ Languages:
 
 Frameworks:
   ansible, behave, django, git, k8s, react, sphinx
+
+Profiles (opt in with --profile; preset is always included):
+  experimental, legacy
 ```
 
 Use `--presets` to list what a custom catalog provides:
@@ -252,7 +255,7 @@ pc-init --framework django --recommended
 
 ## Hook profiles
 
-Every hook belongs to a category: `preset` (the curated default, always included), `legacy` (superseded by a newer hook already in the same preset, but still usable — e.g. `mypy`, superseded by `ty`), or `experimental` (brand-new, not-yet-proven hooks).
+Every hook belongs to a category: `preset` (the curated default, always included), `legacy` (superseded by a newer hook already in the same preset, but still usable — e.g. Python's `mypy`/`flake8`/`isort`/`black`, superseded by `ty`/`ruff`), or `experimental` (brand-new, not-yet-proven hooks — e.g. Python's `pyright`, an alternate type checker).
 By default only `preset` hooks are included.
 Use `--profile` to add `legacy` and/or `experimental` hooks on top of the default baseline:
 
