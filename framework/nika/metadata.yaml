@@ -1,0 +1,5 @@
+---
+fullname: Nika AI Workflow Auditing
+icon: "🧭"
+detect:
+  - glob: "*.nika.yaml"

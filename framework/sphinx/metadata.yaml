@@ -1,0 +1,7 @@
+---
+fullname: Sphinx Documentation
+icon: "📚"
+# Escape hatch: reads file *content* across candidate paths, which doesn't
+# reduce to a clean declarative rule. Resolves against a fixed allowlist in
+# detector.py's _DETECTOR_REGISTRY — never an arbitrary import path.
+detect: "python:_has_sphinx_conf"

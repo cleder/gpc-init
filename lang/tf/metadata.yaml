@@ -1,0 +1,9 @@
+---
+fullname: Terraform
+icon: "🏗️"
+extensions:
+  - .tf
+  - .tfvars
+filenames: []
+aliases:
+  - terraform

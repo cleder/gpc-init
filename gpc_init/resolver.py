@@ -3,28 +3,8 @@
 from pathlib import Path
 from typing import Any
 
+from gpc_init.catalog import load_catalog
 from gpc_init.exceptions import UnsupportedFrameworkError, UnsupportedLanguageError
-
-# Language name aliases -> canonical id
-_LANG_ALIASES: dict[str, str] = {
-    "bash": "sh",
-    "c": "cpp",
-    "c++": "cpp",
-    "dockerfile": "docker",
-    "golang": "go",
-    "image": "img",
-    "javascript": "js",
-    "jupyter": "nb",
-    "kotlin": "kt",
-    "makefile": "make",
-    "notebook": "nb",
-    "python": "py",
-    "ruby": "rb",
-    "rust": "rs",
-    "shell": "sh",
-    "terraform": "tf",
-    "typescript": "ts",
-}
 
 # Default base directory for preset discovery.
 # In development the symlinks gpc_init/lang -> ../lang resolve here; when installed
@@ -58,10 +38,20 @@ def _discover_frameworks(base_dir: Path) -> list[str]:
     )
 
 
-def normalize_lang(lang: str) -> str:
-    """Normalize a language value: lowercase and resolve aliases to canonical id."""
+def normalize_lang(lang: str, base_dir: Path | None = None) -> str:
+    """
+    Normalize a language value: lowercase and resolve aliases to canonical id.
+
+    Args:
+        lang: Raw language value (e.g. from --lang).
+        base_dir: Override base directory for preset discovery (used in tests).
+            Aliases are catalog-specific, since a custom --presets catalog can
+            declare its own languages and aliases.
+
+    """
     normalized = lang.strip().lower()
-    return _LANG_ALIASES.get(normalized, normalized)
+    alias_to_lang = load_catalog(base_dir).alias_to_lang
+    return alias_to_lang.get(normalized, normalized)
 
 
 def normalize_framework(fw: str) -> str:

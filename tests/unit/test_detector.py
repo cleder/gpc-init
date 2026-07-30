@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+import pytest
+
 from gpc_init import detector as _detector
 from gpc_init.detector import detect_frameworks, detect_languages
 
@@ -636,5 +638,42 @@ class TestDetectFrameworks:
         workflows.mkdir(parents=True)
         (workflows / "ci.yml").touch()
 
-        with patch.object(Path, "iterdir", side_effect=OSError):
+        _original_iterdir = Path.iterdir
+
+        def _iterdir(self: Path) -> Any:
+            if self == workflows:
+                raise OSError
+            return _original_iterdir(self)
+
+        with patch.object(Path, "iterdir", _iterdir):
             assert "git" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+
+class TestEvaluateDetectRule:
+    def test_unknown_escape_hatch_name_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="Unknown escape-hatch detector"):
+            _detector._evaluate_detect_rule(tmp_path, "python:_does_not_exist")
+
+    def test_unknown_rule_type_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="Unknown detect rule type"):
+            _detector._evaluate_detect_rule(tmp_path, {"bogus_rule": "x"})
+
+    def test_multi_key_rule_dict_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="exactly one key"):
+            _detector._evaluate_detect_rule(
+                tmp_path, {"file_exists": "a", "dir_exists": "b"}
+            )
+
+    def test_non_str_non_dict_rule_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(TypeError, match="Invalid detect rule"):
+            _detector._evaluate_detect_rule(tmp_path, 123)
+
+    def test_glob_rule_matches_filename_pattern(self, tmp_path: Path) -> None:
+        (tmp_path / "workflow.nika.yaml").touch()
+        assert _detector._evaluate_detect_rule(tmp_path, {"glob": "*.nika.yaml"})
+
+    def test_dir_exists_rule(self, tmp_path: Path) -> None:
+        (tmp_path / "features" / "steps").mkdir(parents=True)
+        rule = {"dir_exists": "features/steps"}
+        assert _detector._evaluate_detect_rule(tmp_path, rule)
+        assert not _detector._evaluate_detect_rule(tmp_path, {"dir_exists": "nope"})

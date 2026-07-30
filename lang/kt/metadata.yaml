@@ -1,0 +1,9 @@
+---
+fullname: Kotlin
+icon: "🟣"
+extensions:
+  - .kt
+  - .kts
+filenames: []
+aliases:
+  - kotlin

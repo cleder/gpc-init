@@ -9,6 +9,10 @@ class PresetParseError(Exception):
     """Raised when a preset file contains invalid YAML or unexpected structure."""
 
 
+class MetadataConflictError(Exception):
+    """Raised when two langs/frameworks claim the same extension/filename/alias."""
+
+
 class UnsupportedLanguageError(Exception):
     """Raised when a requested language is not in the language catalog."""
 

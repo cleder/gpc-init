@@ -1,0 +1,8 @@
+---
+fullname: Rust
+icon: "🦀"
+extensions:
+  - .rs
+filenames: []
+aliases:
+  - rust

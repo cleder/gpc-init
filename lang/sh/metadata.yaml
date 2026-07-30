@@ -1,0 +1,10 @@
+---
+fullname: Shell / Bash
+icon: "🐚"
+extensions:
+  - .sh
+  - .bash
+filenames: []
+aliases:
+  - bash
+  - shell

@@ -256,9 +256,11 @@ def _apply_detection(
 ) -> tuple[list[str], list[str]]:
     """Run auto-detection, print results, and merge with explicit flags."""
     repo_dir = Path.cwd()
-    detected_langs = detect_languages(repo_dir, get_supported_languages(base_dir))
+    detected_langs = detect_languages(
+        repo_dir, get_supported_languages(base_dir), base_dir=base_dir
+    )
     detected_frameworks = detect_frameworks(
-        repo_dir, get_supported_frameworks(base_dir)
+        repo_dir, get_supported_frameworks(base_dir), base_dir=base_dir
     )
     if detected_langs:
         typer.echo(f"Detected languages: {', '.join(detected_langs)}")
@@ -299,10 +301,15 @@ def _expand_comma_separated(raw: list[str] | None) -> list[str]:
     ]
 
 
-def _normalize_langs(raw_langs: list[str] | None) -> list[str]:
+def _normalize_langs(
+    raw_langs: list[str] | None, base_dir: Path | None = None
+) -> list[str]:
     """Lowercase, resolve aliases, and deduplicate language values."""
     return deduplicate_preserving_order(
-        [normalize_lang(v) for v in _expand_comma_separated(raw_langs)]
+        [
+            normalize_lang(v, base_dir=base_dir)
+            for v in _expand_comma_separated(raw_langs)
+        ]
     )
 
 
@@ -411,7 +418,7 @@ def main(  # noqa: PLR0917
 
         _require_lang_or_exit(lang, framework, recommended=recommended, detect=detect)
 
-        langs = _normalize_langs(lang)
+        langs = _normalize_langs(lang, base_dir=base_dir)
         frameworks = _normalize_frameworks(framework)
 
         target = Path(output)

@@ -20,86 +20,22 @@ from typing import Any
 import yaml
 
 PROJECT_ROOT = Path(__file__).parent.parent
+# gpc-init isn't installed into the dev venv (not packaged for editable install),
+# so make the repo root importable when this script is run standalone.
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from gpc_init.catalog import load_catalog  # noqa: E402
+
 LANG_DIR = PROJECT_ROOT / "lang"
 FRAMEWORK_DIR = PROJECT_ROOT / "framework"
-
-_DISPLAY_NAMES: dict[str, str] = {
-    "py": "Python",
-    "js": "JavaScript",
-    "ts": "TypeScript",
-    "go": "Go",
-    "rs": "Rust",
-    "rb": "Ruby",
-    "sh": "Shell / Bash",
-    "sql": "SQL",
-    "nb": "Jupyter Notebooks",
-    "md": "Markdown",
-    "img": "Images",
-    "docker": "Docker",
-    "tf": "Terraform",
-    "toml": "TOML",
-    "yaml": "YAML",
-    "make": "Makefiles",
-    "cpp": "C / C++",
-    "proto": "Protocol Buffers",
-    "swift": "Swift",
-    "kt": "Kotlin",
-    "css": "CSS / SCSS / Sass",
-    "r": "R",
-    "env": "Env / Dotenv Files",
-    "groovy": "Groovy",
-    "lua": "Lua",
-    "react": "React",
-    "django": "Django",
-    "sphinx": "Sphinx Documentation",
-    "git": "Git Workflow",
-    "k8s": "Kubernetes",
-    "ansible": "Ansible",
-    "behave": "Behave BDD",
-    "nika": "Nika AI Workflow Auditing",
-}
-
-_EMOJIS: dict[str, str] = {
-    "py": "🐍",
-    "js": "🟨",
-    "ts": "🔷",
-    "go": "🐹",
-    "rs": "🦀",
-    "rb": "💎",
-    "sh": "🐚",
-    "sql": "🗄️",
-    "nb": "📓",
-    "md": "📝",
-    "img": "🖼️",
-    "docker": "🐳",
-    "tf": "🏗️",
-    "toml": "🔧",
-    "yaml": "📄",
-    "make": "🛠️",
-    "cpp": "🔩",
-    "proto": "📦",
-    "swift": "🐦",
-    "kt": "🟣",
-    "css": "🎨",
-    "r": "📊",
-    "env": "🔐",
-    "groovy": "💧",
-    "lua": "🌙",
-    "react": "⚛️",
-    "django": "🎸",
-    "sphinx": "📚",
-    "git": "🔀",
-    "k8s": "☸️",
-    "ansible": "🤖",
-    "behave": "🥒",
-    "nika": "🧭",
-}
 
 
 def display_label(item_id: str) -> str:
     """Return the emoji + long-form name + id label for a language/framework."""
-    emoji = _EMOJIS.get(item_id, "")
-    name = _DISPLAY_NAMES.get(item_id, item_id)
+    catalog = load_catalog(PROJECT_ROOT)
+    meta = catalog.langs.get(item_id) or catalog.frameworks.get(item_id)
+    emoji = meta.icon if meta else ""
+    name = meta.fullname if meta else item_id
     prefix = f"{emoji} " if emoji else ""
     return f"{prefix}{name} (`{item_id}`)"
 

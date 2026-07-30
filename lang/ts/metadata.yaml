@@ -1,0 +1,9 @@
+---
+fullname: TypeScript
+icon: "🔷"
+extensions:
+  - .ts
+  - .tsx
+filenames: []
+aliases:
+  - typescript

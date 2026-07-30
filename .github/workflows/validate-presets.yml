@@ -5,9 +5,11 @@ name: validate-presets
   push:
     paths:
       - '**/preset*.yaml'
+      - '**/metadata.yaml'
   pull_request:
     paths:
       - '**/preset*.yaml'
+      - '**/metadata.yaml'
 
 permissions:
   contents: read
@@ -31,6 +33,9 @@ jobs:
 
       - name: Validate yaml files
         run: ryl .
+
+      - name: Validate lang/framework metadata catalog
+        run: uv run scripts/validate_metadata.py
 
       - name: Validate presets (pre-commit)
         run: |

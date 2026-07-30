@@ -1,0 +1,7 @@
+---
+fullname: Behave BDD
+icon: "🥒"
+detect:
+  - dir_exists: features/steps
+  - file_exists: behave.ini
+  - file_exists: .behaverc

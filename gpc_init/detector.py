@@ -1,9 +1,11 @@
 """Detect languages and frameworks present in a repository."""
 
+import fnmatch
 import json
 from collections.abc import Callable, Generator
 from pathlib import Path
 
+from gpc_init.catalog import load_catalog
 from gpc_init.resolver import deduplicate_preserving_order
 
 _SKIP_DIRS: frozenset[str] = frozenset(
@@ -21,63 +23,6 @@ _SKIP_DIRS: frozenset[str] = frozenset(
     }
 )
 
-_EXTENSION_TO_LANG: dict[str, str] = {
-    ".py": "py",
-    ".pyi": "py",
-    ".js": "js",
-    ".mjs": "js",
-    ".cjs": "js",
-    ".jsx": "js",
-    ".ts": "ts",
-    ".tsx": "ts",
-    ".go": "go",
-    ".rs": "rs",
-    ".rb": "rb",
-    ".c": "cpp",
-    ".h": "cpp",
-    ".cpp": "cpp",
-    ".cc": "cpp",
-    ".cxx": "cpp",
-    ".hpp": "cpp",
-    ".hh": "cpp",
-    ".hxx": "cpp",
-    ".proto": "proto",
-    ".swift": "swift",
-    ".kt": "kt",
-    ".kts": "kt",
-    ".css": "css",
-    ".scss": "css",
-    ".sass": "css",
-    ".sh": "sh",
-    ".bash": "sh",
-    ".sql": "sql",
-    ".tf": "tf",
-    ".tfvars": "tf",
-    ".md": "md",
-    ".markdown": "md",
-    ".ipynb": "nb",
-    ".yaml": "yaml",
-    ".yml": "yaml",
-    ".r": "r",
-    ".png": "img",
-    ".jpg": "img",
-    ".jpeg": "img",
-    ".gif": "img",
-    ".webp": "img",
-    ".svg": "img",
-    ".lua": "lua",
-    ".groovy": "groovy",
-    ".gvy": "groovy",
-    ".gradle": "groovy",
-}
-
-# Matched case-insensitively against the file stem (no extension).
-_FILENAME_TO_LANG: dict[str, str] = {
-    "dockerfile": "docker",
-    "makefile": "make",
-    "jenkinsfile": "groovy",
-}
-
 
 def _walk(repo_dir: Path) -> Generator[Path]:
     """Yield all files under repo_dir, skipping directories in _SKIP_DIRS."""
@@ -92,20 +37,33 @@ def _is_dotenv_file(name: str) -> bool:
     return lname == ".env" or lname.startswith(".env.")
 
 
-def detect_languages(repo_dir: Path, supported_langs: list[str]) -> list[str]:
+def detect_languages(
+    repo_dir: Path,
+    supported_langs: list[str],
+    base_dir: Path | None = None,
+) -> list[str]:
     """
     Return detected language IDs for the given repository directory.
 
     Walks the directory tree (skipping common non-source dirs), maps file
-    extensions and well-known filenames to language IDs, and filters the
-    result to only IDs present in supported_langs.
+    extensions and well-known filenames — read from each lang's metadata.yaml —
+    to language IDs, and filters the result to only IDs present in
+    supported_langs.
+
+    Args:
+        repo_dir: Directory to scan.
+        supported_langs: Language IDs to filter detection results to.
+        base_dir: Override base directory for the metadata catalog (used in
+            tests / custom --presets catalogs).
+
     """
+    catalog = load_catalog(base_dir)
     supported = set(supported_langs)
     seen: list[str] = []
     for file in _walk(repo_dir):
-        lang = _FILENAME_TO_LANG.get(file.stem.lower())
+        lang = catalog.filename_to_lang.get(file.stem.lower())
         if lang is None:
-            lang = _EXTENSION_TO_LANG.get(file.suffix.lower())
+            lang = catalog.extension_to_lang.get(file.suffix.lower())
         if lang is None and _is_dotenv_file(file.name):
             lang = "env"
         if lang and lang in supported:
@@ -156,16 +114,6 @@ def _has_kubernetes_files(repo_dir: Path) -> bool:
     return False
 
 
-def _has_behave_structure(repo_dir: Path) -> bool:
-    if (repo_dir / "features" / "steps").is_dir():
-        return True
-    return any((repo_dir / name).is_file() for name in ("behave.ini", ".behaverc"))
-
-
-def _has_nika_files(repo_dir: Path) -> bool:
-    return any(f.name.endswith(".nika.yaml") for f in _walk(repo_dir))
-
-
 def _has_github_workflows(repo_dir: Path) -> bool:
     workflows = repo_dir / ".github" / "workflows"
     if not workflows.is_dir():
@@ -180,29 +128,91 @@ def _has_github_workflows(repo_dir: Path) -> bool:
         return False
 
 
-# Ordered list of (framework_id, detector) pairs.
-_FRAMEWORK_DETECTORS: list[tuple[str, Callable[[Path], bool]]] = [
-    ("django", lambda d: (d / "manage.py").is_file()),
-    ("react", lambda d: _has_package_json_dep(d, "react")),
-    ("sphinx", _has_sphinx_conf),
-    ("k8s", _has_kubernetes_files),
-    ("git", _has_github_workflows),
-    ("ansible", lambda d: (d / "ansible.cfg").is_file()),
-    ("behave", _has_behave_structure),
-    ("nika", _has_nika_files),
-]
+# Fixed allowlist for the `python:<name>` escape hatch in framework metadata.yaml
+# `detect` rules. Deliberately NOT a dotted import path: a custom --presets
+# catalog (which may point at an arbitrary git URL) must only be able to
+# reference gpc-init's own built-in detectors, never inject new code.
+_DETECTOR_REGISTRY: dict[str, Callable[[Path], bool]] = {
+    "_has_sphinx_conf": _has_sphinx_conf,
+    "_has_kubernetes_files": _has_kubernetes_files,
+    "_has_github_workflows": _has_github_workflows,
+}
 
 
-def detect_frameworks(repo_dir: Path, supported_frameworks: list[str]) -> list[str]:
+def _rule_file_exists(repo_dir: Path, path: str) -> bool:
+    return (repo_dir / path).is_file()
+
+
+def _rule_dir_exists(repo_dir: Path, path: str) -> bool:
+    return (repo_dir / path).is_dir()
+
+
+def _rule_glob(repo_dir: Path, pattern: str) -> bool:
+    return any(fnmatch.fnmatchcase(f.name, pattern) for f in _walk(repo_dir))
+
+
+def _rule_package_json_dep(repo_dir: Path, dep: str) -> bool:
+    return _has_package_json_dep(repo_dir, dep)
+
+
+# Declarative detect-rule handlers, keyed by the rule's single dict key
+# (e.g. {"file_exists": "manage.py"}).
+_RULE_HANDLERS: dict[str, Callable[[Path, str], bool]] = {
+    "file_exists": _rule_file_exists,
+    "dir_exists": _rule_dir_exists,
+    "glob": _rule_glob,
+    "package_json_dep": _rule_package_json_dep,
+}
+
+
+def _evaluate_detect_rule(repo_dir: Path, rule: object) -> bool:
+    """Evaluate a single `detect:` rule (declarative dict or `python:<name>`)."""
+    if isinstance(rule, str):
+        name = rule.removeprefix("python:")
+        handler = _DETECTOR_REGISTRY.get(name)
+        if handler is None:
+            msg = f"Unknown escape-hatch detector 'python:{name}'"
+            raise ValueError(msg)
+        return handler(repo_dir)
+    if isinstance(rule, dict):
+        if len(rule) != 1:
+            msg = f"detect rule must have exactly one key: {rule!r}"
+            raise ValueError(msg)
+        ((rule_type, arg),) = rule.items()
+        rule_handler = _RULE_HANDLERS.get(rule_type)
+        if rule_handler is None:
+            msg = f"Unknown detect rule type '{rule_type}'"
+            raise ValueError(msg)
+        return rule_handler(repo_dir, str(arg))
+    msg = f"Invalid detect rule: {rule!r}"
+    raise TypeError(msg)
+
+
+def detect_frameworks(
+    repo_dir: Path,
+    supported_frameworks: list[str],
+    base_dir: Path | None = None,
+) -> list[str]:
     """
     Return detected framework IDs for the given repository directory.
 
-    Checks each known framework against its indicator files/directories and
-    filters to only IDs present in supported_frameworks.
+    Checks each known framework against the detect rules declared in its
+    metadata.yaml and filters to only IDs present in supported_frameworks.
+
+    Args:
+        repo_dir: Directory to scan.
+        supported_frameworks: Framework IDs to filter detection results to.
+        base_dir: Override base directory for the metadata catalog (used in
+            tests / custom --presets catalogs).
+
     """
+    catalog = load_catalog(base_dir)
     supported = set(supported_frameworks)
     detected: list[str] = []
-    for fw_id, detector in _FRAMEWORK_DETECTORS:
-        if fw_id in supported and detector(repo_dir):
+    for fw_id in sorted(catalog.frameworks):
+        if fw_id not in supported:
+            continue
+        meta = catalog.frameworks[fw_id]
+        if any(_evaluate_detect_rule(repo_dir, rule) for rule in meta.detect):
             detected.append(fw_id)
     return detected

@@ -1,0 +1,5 @@
+---
+fullname: Django
+icon: "🎸"
+detect:
+  - file_exists: manage.py

@@ -1,0 +1,13 @@
+---
+fullname: Images
+icon: "🖼️"
+extensions:
+  - .png
+  - .jpg
+  - .jpeg
+  - .gif
+  - .webp
+  - .svg
+filenames: []
+aliases:
+  - image

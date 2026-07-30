@@ -2188,7 +2188,7 @@ class TestDetect:
         captured_supported: list[list[str]] = []
 
         def capturing_detect_languages(
-            _repo_dir: Path, supported: list[str]
+            _repo_dir: Path, supported: list[str], **_kwargs: object
         ) -> list[str]:
             captured_supported.append(list(supported))
             return ["py"]
@@ -2332,7 +2332,9 @@ class TestDetect:
         cwd = Path("/some/project")
         captured: list[Path] = []
 
-        def fake_detect_langs(repo_dir: Path, supported: list[str]) -> list[str]:  # noqa: ARG001
+        def fake_detect_langs(
+            repo_dir: Path, _supported: list[str], **_kwargs: object
+        ) -> list[str]:
             captured.append(repo_dir)
             return ["py"]
 
