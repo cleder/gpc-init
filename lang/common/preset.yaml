@@ -129,7 +129,7 @@ repos:
       - id: jscpd
         description: "Check for duplicated code"
   - repo: https://github.com/errata-ai/vale
-    rev: v3.15.2
+    rev: v3.16.0
     hooks:
       - id: vale
         description: "Run vale on your text"

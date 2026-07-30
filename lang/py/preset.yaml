@@ -34,7 +34,7 @@ repos:
       - id: pyrefly-check
         description: "Run `pyrefly check` for Python type checking."
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.64
+    rev: v0.0.65
     hooks:
       - id: ty
         description: "Run 'ty' for extremely fast Python type checking"
