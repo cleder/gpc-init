@@ -42,6 +42,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: mypy
+        category: legacy
         description: "Mirror of mypy for pre-commit"
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
     rev: v6.2.0

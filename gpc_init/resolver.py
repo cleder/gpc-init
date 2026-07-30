@@ -4,7 +4,14 @@ from pathlib import Path
 from typing import Any
 
 from gpc_init.catalog import load_catalog
-from gpc_init.exceptions import UnsupportedFrameworkError, UnsupportedLanguageError
+from gpc_init.exceptions import (
+    UnsupportedFrameworkError,
+    UnsupportedLanguageError,
+    UnsupportedProfileError,
+)
+
+# Selectable hook profiles (categories) on top of the always-on "preset" baseline.
+SELECTABLE_PROFILES = frozenset({"legacy", "experimental"})
 
 # Default base directory for preset discovery.
 # In development the symlinks gpc_init/lang -> ../lang resolve here; when installed
@@ -126,6 +133,23 @@ def validate_frameworks(frameworks: list[str], base_dir: Path | None = None) -> 
     for fw in frameworks:
         if fw not in supported:
             raise UnsupportedFrameworkError(fw, supported)
+
+
+def validate_profiles(profiles: list[str]) -> None:
+    """
+    Validate that all requested profile/category values are supported.
+
+    Args:
+        profiles: Normalized profile values to validate (e.g. ["legacy"]).
+
+    Raises:
+        UnsupportedProfileError: If any profile is not legacy/experimental.
+
+    """
+    supported = sorted(SELECTABLE_PROFILES)
+    for profile in profiles:
+        if profile not in SELECTABLE_PROFILES:
+            raise UnsupportedProfileError(profile, supported)
 
 
 def _normalize_rec(preset: dict[str, Any]) -> dict[str, Any]:
