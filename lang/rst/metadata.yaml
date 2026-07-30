@@ -1,0 +1,8 @@
+---
+fullname: reStructuredText
+icon: "📝"
+extensions:
+  - .rst
+  - .rest
+filenames: []
+aliases: []
