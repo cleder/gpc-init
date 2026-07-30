@@ -1,0 +1,8 @@
+---
+repos:
+  - repo: https://github.com/supernovae-st/nika
+    rev: v0.106.1
+    hooks:
+      - id: nika-check
+        name: nika check
+        description: "Statically audit .nika.yaml AI workflow files (DAG, types, permits, secret flows, cost floor) before they land. Runs offline, executes nothing; requires the nika binary on PATH."
