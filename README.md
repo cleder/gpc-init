@@ -255,7 +255,7 @@ pc-init --framework django --recommended
 
 ## Hook profiles
 
-Every hook belongs to a category: `preset` (the curated default, always included), `legacy` (superseded by a newer hook already in the same preset, but still usable — e.g. Python's `mypy`/`flake8`/`isort`/`black`, superseded by `ty`/`ruff`), or `experimental` (brand-new, not-yet-proven hooks — e.g. Python's `pyright`, an alternate type checker).
+Every hook belongs to a category: `preset` (the curated default, always included), `legacy` (superseded by a newer hook already in the same preset, but still usable — e.g. Python's `mypy`/`flake8`/`isort`/`black`/`pyright`, superseded by `ty`/`ruff`), or `experimental` (brand-new, not-yet-proven hooks).
 By default only `preset` hooks are included.
 Use `--profile` to add `legacy` and/or `experimental` hooks on top of the default baseline:
 

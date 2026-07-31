@@ -153,6 +153,17 @@ def merge_presets(
     return result
 
 
+def _filter_hooks(
+    hooks: list[dict[str, Any]], active_categories: frozenset[str]
+) -> list[dict[str, Any]]:
+    """Return hooks whose category is active, with the 'category' key stripped."""
+    return [
+        {k: v for k, v in hook.items() if k != "category"}
+        for hook in hooks
+        if hook.get("category", DEFAULT_CATEGORY) in active_categories
+    ]
+
+
 def filter_by_category(
     merged: dict[str, Any], active_categories: frozenset[str]
 ) -> dict[str, Any]:
@@ -174,15 +185,11 @@ def filter_by_category(
     """
     repos = merged.get("repos", [])
     if not repos:
-        return merged
+        return dict(merged)
 
     filtered_repos: list[dict[str, Any]] = []
     for repo in repos:
-        kept_hooks = [
-            {k: v for k, v in hook.items() if k != "category"}
-            for hook in repo.get("hooks", [])
-            if hook.get("category", DEFAULT_CATEGORY) in active_categories
-        ]
+        kept_hooks = _filter_hooks(repo.get("hooks", []), active_categories)
         if kept_hooks:
             filtered_repos.append({**repo, "hooks": kept_hooks})
 

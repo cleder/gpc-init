@@ -25,6 +25,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from gpc_init.catalog import load_catalog  # noqa: E402
+from gpc_init.merger import DEFAULT_CATEGORY  # noqa: E402
 
 LANG_DIR = PROJECT_ROOT / "lang"
 FRAMEWORK_DIR = PROJECT_ROOT / "framework"
@@ -121,7 +122,7 @@ _CATEGORY_MARKERS = {"legacy": "🕰️", "experimental": "⚗️"}
 
 def category_markers(hooks: list[dict[str, Any]]) -> str:
     """Return the marker prefix for the non-default categories present in hooks."""
-    categories = {hook.get("category", "preset") for hook in hooks}
+    categories = {hook.get("category", DEFAULT_CATEGORY) for hook in hooks}
     markers = [
         marker for name, marker in _CATEGORY_MARKERS.items() if name in categories
     ]

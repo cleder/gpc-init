@@ -105,15 +105,11 @@ def _generate_content(
             render_yaml(merged), langs, frameworks, lang_presets, fw_presets
         )
 
-    except UnsupportedLanguageError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except UnsupportedFrameworkError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except UnsupportedProfileError as exc:
+    except (
+        UnsupportedLanguageError,
+        UnsupportedFrameworkError,
+        UnsupportedProfileError,
+    ) as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
@@ -368,6 +364,12 @@ _PRESETS_HELP = (
     "Defaults to the bundled presets."
 )
 
+_PROFILE_HELP = (
+    "Hook profile to include on top of the default preset baseline "
+    "(repeatable, or comma-delimited: --profile=legacy,experimental). "
+    "preset hooks are always included. Supported: legacy, experimental."
+)
+
 
 @app.callback(invoke_without_command=True)
 def main(  # noqa: PLR0917
@@ -431,14 +433,7 @@ def main(  # noqa: PLR0917
     ] = False,
     profile: Annotated[
         list[str] | None,
-        typer.Option(
-            "--profile",
-            help=(
-                "Hook profile to include on top of the default preset baseline "
-                "(repeatable, or comma-delimited: --profile=legacy,experimental). "
-                "preset hooks are always included. Supported: legacy, experimental."
-            ),
-        ),
+        typer.Option("--profile", help=_PROFILE_HELP),
     ] = None,
     presets: Annotated[
         str | None,

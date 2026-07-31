@@ -2402,21 +2402,21 @@ class TestProfileFlag:
         assert "isort" in hook_ids
         assert "black" in hook_ids
 
-    def test_legacy_profile_excludes_experimental_pyright(self, tmp_path: Path) -> None:
+    def test_legacy_profile_includes_pyright(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(
             app, ["--lang", "py", "--profile", "legacy", "--output", str(output)]
         )
         assert result.exit_code == 0, result.output
-        assert "pyright" not in _hook_ids(output.read_text(encoding="utf-8"))
+        assert "pyright" in _hook_ids(output.read_text(encoding="utf-8"))
 
-    def test_experimental_profile_includes_pyright(self, tmp_path: Path) -> None:
+    def test_experimental_profile_excludes_legacy_pyright(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(
             app, ["--lang", "py", "--profile", "experimental", "--output", str(output)]
         )
         assert result.exit_code == 0, result.output
-        assert "pyright" in _hook_ids(output.read_text(encoding="utf-8"))
+        assert "pyright" not in _hook_ids(output.read_text(encoding="utf-8"))
 
     def test_experimental_profile_excludes_legacy_hooks(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
