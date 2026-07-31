@@ -34,6 +34,11 @@ Before this change, `gpc-init` had no notion of hook categories at all: every ho
 - `pc-init list` now prints a `Profiles:` section listing the selectable categories, for discoverability alongside `Languages:`/`Frameworks:`.
 - `AWESOME.md`'s generator (`scripts/generate_awesome_list.py`) annotates legacy/experimental hooks with their category emoji, so the categorization is discoverable in the docs, not just via `--help`.
 
+## Update (2026-07-31)
+
+An architecture review confirmed `gpc_init/profiles.py` has zero callers anywhere in the generation pipeline — not just low collision risk with `--profile`, as assumed above, but genuinely dead code (its only reference was its own unit test).
+The module and its test (`tests/unit/test_profiles.py`) were deleted; the "different concept, same word" collision this ADR anticipated never materializes, since there is no longer a second concept to collide with.
+
 ## Consequences
 
 - Behavior change for existing Python users: `pc-init --lang py` (and any preset built on it) no longer includes `mypy` by default.
