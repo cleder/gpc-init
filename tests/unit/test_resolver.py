@@ -10,7 +10,6 @@ from gpc_init.exceptions import (
     UnsupportedProfileError,
 )
 from gpc_init.resolver import (
-    deduplicate_preserving_order,
     expand_recommendations,
     get_recommendations_info,
     get_supported_frameworks,
@@ -70,20 +69,6 @@ class TestNormalizeFramework:
 
     def test_strips_whitespace(self) -> None:
         assert normalize_framework("  django  ") == "django"
-
-
-class TestDeduplicatePreservingOrder:
-    def test_removes_duplicates(self) -> None:
-        assert deduplicate_preserving_order(["py", "js", "py"]) == ["py", "js"]
-
-    def test_preserves_first_occurrence(self) -> None:
-        assert deduplicate_preserving_order(["js", "py", "js"]) == ["js", "py"]
-
-    def test_empty_list(self) -> None:
-        assert deduplicate_preserving_order([]) == []
-
-    def test_no_duplicates(self) -> None:
-        assert deduplicate_preserving_order(["py", "js"]) == ["py", "js"]
 
 
 class TestGetSupportedLanguages:

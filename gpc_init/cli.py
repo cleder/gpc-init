@@ -22,13 +22,13 @@ from gpc_init.exceptions import (
 from gpc_init.generator import generate
 from gpc_init.resolver import (
     SELECTABLE_PROFILES,
-    deduplicate_preserving_order,
     get_recommendations_info,
     get_supported_frameworks,
     get_supported_languages,
     normalize_framework,
     normalize_lang,
 )
+from gpc_init.util import deduplicate_preserving_order
 
 
 def _run(

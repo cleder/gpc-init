@@ -72,9 +72,7 @@ def _load_metadata_file(path: Path) -> dict[str, Any]:
     return data
 
 
-def _discover_ids(
-    kind_dir: Path, *, exclude: frozenset[str] = frozenset()
-) -> list[str]:
+def discover_ids(kind_dir: Path, *, exclude: frozenset[str] = frozenset()) -> list[str]:
     """Return sorted names of subdirectories that contain a preset.yaml."""
     if not kind_dir.is_dir():
         return []
@@ -151,7 +149,7 @@ def load_catalog(base_dir: Path | None = None) -> Catalog:
     filename_to_lang: dict[str, str] = {}
     alias_to_lang: dict[str, str] = {}
 
-    for lang_id in _discover_ids(lang_dir, exclude=frozenset({"common"})):
+    for lang_id in discover_ids(lang_dir, exclude=frozenset({"common"})):
         meta = _load_lang_metadata(lang_dir / lang_id, lang_id)
         langs[lang_id] = meta
         for ext in meta.extensions:
@@ -163,7 +161,7 @@ def load_catalog(base_dir: Path | None = None) -> Catalog:
 
     frameworks: dict[str, FrameworkMetadata] = {
         fw_id: _load_framework_metadata(fw_dir / fw_id, fw_id)
-        for fw_id in _discover_ids(fw_dir)
+        for fw_id in discover_ids(fw_dir)
     }
 
     return Catalog(

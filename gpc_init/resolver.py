@@ -5,7 +5,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from gpc_init.catalog import load_catalog
+from gpc_init.catalog import discover_ids, load_catalog
 from gpc_init.exceptions import (
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
@@ -25,28 +25,6 @@ def _resolve_base(base_dir: Path | None) -> Path:
     return base_dir if base_dir is not None else _DEFAULT_PRESETS_BASE
 
 
-def _discover_languages(base_dir: Path) -> list[str]:
-    """Scan lang/<lang>/preset.yaml and return sorted list of language ids."""
-    lang_dir = base_dir / "lang"
-    if not lang_dir.is_dir():
-        return []
-    return sorted(
-        d.name
-        for d in lang_dir.iterdir()
-        if d.is_dir() and d.name != "common" and (d / "preset.yaml").exists()
-    )
-
-
-def _discover_frameworks(base_dir: Path) -> list[str]:
-    """Scan framework/<fw>/preset.yaml and return sorted list of framework ids."""
-    fw_dir = base_dir / "framework"
-    if not fw_dir.is_dir():
-        return []
-    return sorted(
-        d.name for d in fw_dir.iterdir() if d.is_dir() and (d / "preset.yaml").exists()
-    )
-
-
 class _Kind(StrEnum):
     """Tags the three flavors of value get_supported_*/validate_* operate on."""
 
@@ -62,12 +40,16 @@ class _KindConfig(NamedTuple):
     error_cls: type[Exception]
 
 
+_LANG_EXCLUDE = frozenset({"common"})
+
 _KIND_CONFIG: dict[_Kind, _KindConfig] = {
     _Kind.LANG: _KindConfig(
-        discover=_discover_languages, error_cls=UnsupportedLanguageError
+        discover=lambda base: discover_ids(base / "lang", exclude=_LANG_EXCLUDE),
+        error_cls=UnsupportedLanguageError,
     ),
     _Kind.FRAMEWORK: _KindConfig(
-        discover=_discover_frameworks, error_cls=UnsupportedFrameworkError
+        discover=lambda base: discover_ids(base / "framework"),
+        error_cls=UnsupportedFrameworkError,
     ),
     _Kind.PROFILE: _KindConfig(
         discover=lambda _base_dir: sorted(SELECTABLE_PROFILES),
@@ -107,17 +89,6 @@ def normalize_lang(lang: str, base_dir: Path | None = None) -> str:
 def normalize_framework(fw: str) -> str:
     """Normalize a framework value: lowercase and strip whitespace."""
     return fw.strip().lower()
-
-
-def deduplicate_preserving_order(values: list[str]) -> list[str]:
-    """Remove duplicate values from a list, preserving first-occurrence order."""
-    seen: set[str] = set()
-    result: list[str] = []
-    for v in values:
-        if v not in seen:
-            seen.add(v)
-            result.append(v)
-    return result
 
 
 def get_supported_languages(base_dir: Path | None = None) -> list[str]:

@@ -6,7 +6,7 @@ from collections.abc import Callable, Generator
 from pathlib import Path
 
 from gpc_init.catalog import load_catalog
-from gpc_init.resolver import deduplicate_preserving_order
+from gpc_init.util import deduplicate_preserving_order
 
 _SKIP_DIRS: frozenset[str] = frozenset(
     {
