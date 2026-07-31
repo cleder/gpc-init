@@ -39,6 +39,10 @@ class TestGenerateRecommended:
         result = generate([], ["react"], base_dir=tmp_preset_dir, recommended=False)
         assert result.langs == []
 
+    def test_recommended_defaults_to_false(self, tmp_preset_dir: Path) -> None:
+        result = generate(["py"], ["react"], base_dir=tmp_preset_dir)
+        assert result.langs == ["py"]
+
 
 class TestGenerateValidationErrors:
     def test_unsupported_language_raises(self, tmp_preset_dir: Path) -> None:
