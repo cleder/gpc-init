@@ -3,10 +3,12 @@
 from typing import Any
 
 from gpc_init.merger import (
+    DEFAULT_CATEGORY,
     _deep_merge_top_level,
     _merge_hooks_list,
     _merge_repos,
     _repo_key,
+    filter_by_category,
     merge_presets,
 )
 
@@ -298,6 +300,85 @@ class TestDeepMergeTopLevel:
         result = _deep_merge_top_level(lower, higher)
         assert result["versions"]["python"] == "3.12"
         assert result["versions"]["node"] == "18"
+
+
+class TestFilterByCategory:
+    def test_hook_without_category_defaults_to_preset_and_survives(self) -> None:
+        merged = {"repos": [make_repo("https://a.com", "v1", [make_hook("ha")])]}
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert [h["id"] for h in result["repos"][0]["hooks"]] == ["ha"]
+
+    def test_legacy_hook_dropped_by_default(self) -> None:
+        merged = {
+            "repos": [
+                make_repo("https://a.com", "v1", [make_hook("ha", category="legacy")])
+            ]
+        }
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert result["repos"] == []
+
+    def test_legacy_hook_kept_when_legacy_active_and_category_key_stripped(
+        self,
+    ) -> None:
+        merged = {
+            "repos": [
+                make_repo("https://a.com", "v1", [make_hook("ha", category="legacy")])
+            ]
+        }
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY, "legacy"}))
+        hooks = result["repos"][0]["hooks"]
+        assert [h["id"] for h in hooks] == ["ha"]
+        assert "category" not in hooks[0]
+
+    def test_repo_with_only_non_active_hooks_is_removed_entirely(self) -> None:
+        merged = {
+            "repos": [
+                make_repo(
+                    "https://legacy-only.com",
+                    "v1",
+                    [make_hook("legacy-hook", category="legacy")],
+                ),
+                make_repo("https://kept.com", "v1", [make_hook("preset-hook")]),
+            ]
+        }
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert [r["repo"] for r in result["repos"]] == ["https://kept.com"]
+
+    def test_mixed_category_repo_keeps_only_active_hooks(self) -> None:
+        merged = {
+            "repos": [
+                make_repo(
+                    "https://a.com",
+                    "v1",
+                    [
+                        make_hook("preset-hook"),
+                        make_hook("legacy-hook", category="legacy"),
+                    ],
+                )
+            ]
+        }
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert [h["id"] for h in result["repos"][0]["hooks"]] == ["preset-hook"]
+
+    def test_no_repos_key_returns_input_unchanged(self) -> None:
+        merged = {"default_language_version": {"python": "python3.12"}}
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert result == merged
+
+    def test_experimental_active_keeps_experimental_hook(self) -> None:
+        merged = {
+            "repos": [
+                make_repo(
+                    "https://a.com",
+                    "v1",
+                    [make_hook("new-hook", category="experimental")],
+                )
+            ]
+        }
+        result = filter_by_category(
+            merged, frozenset({DEFAULT_CATEGORY, "experimental"})
+        )
+        assert [h["id"] for h in result["repos"][0]["hooks"]] == ["new-hook"]
 
 
 class TestMergePresetsHigherHookReplaces:

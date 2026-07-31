@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from gpc_init.exceptions import UnsupportedFrameworkError, UnsupportedLanguageError
+from gpc_init.exceptions import (
+    UnsupportedFrameworkError,
+    UnsupportedLanguageError,
+    UnsupportedProfileError,
+)
 from gpc_init.resolver import (
     deduplicate_preserving_order,
     expand_recommendations,
@@ -15,6 +19,7 @@ from gpc_init.resolver import (
     normalize_lang,
     validate_frameworks,
     validate_langs,
+    validate_profiles,
 )
 
 
@@ -161,6 +166,37 @@ class TestValidateFrameworks:
 
         # If base_dir were ignored (mutant: None), the real install would be used
         # and "xtest-only-fw" would be absent, raising UnsupportedFrameworkError.
+
+
+class TestValidateProfiles:
+    def test_legacy_passes(self) -> None:
+        validate_profiles(["legacy"])  # no error
+
+    def test_experimental_passes(self) -> None:
+        validate_profiles(["experimental"])  # no error
+
+    def test_both_pass(self) -> None:
+        validate_profiles(["legacy", "experimental"])  # no error
+
+    def test_empty_passes(self) -> None:
+        validate_profiles([])  # no error
+
+    def test_preset_is_not_selectable(self) -> None:
+        # 'preset' is the always-on baseline, not a user-facing --profile value.
+        with pytest.raises(UnsupportedProfileError) as exc_info:
+            validate_profiles(["preset"])
+        assert "preset" in str(exc_info.value)
+
+    def test_invalid_profile_raises(self) -> None:
+        with pytest.raises(UnsupportedProfileError) as exc_info:
+            validate_profiles(["bogus"])
+        assert "bogus" in str(exc_info.value)
+        assert "Supported:" in str(exc_info.value)
+
+    def test_error_lists_supported(self) -> None:
+        with pytest.raises(UnsupportedProfileError) as exc_info:
+            validate_profiles(["bogus"])
+        assert exc_info.value.supported == ["experimental", "legacy"]
 
 
 class TestGetRecommendationsInfo:

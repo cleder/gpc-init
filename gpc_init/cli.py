@@ -17,15 +17,17 @@ from gpc_init.exceptions import (
     PresetParseError,
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
+    UnsupportedProfileError,
 )
 from gpc_init.loader import (
     load_common_preset,
     load_framework_preset,
     load_language_preset,
 )
-from gpc_init.merger import merge_presets
+from gpc_init.merger import DEFAULT_CATEGORY, filter_by_category, merge_presets
 from gpc_init.renderer import render_yaml
 from gpc_init.resolver import (
+    SELECTABLE_PROFILES,
     deduplicate_preserving_order,
     expand_recommendations,
     get_recommendations_info,
@@ -35,6 +37,7 @@ from gpc_init.resolver import (
     normalize_lang,
     validate_frameworks,
     validate_langs,
+    validate_profiles,
 )
 
 
@@ -52,13 +55,16 @@ def _generate_content(
     base_dir: Path | None,
     *,
     recommended: bool = False,
+    profiles: tuple[str, ...] = (),
 ) -> _GenerationResult:
     """
-    Validate, load, merge, render.
+    Validate, load, merge, filter by profile, render.
 
     Returns (yaml_content, final_langs, final_frameworks, lang_presets, fw_presets).
     When recommended=True the lang/framework lists are expanded with every
     recommendation from the selected presets before merging.
+    profiles selects additional hook categories (legacy/experimental) to
+    include on top of the always-on 'preset' baseline.
     """
     if base_dir is not None and not (base_dir / "lang").is_dir():
         typer.echo(f"Error: '{base_dir}' must contain a 'lang' subdirectory.", err=True)
@@ -67,6 +73,7 @@ def _generate_content(
     try:
         validate_langs(langs, base_dir=base_dir)
         validate_frameworks(frameworks, base_dir=base_dir)
+        validate_profiles(list(profiles))
 
         common = load_common_preset(base_dir=base_dir)
         lang_presets = [
@@ -93,15 +100,16 @@ def _generate_content(
             ]
 
         merged = merge_presets(common, lang_presets, fw_presets)
+        merged = filter_by_category(merged, frozenset({DEFAULT_CATEGORY, *profiles}))
         return _GenerationResult(
             render_yaml(merged), langs, frameworks, lang_presets, fw_presets
         )
 
-    except UnsupportedLanguageError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except UnsupportedFrameworkError as exc:
+    except (
+        UnsupportedLanguageError,
+        UnsupportedFrameworkError,
+        UnsupportedProfileError,
+    ) as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
@@ -121,10 +129,11 @@ def _run(
     base_dir: Path | None,
     *,
     recommended: bool = False,
+    profiles: tuple[str, ...] = (),
 ) -> None:
     """Generate and write the preset config to target."""
     content, langs, frameworks, lang_presets, fw_presets = _generate_content(
-        langs, frameworks, base_dir, recommended=recommended
+        langs, frameworks, base_dir, recommended=recommended, profiles=profiles
     )
 
     overwritten = target.exists()
@@ -142,7 +151,10 @@ def _run(
     lang_str = ", ".join(langs)
     fw_str = (", ".join(frameworks)) if frameworks else "none"
     action = "Overwrote" if overwritten else "Generated"
-    typer.echo(f"{action} {target} with languages: {lang_str} and frameworks: {fw_str}")
+    msg = f"{action} {target} with languages: {lang_str} and frameworks: {fw_str}"
+    if profiles:
+        msg += f" and profiles: {', '.join(profiles)}"
+    typer.echo(msg)
 
 
 def _dispatch(
@@ -153,23 +165,40 @@ def _dispatch(
     *,
     force: bool,
     recommended: bool = False,
+    profiles: tuple[str, ...] = (),
 ) -> None:
     """Route to diff display or write depending on whether target exists."""
     if target.exists() and not force:
         _handle_existing_file(
-            langs, frameworks, target, base_dir, recommended=recommended
+            langs,
+            frameworks,
+            target,
+            base_dir,
+            recommended=recommended,
+            profiles=profiles,
         )
     else:
-        _run(langs, frameworks, target, base_dir, recommended=recommended)
+        _run(
+            langs,
+            frameworks,
+            target,
+            base_dir,
+            recommended=recommended,
+            profiles=profiles,
+        )
 
 
-def _build_force_command(langs: list[str], frameworks: list[str]) -> str:
+def _build_force_command(
+    langs: list[str], frameworks: list[str], profiles: tuple[str, ...] = ()
+) -> str:
     """Return a ready-to-run pc-init command string that includes --force."""
     parts = ["pc-init"]
     if langs:
         parts.append(f"--lang={','.join(langs)}")
     if frameworks:
         parts.append(f"--framework={','.join(frameworks)}")
+    if profiles:
+        parts.append(f"--profile={','.join(profiles)}")
     parts.append("--force")
     return " ".join(parts)
 
@@ -181,10 +210,11 @@ def _handle_existing_file(
     base_dir: Path | None,
     *,
     recommended: bool = False,
+    profiles: tuple[str, ...] = (),
 ) -> None:
     """Show unified diff vs existing file. Always raises typer.Exit."""
     content, *_ = _generate_content(
-        langs, frameworks, base_dir, recommended=recommended
+        langs, frameworks, base_dir, recommended=recommended, profiles=profiles
     )
     try:
         existing = target.read_text(encoding="utf-8")
@@ -201,7 +231,7 @@ def _handle_existing_file(
     )
     if diff_lines:
         typer.echo("".join(diff_lines))
-        cmd = _build_force_command(langs, frameworks)
+        cmd = _build_force_command(langs, frameworks, profiles)
         typer.echo(
             f"\nRun with --force to overwrite '{target}'.\n  Try: {cmd}", err=True
         )
@@ -320,11 +350,24 @@ def _normalize_frameworks(raw_frameworks: list[str] | None) -> list[str]:
     )
 
 
+def _normalize_profiles(raw_profiles: list[str] | None) -> list[str]:
+    """Lowercase and deduplicate profile (hook category) values."""
+    return deduplicate_preserving_order(
+        [v.strip().lower() for v in _expand_comma_separated(raw_profiles)]
+    )
+
+
 _PRESETS_HELP = (
     "Preset catalog to use. Accepts a local directory path or a git "
     "repository URL (https://, git@, git://, ssh://). The directory / "
     "repo root must contain lang/ and framework/ subdirectories. "
     "Defaults to the bundled presets."
+)
+
+_PROFILE_HELP = (
+    "Hook profile to include on top of the default preset baseline "
+    "(repeatable, or comma-delimited: --profile=legacy,experimental). "
+    "preset hooks are always included. Supported: legacy, experimental."
 )
 
 
@@ -388,6 +431,10 @@ def main(  # noqa: PLR0917
             ),
         ),
     ] = False,
+    profile: Annotated[
+        list[str] | None,
+        typer.Option("--profile", help=_PROFILE_HELP),
+    ] = None,
     presets: Annotated[
         str | None,
         typer.Option("--presets", help=_PRESETS_HELP),
@@ -407,7 +454,8 @@ def main(  # noqa: PLR0917
 
     At least one --lang value is required (or use --detect).
     --framework values are optional. Use --force to overwrite an existing config file.
-    Run `pc-init list` to see all available languages and frameworks.
+    Use --profile to include legacy or experimental hooks on top of the default
+    preset baseline. Run `pc-init list` to see all available languages and frameworks.
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -420,6 +468,7 @@ def main(  # noqa: PLR0917
 
         langs = _normalize_langs(lang, base_dir=base_dir)
         frameworks = _normalize_frameworks(framework)
+        profiles = tuple(_normalize_profiles(profile))
 
         target = Path(output)
 
@@ -430,6 +479,7 @@ def main(  # noqa: PLR0917
             base_dir,
             force=force,
             recommended=recommended,
+            profiles=profiles,
         )
 
 
@@ -449,6 +499,8 @@ def list_presets(
     typer.echo("  " + ", ".join(langs))
     typer.echo("\nFrameworks:")
     typer.echo("  " + ", ".join(frameworks))
+    typer.echo("\nProfiles (opt in with --profile; preset is always included):")
+    typer.echo("  " + ", ".join(sorted(SELECTABLE_PROFILES)))
 
 
 def entry_point() -> None:

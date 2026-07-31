@@ -5,9 +5,14 @@
 ## Language
 
 **Preset**: A single `lang/<id>/preset.yaml` or `framework/<id>/preset.yaml` file — a standalone, curated bundle of pre-commit `repos:`/`hooks:` entries for one language or framework.
-_Avoid_: Config, profile
+_Avoid_: Config
 
 **Hook**: One entry under a repo's `hooks:` list in a preset — a single check or action identified by its `id` (e.g. `ruff-check`, `checkmake`), sourced from that repo's own `.pre-commit-hooks.yaml` manifest.
+
+**Hook category / profile**: An optional `category: legacy|experimental` field on a hook.
+Absent ⇒ implicit `preset` (the curated default, always included).
+`legacy` marks a hook superseded by a newer one already in the same preset but still usable (e.g. `mypy`, superseded by `ty`); `experimental` marks a brand-new, not-yet-proven hook.
+`--profile` is the CLI flag that opts into `legacy`/`experimental` hooks on top of the always-on `preset` baseline (repeatable/comma-delimited, like `--lang`/`--framework`).
 
 **Hook capability**: A distinct check or action a repo's manifest offers (e.g. `pocc/pre-commit-hooks`' `clang-format` formatting vs. its `cppcheck` static analysis).
 Capabilities from the same repo are additive — each is worth including on its own merits.

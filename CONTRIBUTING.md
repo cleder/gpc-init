@@ -40,6 +40,19 @@ repos:
         description: What this hook does
 ```
 
+A hook may optionally declare a `category` to mark it as `legacy` or `experimental` instead of the default `preset` category:
+
+```yaml
+      - id: mypy
+        category: legacy
+        description: "Mirror of mypy for pre-commit"
+```
+
+Omit `category` for hooks that belong in the curated default (`preset`) — most hooks.
+Use `category: legacy` when the hook is superseded by a newer hook already in the same preset but is still usable (e.g. `mypy`, superseded by `ty`).
+Use `category: experimental` for a brand-new, not-yet-proven hook.
+Users opt into `legacy`/`experimental` hooks with `--profile` (e.g. `pc-init --lang py --profile legacy`); `preset` hooks are always included.
+
 Framework presets may additionally declare which languages and frameworks they recommend:
 
 ```yaml

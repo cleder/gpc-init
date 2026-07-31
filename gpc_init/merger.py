@@ -2,6 +2,9 @@
 
 from typing import Any
 
+# Implicit category for hooks with no explicit `category:` field.
+DEFAULT_CATEGORY = "preset"
+
 
 def _repo_key(repo_entry: dict[str, Any]) -> tuple[str, str]:
     """Return a (repo, rev) identity key for a repo entry."""
@@ -148,3 +151,46 @@ def merge_presets(
         result["repos"] = merged_repos
 
     return result
+
+
+def _filter_hooks(
+    hooks: list[dict[str, Any]], active_categories: frozenset[str]
+) -> list[dict[str, Any]]:
+    """Return hooks whose category is active, with the 'category' key stripped."""
+    return [
+        {k: v for k, v in hook.items() if k != "category"}
+        for hook in hooks
+        if hook.get("category", DEFAULT_CATEGORY) in active_categories
+    ]
+
+
+def filter_by_category(
+    merged: dict[str, Any], active_categories: frozenset[str]
+) -> dict[str, Any]:
+    """
+    Drop hooks whose category isn't active, from an already-merged config dict.
+
+    Each hook's `category` field (default: 'preset') is checked against
+    active_categories. Surviving hooks have the 'category' key stripped
+    (it isn't a pre-commit config field). A repo entry left with zero hooks
+    after filtering is removed entirely from the result.
+
+    Args:
+        merged: Merged configuration dict, as returned by merge_presets().
+        active_categories: Categories to keep (always includes 'preset').
+
+    Returns:
+        A new configuration dict with non-active-category hooks removed.
+
+    """
+    repos = merged.get("repos", [])
+    if not repos:
+        return dict(merged)
+
+    filtered_repos: list[dict[str, Any]] = []
+    for repo in repos:
+        kept_hooks = _filter_hooks(repo.get("hooks", []), active_categories)
+        if kept_hooks:
+            filtered_repos.append({**repo, "hooks": kept_hooks})
+
+    return {**merged, "repos": filtered_repos}

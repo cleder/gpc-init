@@ -69,6 +69,10 @@ Options:
   --detect           Auto-detect languages and frameworks from the current
                      directory and merge them with any explicitly supplied
                      --lang/--framework values.
+  --profile    TEXT  Hook profile to include on top of the default preset
+                     baseline (repeatable, or comma-delimited:
+                     --profile=legacy,experimental). preset hooks are always
+                     included. Supported: legacy, experimental.
   --output     TEXT  Output file path.  [default: .pre-commit-config.yaml]
   --presets    TEXT  Preset catalog to use. Accepts a local directory path or
                      a git repository URL (https://, git@, git://, ssh://).
@@ -96,6 +100,9 @@ Languages:
 
 Frameworks:
   ansible, behave, django, git, k8s, react, sphinx
+
+Profiles (opt in with --profile; preset is always included):
+  experimental, legacy
 ```
 
 Use `--presets` to list what a custom catalog provides:
@@ -245,6 +252,19 @@ You can also omit `--lang` entirely when using `--recommended` with at least one
 ```bash
 pc-init --framework django --recommended
 ```
+
+## Hook profiles
+
+Every hook belongs to a category: `preset` (the curated default, always included), `legacy` (superseded by a newer hook already in the same preset, but still usable — e.g. Python's `mypy`/`flake8`/`isort`/`black`/`pyright`, superseded by `ty`/`ruff`), or `experimental` (brand-new, not-yet-proven hooks).
+By default only `preset` hooks are included.
+Use `--profile` to add `legacy` and/or `experimental` hooks on top of the default baseline:
+
+```bash
+pc-init --lang py --profile legacy
+pc-init --lang py --profile legacy,experimental
+```
+
+`--profile` is repeatable/comma-delimited, just like `--lang`/`--framework`.
 
 ## Examples
 
