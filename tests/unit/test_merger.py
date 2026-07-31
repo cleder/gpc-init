@@ -186,6 +186,16 @@ class TestMergeRepos:
         assert len(result) == 1
         assert [h["id"] for h in result[0]["hooks"]] == ["ha"]
 
+    def test_higher_repo_extra_top_level_field_wins(self) -> None:
+        # A field on the higher-layer repo entry other than repo/rev/hooks must
+        # now survive into the merged result, matching how _merge_hook already
+        # lets higher-precedence fields replace lower fields.
+        lower = {**make_repo("https://a.com", "v1", [make_hook("ha")]), "quiet": False}
+        higher = {**make_repo("https://a.com", "v1", [make_hook("hb")]), "quiet": True}
+        result = _merge_repos([lower], [higher])
+        assert len(result) == 1
+        assert result[0]["quiet"] is True
+
     def test_higher_repo_without_hooks_key_merged_safely(self) -> None:
         # A higher-layer repo entry for the same (repo, rev) key that has no
         # "hooks" key at all must default to an empty list, not raise TypeError.
