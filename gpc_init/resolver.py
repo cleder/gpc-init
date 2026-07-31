@@ -1,7 +1,9 @@
 """Resolve and validate generation requests against the preset catalog."""
 
+from collections.abc import Callable
+from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from gpc_init.catalog import load_catalog
 from gpc_init.exceptions import (
@@ -45,6 +47,47 @@ def _discover_frameworks(base_dir: Path) -> list[str]:
     )
 
 
+class _Kind(StrEnum):
+    """Tags the three flavors of value get_supported_*/validate_* operate on."""
+
+    LANG = "lang"
+    FRAMEWORK = "framework"
+    PROFILE = "profile"
+
+
+class _KindConfig(NamedTuple):
+    """Per-kind behavior for supported-set lookup and unsupported-value errors."""
+
+    discover: Callable[[Path], list[str]]
+    error_cls: type[Exception]
+
+
+_KIND_CONFIG: dict[_Kind, _KindConfig] = {
+    _Kind.LANG: _KindConfig(
+        discover=_discover_languages, error_cls=UnsupportedLanguageError
+    ),
+    _Kind.FRAMEWORK: _KindConfig(
+        discover=_discover_frameworks, error_cls=UnsupportedFrameworkError
+    ),
+    _Kind.PROFILE: _KindConfig(
+        discover=lambda _base_dir: sorted(SELECTABLE_PROFILES),
+        error_cls=UnsupportedProfileError,
+    ),
+}
+
+
+def _supported(base_dir: Path | None, kind: _Kind) -> list[str]:
+    return _KIND_CONFIG[kind].discover(_resolve_base(base_dir))
+
+
+def _validate(kind: _Kind, values: list[str], base_dir: Path | None = None) -> None:
+    supported = _supported(base_dir, kind)
+    error_cls = _KIND_CONFIG[kind].error_cls
+    for value in values:
+        if value not in supported:
+            raise error_cls(value, supported)
+
+
 def normalize_lang(lang: str, base_dir: Path | None = None) -> str:
     """
     Normalize a language value: lowercase and resolve aliases to canonical id.
@@ -85,7 +128,7 @@ def get_supported_languages(base_dir: Path | None = None) -> list[str]:
         base_dir: Override base directory for preset discovery (used in tests).
 
     """
-    return _discover_languages(_resolve_base(base_dir))
+    return _supported(base_dir, _Kind.LANG)
 
 
 def get_supported_frameworks(base_dir: Path | None = None) -> list[str]:
@@ -96,7 +139,7 @@ def get_supported_frameworks(base_dir: Path | None = None) -> list[str]:
         base_dir: Override base directory for preset discovery (used in tests).
 
     """
-    return _discover_frameworks(_resolve_base(base_dir))
+    return _supported(base_dir, _Kind.FRAMEWORK)
 
 
 def validate_langs(langs: list[str], base_dir: Path | None = None) -> None:
@@ -111,10 +154,7 @@ def validate_langs(langs: list[str], base_dir: Path | None = None) -> None:
         UnsupportedLanguageError: If any language is not in the catalog.
 
     """
-    supported = get_supported_languages(base_dir)
-    for lang in langs:
-        if lang not in supported:
-            raise UnsupportedLanguageError(lang, supported)
+    _validate(_Kind.LANG, langs, base_dir)
 
 
 def validate_frameworks(frameworks: list[str], base_dir: Path | None = None) -> None:
@@ -129,10 +169,7 @@ def validate_frameworks(frameworks: list[str], base_dir: Path | None = None) -> 
         UnsupportedFrameworkError: If any framework is not in the catalog.
 
     """
-    supported = get_supported_frameworks(base_dir)
-    for fw in frameworks:
-        if fw not in supported:
-            raise UnsupportedFrameworkError(fw, supported)
+    _validate(_Kind.FRAMEWORK, frameworks, base_dir)
 
 
 def validate_profiles(profiles: list[str]) -> None:
@@ -146,10 +183,7 @@ def validate_profiles(profiles: list[str]) -> None:
         UnsupportedProfileError: If any profile is not legacy/experimental.
 
     """
-    supported = sorted(SELECTABLE_PROFILES)
-    for profile in profiles:
-        if profile not in SELECTABLE_PROFILES:
-            raise UnsupportedProfileError(profile, supported)
+    _validate(_Kind.PROFILE, profiles)
 
 
 def _normalize_rec(preset: dict[str, Any]) -> dict[str, Any]:
