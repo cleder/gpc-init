@@ -1,0 +1,8 @@
+---
+fullname: Cython
+icon: "🐍"
+extensions:
+  - .pyx
+filenames: []
+aliases:
+  - cython

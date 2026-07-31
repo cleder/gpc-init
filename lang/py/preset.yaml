@@ -6,7 +6,7 @@ repos:
       - id: absolufy-imports
         description: "Automatically convert relative imports to absolute"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.0
+    rev: v0.16.1
     hooks:
       - id: ruff-check
         description: "Run 'ruff check' for extremely fast Python linting"
@@ -57,7 +57,7 @@ repos:
         category: legacy
         description: "Style guide enforcement (superseded by ruff-check)"
   - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+    rev: 9.0.0b1
     hooks:
       - id: isort
         category: legacy
@@ -110,7 +110,7 @@ repos:
         description: "Automatically upgrade syntax for newer versions."
         category: legacy
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.12.0
+    rev: 0.12.1
     hooks:
       - id: uv-lock
         description: "Automatically run 'uv lock' on your project dependencies"
@@ -134,7 +134,7 @@ repos:
       - id: deptry
         description: "deptry is a command line tool to check for issues with dependencies in a Python project, such as unused or missing dependencies."
   - repo: https://github.com/shelkesays/safelint
-    rev: v2.10.0  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
+    rev: v2.11.0rc1  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
     hooks:
       - id: safelint
         # Required in v2.0.0+, pick the line for the language(s) your repo lints:
@@ -162,3 +162,16 @@ repos:
           ``['safelint[php]']``, ``['safelint[c]']``, ``['safelint[cpp]']``, or
           ``['safelint[all]']``. Without an extra, the hook installs only the
           engine and exits with a clear install hint on first run.
+  - repo: https://github.com/hakancelikdev/unexport
+    rev: 0.4.0
+    hooks:
+      - id: unexport
+        args: [--refactor]
+        description: "unexport is a linter that tries to keep the __all __ in your Python modules always up to date."
+  - repo: https://github.com/fzimmermann89/check_all
+    rev: v1.2
+    hooks:
+      - id: check-init-all
+        args: [--fix]
+        description: Check if __all__ is properly defined in __init__.py files and updates it if necessary.
+        category: experimental
