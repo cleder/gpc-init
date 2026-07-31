@@ -207,6 +207,48 @@ class TestMergeRepos:
         assert len(result) == 1
         assert [h["id"] for h in result[0]["hooks"]] == ["ha"]
 
+    def test_repo_entries_hook_without_id_does_not_merge_with_hook_id_string_none(
+        self,
+    ) -> None:
+        # Within a merged repo entry (same repo+rev), a lower hook with the
+        # literal id "None" and a higher hook with no "id" key at all must NOT
+        # be treated as the same hook. The original default for a missing id
+        # is "" (distinct from "None"). Mutant 30 changes the default to None,
+        # so str(None) == "None" collides with the explicit id "None" and the
+        # two hooks get merged into one instead of staying separate.
+        lower = [
+            make_repo("https://a.com", "v1", [make_hook("None", args=["--lower"])])
+        ]
+        higher = [make_repo("https://a.com", "v1", [{"args": ["--higher"]}])]
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1
+        hooks = result[0]["hooks"]
+        assert len(hooks) == 2
+        assert hooks[0]["id"] == "None"
+        assert hooks[0]["args"] == ["--lower"]
+        assert hooks[1]["args"] == ["--higher"]
+
+    def test_repo_entries_hook_without_id_does_not_merge_with_hook_id_string_xxxx(
+        self,
+    ) -> None:
+        # Within a merged repo entry (same repo+rev), a lower hook with the
+        # literal id "XXXX" and a higher hook with no "id" key at all must NOT
+        # be treated as the same hook. The original default for a missing id
+        # is "" (distinct from "XXXX"). Mutant 35 changes the default to
+        # "XXXX", so it collides with the explicit id "XXXX" and the two
+        # hooks get merged into one instead of staying separate.
+        lower = [
+            make_repo("https://a.com", "v1", [make_hook("XXXX", args=["--lower"])])
+        ]
+        higher = [make_repo("https://a.com", "v1", [{"args": ["--higher"]}])]
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1
+        hooks = result[0]["hooks"]
+        assert len(hooks) == 2
+        assert hooks[0]["id"] == "XXXX"
+        assert hooks[0]["args"] == ["--lower"]
+        assert hooks[1]["args"] == ["--higher"]
+
 
 class TestMergePresets:
     def test_merges_common_and_single_lang(self) -> None:
@@ -375,6 +417,11 @@ class TestFilterByCategory:
         result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
         assert result == merged
 
+    def test_repo_without_hooks_key_is_treated_as_empty_and_removed(self) -> None:
+        merged = {"repos": [{"repo": "https://a.com", "rev": "v1"}]}
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert result["repos"] == []
+
     def test_experimental_active_keeps_experimental_hook(self) -> None:
         merged = {
             "repos": [
@@ -389,6 +436,15 @@ class TestFilterByCategory:
             merged, frozenset({DEFAULT_CATEGORY, "experimental"})
         )
         assert [h["id"] for h in result["repos"][0]["hooks"]] == ["new-hook"]
+
+    def test_repo_without_hooks_key_does_not_raise(self) -> None:
+        # A repo entry with no "hooks" key at all must default to an empty
+        # list rather than None. The mutant removes the default `[]` from
+        # `repo.get("hooks", [])`, causing `_filter_hooks(None, ...)` to raise
+        # TypeError when it tries to iterate over None.
+        merged = {"repos": [{"repo": "https://a.com", "rev": "v1"}]}
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert result["repos"] == []
 
 
 class TestMergePresetsHigherHookReplaces:

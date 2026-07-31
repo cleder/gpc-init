@@ -79,6 +79,10 @@ class TestUnsupportedProfileError:
         msg = str(exc)
         assert msg.index("experimental") < msg.index("legacy")  # sorted order
 
+    def test_message_lists_supported_with_comma_separator(self) -> None:
+        exc = UnsupportedProfileError("bogus", ["legacy", "experimental"])
+        assert "experimental, legacy" in str(exc)
+
 
 class TestTargetFileExistsError:
     def test_path_attribute(self) -> None:

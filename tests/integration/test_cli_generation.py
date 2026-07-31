@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
@@ -718,6 +719,34 @@ class TestArgumentNormalization:
         result = runner.invoke(app, ["--lang", "python", "--output", str(output)])
         assert result.exit_code == 0, result.output
 
+    def test_custom_catalog_alias_resolved_via_base_dir(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        """
+        normalize_lang must receive base_dir so custom-catalog aliases resolve.
+
+        If base_dir were not forwarded (mutant), the alias would be looked up in
+        the bundled catalog, where it is unknown, leaving it unresolved and
+        triggering UnsupportedLanguageError against the custom catalog.
+        """
+        metadata_path = tmp_preset_dir / "lang" / "py" / "metadata.yaml"
+        metadata_path.write_text(
+            "fullname: Python\naliases:\n  - zzcustompyalias\n", encoding="utf-8"
+        )
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "zzcustompyalias",
+                "--presets",
+                str(tmp_preset_dir),
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
     def test_javascript_alias_normalized_to_js(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(app, ["--lang", "javascript", "--output", str(output)])
@@ -954,6 +983,47 @@ class TestPresetsOption:
             ],
         )
         assert result.exit_code == 0, result.output
+
+    def test_lang_alias_resolved_against_custom_presets_dir(
+        self, tmp_path: Path
+    ) -> None:
+        """
+        normalize_lang must resolve aliases using base_dir, not the bundled catalog.
+
+        The custom presets dir defines a language 'widget' with alias 'wdg' that
+        does not exist in the bundled catalog. If base_dir were dropped when
+        resolving the alias (the mutant), 'wdg' would be looked up against the
+        bundled catalog, fail to resolve, and then fail validation against the
+        custom catalog's supported languages (['widget']).
+        """
+        preset_dir = tmp_path / "presets"
+        lang_dir = preset_dir / "lang" / "widget"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text(
+            "repos:\n  - repo: local\n    hooks:\n"
+            "      - id: widget-hook\n        name: widget\n"
+            "        entry: widget\n        language: system\n",
+            encoding="utf-8",
+        )
+        (lang_dir / "metadata.yaml").write_text(
+            "fullname: Widget\naliases:\n  - wdg\n",
+            encoding="utf-8",
+        )
+
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "wdg",
+                "--presets",
+                str(preset_dir),
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
 
     def test_local_presets_common_preset_loaded_from_custom_dir(
         self, tmp_path: Path, tmp_preset_dir: Path
@@ -1798,6 +1868,38 @@ class TestDiffOnExistingFile:
         # Mutant produces 'XX,XX' as separator — must not appear.
         assert "XX,XX" not in result.output
 
+    def test_force_command_hint_uses_comma_separator_for_multiple_profiles(
+        self, tmp_path: Path
+    ) -> None:
+        """
+        _build_force_command must join profiles with ',' not 'XX,XX'.
+
+        When a diff is detected on an existing file, _handle_existing_file prints
+        a hint of the form 'Try: pc-init --lang=... --profile=a,b --force'.
+        The mutant replaces ',' with 'XX,XX' as the join separator, producing
+        '--profile=legacyXX,XXexperimental' which is syntactically wrong.
+        """
+        output = tmp_path / ".pre-commit-config.yaml"
+        output.write_text("existing: content\n", encoding="utf-8")
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--profile",
+                "legacy",
+                "--profile",
+                "experimental",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 1
+        # The hint must contain the two profiles joined by a plain comma.
+        assert "--profile=legacy,experimental" in result.output
+        # Mutant produces 'XX,XX' as separator — must not appear.
+        assert "XX,XX" not in result.output
+
     def test_read_permission_error_on_existing_file_shows_cannot_read_message(
         self, tmp_path: Path
     ) -> None:
@@ -2238,6 +2340,94 @@ class TestDetect:
         assert "js" in supported_used
         assert "py" in supported_used
 
+    def test_detect_languages_uses_custom_base_dir_catalog(
+        self,
+        tmp_path: Path,
+        tmp_preset_dir: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """
+        _apply_detection must pass base_dir to detect_languages, not None.
+
+        detect_languages loads its extension/filename catalog from base_dir.
+        The fixture presets dir's 'js' language has no metadata.yaml, so its
+        custom catalog does not map the '.js' extension to any language --
+        unlike the bundled catalog, which does. With the mutant
+        (base_dir=None passed to detect_languages), the bundled catalog is
+        used instead of the custom one, so an 'app.js' file is detected as
+        'js' even though --presets points at the custom catalog. With the
+        original code, the custom catalog is used and 'js' is not detected.
+        """
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "app.js").write_text("console.log('hi');\n", encoding="utf-8")
+        output = tmp_path / ".pre-commit-config.yaml"
+        # Point Path.cwd() at repo_dir without an actual os.chdir(): the CLI
+        # scans Path.cwd() for --detect, and this fixture only needs that
+        # single call site redirected, not the process's real working
+        # directory changed.
+        monkeypatch.setattr(Path, "cwd", staticmethod(lambda: repo_dir))
+
+        with patch("gpc_init.cli.detect_frameworks", return_value=[]):
+            result = runner.invoke(
+                app,
+                [
+                    "--detect",
+                    "--lang",
+                    "py",
+                    "--presets",
+                    str(tmp_preset_dir),
+                    "--output",
+                    str(output),
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "Detected languages:" not in result.output
+        assert "js" not in result.output
+
+    def test_detect_frameworks_uses_custom_base_dir_catalog(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        """
+        _apply_detection must pass base_dir to detect_frameworks, not None.
+
+        detect_frameworks loads its framework metadata (including detect rules)
+        from load_catalog(base_dir). The fixture presets dir's 'react' framework
+        has no metadata.yaml, so its custom catalog gives 'react' no detect
+        rules at all -- unlike the bundled catalog, whose 'react' framework
+        detects a "react" package.json dependency. With the mutant
+        (base_dir=None passed to detect_frameworks), the bundled catalog is
+        used instead of the custom one, so a package.json depending on react
+        is detected as the 'react' framework even though --presets points at
+        the custom catalog. With the original code, the custom catalog is
+        used, 'react' has no detect rules, and it is not detected.
+        """
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "package.json").write_text(
+            '{"dependencies": {"react": "^18.0.0"}}', encoding="utf-8"
+        )
+        output = tmp_path / ".pre-commit-config.yaml"
+
+        with patch.object(Path, "cwd", return_value=repo_dir):
+            result = runner.invoke(
+                app,
+                [
+                    "--detect",
+                    "--lang",
+                    "js",
+                    "--presets",
+                    str(tmp_preset_dir),
+                    "--output",
+                    str(output),
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "Detected frameworks:" not in result.output
+        assert "react" not in result.output
+
     def test_detect_with_custom_presets_uses_custom_framework_catalog(
         self, tmp_path: Path, tmp_preset_dir: Path
     ) -> None:
@@ -2279,6 +2469,164 @@ class TestDetect:
             "detect_frameworks should not surface it. "
             f"Got exit {result.exit_code}; output: {result.output}"
         )
+
+    def test_detect_finds_framework_only_defined_in_custom_presets_dir(
+        self, tmp_path: Path, fixtures_dir: Path
+    ) -> None:
+        """
+        _apply_detection must pass base_dir to get_supported_frameworks, not None.
+
+        The custom presets dir here defines 'custom_only_fw', a framework id
+        that does not exist in the bundled catalog at all. detect_frameworks
+        itself always loads its metadata catalog from base_dir (unaffected by
+        this mutant), so 'custom_only_fw' is present in catalog.frameworks --
+        but it is only checked against the repo's files if it also appears in
+        the `supported_frameworks` list detect_frameworks filters against.
+
+        With the original code, get_supported_frameworks(base_dir) returns the
+        custom dir's framework ids, including 'custom_only_fw', so its detect
+        rule is evaluated and it is reported as detected.
+
+        With the mutant, get_supported_frameworks(None) returns only bundled
+        framework ids. 'custom_only_fw' is absent from that list, so it is
+        skipped regardless of whether its detect rule matches -- it is never
+        reported as detected.
+        """
+        preset_dir = tmp_path / "presets"
+        shutil.copytree(fixtures_dir / "lang", preset_dir / "lang")
+        shutil.copytree(fixtures_dir / "framework", preset_dir / "framework")
+        fw_dir = preset_dir / "framework" / "custom_only_fw"
+        fw_dir.mkdir(parents=True)
+        (fw_dir / "metadata.yaml").write_text(
+            "fullname: CustomOnly\ndetect:\n  - file_exists: custom_only_marker.txt\n",
+            encoding="utf-8",
+        )
+        (fw_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "custom_only_marker.txt").write_text("marker\n", encoding="utf-8")
+        output = tmp_path / "out.yaml"
+
+        with patch.object(Path, "cwd", return_value=repo_dir):
+            result = runner.invoke(
+                app,
+                [
+                    "--detect",
+                    "--lang",
+                    "py",
+                    "--presets",
+                    str(preset_dir),
+                    "--output",
+                    str(output),
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "Detected frameworks: custom_only_fw" in result.output
+
+    def test_detect_with_custom_presets_uses_custom_extension_mapping(
+        self, tmp_path: Path, fixtures_dir: Path
+    ) -> None:
+        """
+        _apply_detection must pass base_dir through to detect_languages itself.
+
+        detect_languages loads its filename/extension-to-language lookup tables
+        from load_catalog(base_dir), not just the supported-langs allowlist. A
+        custom --presets directory can define a language with an extension that
+        the bundled catalog does not know about at all. If base_dir is dropped
+        on the call to detect_languages (defaulting to None), the lookup falls
+        back to the bundled catalog, which has no mapping for the custom
+        extension, and the file goes undetected.
+        """
+        preset_dir = tmp_path / "presets"
+        shutil.copytree(fixtures_dir / "lang", preset_dir / "lang")
+        shutil.copytree(fixtures_dir / "framework", preset_dir / "framework")
+        zzz_dir = preset_dir / "lang" / "zzzlang"
+        zzz_dir.mkdir(parents=True)
+        (zzz_dir / "metadata.yaml").write_text(
+            "fullname: Zzz\nextensions:\n  - .zzzext\nfilenames: []\naliases: []\n",
+            encoding="utf-8",
+        )
+        (zzz_dir / "preset.yaml").write_text(
+            "repos:\n  - repo: local\n    hooks:\n"
+            "      - id: zzz-hook\n        name: zzz\n"
+            "        entry: zzz\n        language: system\n",
+            encoding="utf-8",
+        )
+
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "file.zzzext").write_text("marker\n", encoding="utf-8")
+        output = tmp_path / "out.yaml"
+
+        with patch.object(Path, "cwd", return_value=repo_dir):
+            result = runner.invoke(
+                app,
+                [
+                    "--detect",
+                    "--presets",
+                    str(preset_dir),
+                    "--output",
+                    str(output),
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "Detected languages: zzzlang" in result.output
+
+    def test_detect_with_custom_presets_uses_custom_framework_detect_rules(
+        self, tmp_path: Path, fixtures_dir: Path
+    ) -> None:
+        """
+        _apply_detection must pass base_dir through to detect_frameworks itself.
+
+        detect_frameworks loads its own metadata catalog (and therefore its
+        detect rules) from load_catalog(base_dir), separately from the
+        supported-frameworks allowlist. A custom --presets directory can define
+        a framework id the bundled catalog has never heard of. If base_dir is
+        dropped on the call to detect_frameworks (defaulting to None), the
+        catalog loaded is the bundled one, which has no 'zzzframework' entry at
+        all, so it can never be detected -- regardless of the supported list.
+        """
+        preset_dir = tmp_path / "presets"
+        shutil.copytree(fixtures_dir / "lang", preset_dir / "lang")
+        shutil.copytree(fixtures_dir / "framework", preset_dir / "framework")
+        zzz_dir = preset_dir / "framework" / "zzzframework"
+        zzz_dir.mkdir(parents=True)
+        (zzz_dir / "metadata.yaml").write_text(
+            "fullname: Zzz\ndetect:\n  - file_exists: zzzmarker.txt\n",
+            encoding="utf-8",
+        )
+        (zzz_dir / "preset.yaml").write_text(
+            "recommended:\n  lang:\n    - js\n"
+            "repos:\n  - repo: local\n    hooks:\n"
+            "      - id: zzz-hook\n        name: zzz\n"
+            "        entry: zzz\n        language: system\n",
+            encoding="utf-8",
+        )
+
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "zzzmarker.txt").write_text("marker\n", encoding="utf-8")
+        output = tmp_path / "out.yaml"
+
+        with patch.object(Path, "cwd", return_value=repo_dir):
+            result = runner.invoke(
+                app,
+                [
+                    "--detect",
+                    "--lang",
+                    "js",
+                    "--presets",
+                    str(preset_dir),
+                    "--output",
+                    str(output),
+                ],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "Detected frameworks: zzzframework" in result.output
 
     def test_detect_detected_langs_joined_by_comma_space(self, tmp_path: Path) -> None:
         """
@@ -2495,6 +2843,40 @@ class TestProfileFlag:
         assert result.exit_code == 0, result.output
         assert "profiles: legacy" in result.output
 
+    def test_success_message_retains_language_and_framework_summary(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "legacy", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        expected = (
+            f"Generated {output} with languages: py and frameworks: none"
+            " and profiles: legacy"
+        )
+        assert expected in result.output
+
+    def test_success_message_joins_multiple_profiles_with_comma_space(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "py",
+                "--profile",
+                "legacy",
+                "--profile",
+                "experimental",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "profiles: legacy, experimental" in result.output
+
     def test_no_profile_flag_omits_profiles_from_success_message(
         self, tmp_path: Path
     ) -> None:
@@ -2514,3 +2896,13 @@ class TestProfileFlag:
         )
         assert result.exit_code == 1
         assert "--profile=experimental" in result.output
+
+    def test_diff_against_existing_file_honors_profile(self, tmp_path: Path) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        # Regenerate with a profile, without --force, to trigger the diff.
+        result = runner.invoke(
+            app, ["--lang", "py", "--profile", "legacy", "--output", str(output)]
+        )
+        assert result.exit_code == 1
+        assert "mypy" in result.output

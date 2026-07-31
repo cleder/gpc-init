@@ -249,6 +249,34 @@ class TestDetectLanguages:
         (venv / "pyvenv.cfg").touch()
         assert "env" not in detect_languages(tmp_path, ALL_LANGS)
 
+    def test_dotenv_style_filename_with_known_extension_keeps_extension_lang(
+        self, tmp_path: Path
+    ) -> None:
+        # ".env.yaml" matches the dotenv naming pattern (_is_dotenv_file) but
+        # also has a known extension (.yaml). The extension-derived language
+        # must win; it must not be overwritten to "env".
+        (tmp_path / ".env.yaml").touch()
+        result = detect_languages(tmp_path, ALL_LANGS)
+        assert "yaml" in result
+
+    def test_base_dir_is_forwarded_to_catalog(self, tmp_path: Path) -> None:
+        # Create a language that cannot exist in the real package install.
+        lang_dir = tmp_path / "lang" / "xtest-only-lang"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("repos: []\n")
+        (lang_dir / "metadata.yaml").write_text("extensions:\n  - .xtestonly\n")
+
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "main.xtestonly").touch()
+
+        # With the correct base_dir the synthetic extension is recognized.
+        result = detect_languages(repo_dir, ["xtest-only-lang"], base_dir=tmp_path)
+
+        # If base_dir were ignored (mutant: None), the real install's catalog
+        # would be used instead and ".xtestonly" would be unknown.
+        assert "xtest-only-lang" in result
+
 
 class TestDetectFrameworks:
     def test_detects_django_by_manage_py(self, tmp_path: Path) -> None:
@@ -647,6 +675,31 @@ class TestDetectFrameworks:
 
         with patch.object(Path, "iterdir", _iterdir):
             assert "git" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    # mutmut_2: load_catalog(base_dir) changed to load_catalog(None)
+    def test_base_dir_is_forwarded_to_catalog_loading(self, tmp_path: Path) -> None:
+        # Build a synthetic framework catalog that cannot exist in the real
+        # package install.
+        custom_base = tmp_path / "base"
+        fw_dir = custom_base / "framework" / "xtest-only-fw"
+        fw_dir.mkdir(parents=True)
+        (fw_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+        (fw_dir / "metadata.yaml").write_text(
+            "detect:\n  - file_exists: sentinel.txt\n", encoding="utf-8"
+        )
+
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "sentinel.txt").touch()
+
+        # With the correct base_dir the synthetic framework's catalog entry
+        # is visible and its detect rule matches — it is reported as detected.
+        result = detect_frameworks(repo_dir, ["xtest-only-fw"], base_dir=custom_base)
+        assert "xtest-only-fw" in result
+
+        # If base_dir were ignored (mutant: None), the real install would be
+        # used instead, "xtest-only-fw" would be absent from its catalog, and
+        # detection would find nothing.
 
 
 class TestEvaluateDetectRule:

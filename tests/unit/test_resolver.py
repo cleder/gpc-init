@@ -62,6 +62,19 @@ class TestNormalizeLang:
     def test_mixed_case_alias(self) -> None:
         assert normalize_lang("Python") == "py"
 
+    def test_base_dir_is_forwarded_to_alias_lookup(self, tmp_path: Path) -> None:
+        # Create a custom lang with an alias that only exists in this catalog.
+        lang_dir = tmp_path / "lang" / "xtest"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("repos: []\n")
+        (lang_dir / "metadata.yaml").write_text("aliases:\n  - xalias\n")
+
+        # With the correct base_dir the custom alias resolves to "xtest".
+        # If base_dir were ignored (mutant: None), the real install's catalog
+        # would be used instead, which has no "xalias" alias, so the value
+        # would pass through unchanged.
+        assert normalize_lang("xalias", base_dir=tmp_path) == "xtest"
+
 
 class TestNormalizeFramework:
     def test_lowercase(self) -> None:

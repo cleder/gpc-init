@@ -94,5 +94,29 @@
     "file_hash": "f1564a8bca9e4081fa32c06d9eebe775b48de82f",
     "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_6",
     "source_file": "gpc_init/loader.py"
+  },
+  {
+    "equivalent_reason": "The default value supplied to .get(\"repos\", ...) is only used when the \"repos\" key is absent from merged. In that scenario the original returns [] and the mutant returns None, but both are falsy under Python's truthiness rules, so the very next line `if not repos: return dict(merged)` takes the identical branch in both cases. `repos` is never referenced again after that guard (the subsequent `for repo in repos` loop is unreachable whenever the key was missing), so there is no input for which the mutant produces a different observable result than the original. The mutation is behaviorally equivalent and cannot be killed by any test.",
+    "file_hash": "a92ddfa1689d36f4ac7779e10c914cd0daa233be",
+    "mutant_name": "gpc_init.merger.x_filter_by_category__mutmut_3",
+    "source_file": "gpc_init/merger.py"
+  },
+  {
+    "equivalent_reason": "The only use of `repos` immediately after the .get() call is `if not repos: return dict(merged)`. Both None and [] are falsy, so this guard behaves identically for a missing \"repos\" key regardless of which default is used. If the \"repos\" key is present, the default argument is never consulted at all. Since `repos` is only ever iterated later inside the branch where it is already known to be truthy (and thus a real list in both mutant and original, because \"repos\" must be present and non-empty for that path to be reached), there is no reachable input for which the mutant's behavior differs from the original's. Hence no test can distinguish them \u2014 the mutant is equivalent.",
+    "file_hash": "a92ddfa1689d36f4ac7779e10c914cd0daa233be",
+    "mutant_name": "gpc_init.merger.x_filter_by_category__mutmut_5",
+    "source_file": "gpc_init/merger.py"
+  },
+  {
+    "equivalent_reason": "Python's codec name lookup (via the codecs module, used internally by open/io.TextIOWrapper) is case-insensitive and also normalizes hyphens/underscores. codecs.lookup(\"utf-8\").name == codecs.lookup(\"UTF-8\").name == \"utf-8\", so the two encoding strings resolve to the exact same codec object. There is no difference in decoding behavior, error handling, or any other observable output between the original and mutated code \u2014 no test could ever distinguish them, since the runtime behavior is byte-for-byte identical.",
+    "file_hash": "7ecac342b4130befd8c03813528f63c2b1d6e909",
+    "mutant_name": "gpc_init.catalog.x__load_metadata_file__mutmut_4",
+    "source_file": "gpc_init/catalog.py"
+  },
+  {
+    "equivalent_reason": "Python's codec name lookup (codecs.lookup) is case-insensitive and normalizes hyphens/underscores, so \"utf-8\" and \"UTF-8\" resolve to the exact same CodecInfo object (verified: codecs.lookup(\"utf-8\") == codecs.lookup(\"UTF-8\") is True). Reading, decoding, and any resulting yaml.safe_load output are byte-for-byte identical regardless of which casing is used. No test, however constructed, can observe a behavioral difference between the original and mutated line, making this mutant equivalent.",
+    "file_hash": "f1564a8bca9e4081fa32c06d9eebe775b48de82f",
+    "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_5",
+    "source_file": "gpc_init/loader.py"
   }
 ]
