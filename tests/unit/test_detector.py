@@ -396,7 +396,7 @@ class TestDetectFrameworks:
     def test_reads_package_json_with_utf8_encoding(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").touch()
 
-        recorded: dict = {}
+        recorded: dict[str, Any] = {}
 
         def _mock_read_text(_self: Path, **kwargs: Any) -> str:
             recorded.update(kwargs)
@@ -594,7 +594,7 @@ class TestDetectFrameworks:
             "apiVersion: apps/v1\nkind: Deployment\n", encoding="utf-8"
         )
 
-        recorded: dict = {}
+        recorded: dict[str, Any] = {}
         _original_read_text = Path.read_text
 
         def tracking_read_text(self: Path, *args: Any, **kwargs: Any) -> str:

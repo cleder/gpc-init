@@ -22,6 +22,7 @@ test = [
     "pytest-cov",
     "radon>=6.0.1,<7.0.0",
     "ty>=0.0.51",
+    "types-pyyaml>=6.0",
     "zuban>=0.9.0",
 ]
 
@@ -89,6 +90,7 @@ type_check_command = [
 ]
 
 [tool.pyrefly]
+preset = "strict"
 project_excludes = [
     "specs/**",
 ]
@@ -111,7 +113,6 @@ extend-safe-fixes = [
     "UP047",
 ]
 ignore = [
-    "ANN401",
     "COM812",
     "CPY001",
     "D203",
@@ -174,6 +175,18 @@ gpc_init = [
 include = [
     "gpc_init*",
 ]
+
+[tool.ty.analysis]
+strict-literal-narrowing = true
+
+[tool.ty.rules]
+blanket-ignore-comment = "error"
+division-by-zero = "warn"
+missing-type-argument = "error"
+possibly-missing-attribute = "warn"
+possibly-missing-import = "warn"
+possibly-unresolved-reference = "warn"
+unsupported-dynamic-base = "warn"
 
 [tool.uv]
 add-bounds = "major"

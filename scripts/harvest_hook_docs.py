@@ -23,11 +23,14 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml as pyyaml
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
+
+if TYPE_CHECKING:
+    from ruamel.yaml.comments import CommentedMap
 
 PROJECT_ROOT = Path(__file__).parent.parent
 LANG_DIR = PROJECT_ROOT / "lang"
@@ -421,7 +424,7 @@ def fetch_manifest(
     return result
 
 
-def _set_description(hook: Any, text: str) -> None:
+def _set_description(hook: CommentedMap, text: str) -> None:
     """
     Set a hook's description, preserving ruamel's comment attachment.
 

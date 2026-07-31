@@ -42,17 +42,30 @@ class _KindConfig(NamedTuple):
 
 _LANG_EXCLUDE = frozenset({"common"})
 
+
+def _discover_langs(base: Path) -> list[str]:
+    return discover_ids(base / "lang", exclude=_LANG_EXCLUDE)
+
+
+def _discover_frameworks(base: Path) -> list[str]:
+    return discover_ids(base / "framework")
+
+
+def _discover_profiles(_base_dir: Path) -> list[str]:
+    return sorted(SELECTABLE_PROFILES)
+
+
 _KIND_CONFIG: dict[_Kind, _KindConfig] = {
     _Kind.LANG: _KindConfig(
-        discover=lambda base: discover_ids(base / "lang", exclude=_LANG_EXCLUDE),
+        discover=_discover_langs,
         error_cls=UnsupportedLanguageError,
     ),
     _Kind.FRAMEWORK: _KindConfig(
-        discover=lambda base: discover_ids(base / "framework"),
+        discover=_discover_frameworks,
         error_cls=UnsupportedFrameworkError,
     ),
     _Kind.PROFILE: _KindConfig(
-        discover=lambda _base_dir: sorted(SELECTABLE_PROFILES),
+        discover=_discover_profiles,
         error_cls=UnsupportedProfileError,
     ),
 }
@@ -158,7 +171,9 @@ def validate_profiles(profiles: list[str]) -> None:
 
 
 def _normalize_rec(preset: dict[str, Any]) -> dict[str, Any]:
-    rec = preset.get("recommended") or preset.get("primary_languages") or {}
+    rec: dict[str, Any] | list[Any] = (
+        preset.get("recommended") or preset.get("primary_languages") or {}
+    )
     if isinstance(rec, list):
         return {"lang": rec}
     return rec

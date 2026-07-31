@@ -2,6 +2,7 @@
 
 import importlib.metadata
 import shutil
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -691,9 +692,14 @@ class TestOverwriteBehavior:
         output = tmp_path / "out.yaml"
         original_write_text = Path.write_text
 
-        calls = []
+        calls: list[dict[str, Any]] = []
 
-        def capturing_write_text(self, data, encoding=None, errors=None):
+        def capturing_write_text(
+            self: Path,
+            data: str,
+            encoding: str | None = None,
+            errors: str | None = None,
+        ) -> int:
             calls.append({"path": self, "encoding": encoding})
             return original_write_text(self, data, encoding=encoding, errors=errors)
 
@@ -848,7 +854,7 @@ class TestPresetsOption:
         output = tmp_path / "out.yaml"
 
         @contextmanager
-        def fake_fetch(_url: str):
+        def fake_fetch(_url: str) -> Iterator[Path]:
             yield tmp_preset_dir
 
         with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
@@ -1799,7 +1805,7 @@ class TestDiffOnExistingFile:
         output.write_text("existing: content\n", encoding="utf-8")
         original_read_text = Path.read_text
 
-        def raise_on_target(self, *args: Any, **kwargs: Any) -> str:
+        def raise_on_target(self: Path, *args: Any, **kwargs: Any) -> str:
             if self == output:
                 msg = "denied"
                 raise PermissionError(msg)
@@ -1827,7 +1833,9 @@ class TestDiffOnExistingFile:
 
         original_read_text = Path.read_text
 
-        def failing_read_text(self, encoding=None, errors=None):
+        def failing_read_text(
+            self: Path, encoding: str | None = None, errors: str | None = None
+        ) -> str:
             if self == output:
                 msg = "access denied"
                 raise PermissionError(msg)
@@ -1853,7 +1861,9 @@ class TestDiffOnExistingFile:
 
         original_read_text = Path.read_text
 
-        def failing_read_text(self, encoding=None, errors=None):
+        def failing_read_text(
+            self: Path, encoding: str | None = None, errors: str | None = None
+        ) -> str:
             if self == output:
                 msg = "access denied"
                 raise PermissionError(msg)
@@ -1881,9 +1891,11 @@ class TestDiffOnExistingFile:
         output.write_text("existing: content\n", encoding="utf-8")
 
         original_read_text = Path.read_text
-        calls: list[dict] = []
+        calls: list[dict[str, Any]] = []
 
-        def capturing_read_text(self, encoding=None, errors=None):
+        def capturing_read_text(
+            self: Path, encoding: str | None = None, errors: str | None = None
+        ) -> str:
             calls.append({"path": self, "encoding": encoding})
             return original_read_text(self, encoding=encoding, errors=errors)
 

@@ -147,7 +147,7 @@ def render_repos(repos: list[dict[str, Any]]) -> list[str]:
     ]
 
 
-def render_section(title: str, preset: dict, note: str = "") -> list[str]:
+def render_section(title: str, preset: dict[str, Any], note: str = "") -> list[str]:
     """Render a language or framework section with an optional note."""
     repos = preset.get("repos", [])
     repo_lines = render_repos(repos)

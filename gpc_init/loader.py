@@ -29,7 +29,7 @@ def _load_yaml_file(path: Path) -> dict[str, Any]:
         msg = f"Failed to parse preset YAML '{path}': {exc}"
         raise PresetParseError(msg) from exc
     if data is None:
-        data = {}
+        data = dict[str, Any]()
     if not isinstance(data, dict):
         msg = (
             f"Preset file '{path}' must contain a YAML mapping,"

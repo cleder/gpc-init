@@ -98,7 +98,7 @@ def _load_lang_metadata(lang_dir: Path, lang_id: str) -> LangMetadata:
 def _load_framework_metadata(fw_dir: Path, fw_id: str) -> FrameworkMetadata:
     data = _load_metadata_file(fw_dir / "metadata.yaml")
     detect = data.get("detect") or ()
-    if isinstance(detect, str | dict):
+    if isinstance(detect, (str, dict)):
         detect = (detect,)
     return FrameworkMetadata(
         id=fw_id,
