@@ -22,6 +22,7 @@ test = [
     "pytest-cov",
     "radon>=6.0.1,<7.0.0",
     "ty>=0.0.51",
+    "zuban>=0.9.0",
 ]
 
 [project]
@@ -176,3 +177,13 @@ include = [
 
 [tool.uv]
 add-bounds = "major"
+
+[tool.zuban]
+enable_error_code = [
+    "exhaustive-match",
+    "explicit-override",
+    "ignore-without-code",
+    "unimported-reveal",
+]
+extra_checks = true
+strict = true
