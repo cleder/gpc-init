@@ -2,12 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.8.0]
+
+Adds a `--profile` flag for opting into legacy/experimental hooks, makes language/framework metadata fully data-driven, and rounds out the preset catalog with reStructuredText and dead-link checking.
+
+### New Features
+
+- Add a `--profile` flag to opt into `legacy` and `experimental` hook categories on top of the always-on default preset baseline. `pc-init` now lists the available profiles alongside languages and frameworks, and hooks are annotated by category in the generated `AWESOME.md` (#4, #46).
+- Add `rst` (reStructuredText) language preset (`rstcheck`).
+- Add `nika` framework preset (`nika-check`) for statically auditing `*.nika.yaml` AI workflow files, auto-detected via any `*.nika.yaml` file in the repo, and added to the generated `AWESOME.md` list with a display name and emoji.
 
 ### Enhancements
 
-- Auto-detect the `behave` framework preset (added in 0.7.0) via a `features/steps/` directory or a `behave.ini`/`.behaverc` file at the repo root, and add it to the generated `AWESOME.md` list with a display name and emoji.
-- Add `nika` framework preset (`nika-check`) for statically auditing `*.nika.yaml` AI workflow files, auto-detected via any `*.nika.yaml` file in the repo, and added to the generated `AWESOME.md` list with a display name and emoji.
+- Add dead-link checkers (`darnlink`, `md-dead-link-check`) to the `md` preset.
+- Reclassify and expand the Python preset's hooks into `preset`, `legacy`, and `experimental` categories (e.g. `mypy`, `flake8`, `isort`, `black`, `pyright` move to `legacy`/`experimental`).
+- Split the Jupyter Notebook preset's combined `nbqa-ruff` hook into `nbqa-ruff-check` and `nbqa-ruff-format`, and recategorize `nbqa-check-ast`, `nbqa-isort`, and `nbqa-pyupgrade` as `legacy`.
+- Replace the hardcoded extension/filename/alias/display-name/icon/framework-detector dictionaries scattered across `detector.py`, `resolver.py`, and `generate_awesome_list.py` with a `metadata.yaml` file co-located in each `lang/<id>/` and `framework/<id>/` directory, loaded through a new shared catalog module.
+  Adding a new language or framework no longer requires touching multiple Python files.
+
+### Documentation
+
+- Document the `metadata.yaml` requirement for new languages/frameworks, and the `--profile` flag / hook-category concept, in `CONTRIBUTING.md` and `README.md`.
+- Fix a relative `CONTRIBUTING.md` link in the README that 404s on the PyPI project page (it resolves against pypi.org rather than the repo tree).
+
+### Build
+
+- Add `zuban` as a third strict type checker alongside `ty` and `pyrefly`, enable each tool's strictest preset/rule set, and fix every finding surfaced.
+
+## [0.7.0]
+
+Adds the Behave BDD framework preset with auto-detection, a Python safety-linting hook, and fixes a language-id typo.
+
+### New Features
+
+- Add `behave` framework preset, recommending the `py` language and Behave-specific hooks, auto-detected via a `features/steps/` directory or a `behave.ini`/`.behaverc` file at the repo root, and added to the generated `AWESOME.md` list with a display name and emoji.
+- Add `safelint` to the Python preset for safety-critical coding rule checks.
+
+### Bug Fixes
+
+- Rename the Rust language id from `ru` (which collided with the ISO 639-1 code for Russian) to `rs` (matching its `.rs` extension) across the CLI, detector, resolver, scripts, docs, and tests.
+
+### Build
+
+- Bump bundled hook revisions across most presets, including `ruff`, `ty`, `mypy`, `complexipy`, `typos`, `rumdl`, `trufflehog`, `semgrep`, `codespell`, `jscpd`, `vale`, `djlint`, `Biome`, `oxlint`, `eslint`, `stylelint`, `buf`, `squawk`, `terraform`, `tombi`, and others.
+
+### Documentation
+
+- Refresh the README's language/framework tables and auto-detection docs to cover Behave and the `rs` rename, and add a monthly PyPI downloads badge.
 
 ## [0.6.0]
 
