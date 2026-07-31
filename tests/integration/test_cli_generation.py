@@ -1327,7 +1327,7 @@ class TestErrorPaths:
     def test_preset_not_found_error(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
-            "gpc_init.cli.load_language_preset",
+            "gpc_init.generator.load_language_preset",
             side_effect=PresetNotFoundError("preset not found"),
         ):
             result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
@@ -1337,7 +1337,7 @@ class TestErrorPaths:
     def test_preset_not_found_error_goes_to_stderr(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
-            "gpc_init.cli.load_language_preset",
+            "gpc_init.generator.load_language_preset",
             side_effect=PresetNotFoundError("preset not found"),
         ):
             result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
@@ -1367,7 +1367,7 @@ class TestErrorPaths:
     def test_preset_parse_error_writes_to_stderr(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
-            "gpc_init.cli.load_language_preset",
+            "gpc_init.generator.load_language_preset",
             side_effect=PresetParseError("bad yaml"),
         ):
             result = runner.invoke(app, ["--lang", "py", "--output", str(output)])

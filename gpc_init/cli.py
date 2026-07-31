@@ -5,7 +5,7 @@ import importlib.metadata
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated, Any, NamedTuple
+from typing import Annotated
 
 import typer
 
@@ -19,107 +19,16 @@ from gpc_init.exceptions import (
     UnsupportedLanguageError,
     UnsupportedProfileError,
 )
-from gpc_init.loader import (
-    load_common_preset,
-    load_framework_preset,
-    load_language_preset,
-)
-from gpc_init.merger import DEFAULT_CATEGORY, filter_by_category, merge_presets
-from gpc_init.renderer import render_yaml
+from gpc_init.generator import generate
 from gpc_init.resolver import (
     SELECTABLE_PROFILES,
     deduplicate_preserving_order,
-    expand_recommendations,
     get_recommendations_info,
     get_supported_frameworks,
     get_supported_languages,
     normalize_framework,
     normalize_lang,
-    validate_frameworks,
-    validate_langs,
-    validate_profiles,
 )
-
-
-class _GenerationResult(NamedTuple):
-    yaml_content: str
-    langs: list[str]
-    frameworks: list[str]
-    lang_presets: list[dict[str, Any]]
-    fw_presets: list[dict[str, Any]]
-
-
-def _generate_content(
-    langs: list[str],
-    frameworks: list[str],
-    base_dir: Path | None,
-    *,
-    recommended: bool = False,
-    profiles: tuple[str, ...] = (),
-) -> _GenerationResult:
-    """
-    Validate, load, merge, filter by profile, render.
-
-    Returns (yaml_content, final_langs, final_frameworks, lang_presets, fw_presets).
-    When recommended=True the lang/framework lists are expanded with every
-    recommendation from the selected presets before merging.
-    profiles selects additional hook categories (legacy/experimental) to
-    include on top of the always-on 'preset' baseline.
-    """
-    if base_dir is not None and not (base_dir / "lang").is_dir():
-        typer.echo(f"Error: '{base_dir}' must contain a 'lang' subdirectory.", err=True)
-        raise typer.Exit(code=1)
-
-    try:
-        validate_langs(langs, base_dir=base_dir)
-        validate_frameworks(frameworks, base_dir=base_dir)
-        validate_profiles(list(profiles))
-
-        common = load_common_preset(base_dir=base_dir)
-        lang_presets = [
-            load_language_preset(lang_id, base_dir=base_dir) for lang_id in langs
-        ]
-        fw_presets = [
-            load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
-        ]
-
-        if recommended:
-            langs, frameworks = expand_recommendations(
-                langs=langs,
-                frameworks=frameworks,
-                lang_presets=lang_presets,
-                fw_presets=fw_presets,
-                supported_langs=get_supported_languages(base_dir),
-                supported_frameworks=get_supported_frameworks(base_dir),
-            )
-            lang_presets = [
-                load_language_preset(lang_id, base_dir=base_dir) for lang_id in langs
-            ]
-            fw_presets = [
-                load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
-            ]
-
-        merged = merge_presets(common, lang_presets, fw_presets)
-        merged = filter_by_category(merged, frozenset({DEFAULT_CATEGORY, *profiles}))
-        return _GenerationResult(
-            render_yaml(merged), langs, frameworks, lang_presets, fw_presets
-        )
-
-    except (
-        UnsupportedLanguageError,
-        UnsupportedFrameworkError,
-        UnsupportedProfileError,
-    ) as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except PresetNotFoundError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except PresetParseError as exc:
-        typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
 
 
 def _run(
@@ -132,7 +41,7 @@ def _run(
     profiles: tuple[str, ...] = (),
 ) -> None:
     """Generate and write the preset config to target."""
-    content, langs, frameworks, lang_presets, fw_presets = _generate_content(
+    content, langs, frameworks, lang_presets, fw_presets = generate(
         langs, frameworks, base_dir, recommended=recommended, profiles=profiles
     )
 
@@ -213,7 +122,7 @@ def _handle_existing_file(
     profiles: tuple[str, ...] = (),
 ) -> None:
     """Show unified diff vs existing file. Always raises typer.Exit."""
-    content, *_ = _generate_content(
+    content, *_ = generate(
         langs, frameworks, base_dir, recommended=recommended, profiles=profiles
     )
     try:
@@ -472,15 +381,27 @@ def main(  # noqa: PLR0917
 
         target = Path(output)
 
-        _dispatch(
-            langs,
-            frameworks,
-            target,
-            base_dir,
-            force=force,
-            recommended=recommended,
-            profiles=profiles,
-        )
+        try:
+            _dispatch(
+                langs,
+                frameworks,
+                target,
+                base_dir,
+                force=force,
+                recommended=recommended,
+                profiles=profiles,
+            )
+        except (
+            UnsupportedLanguageError,
+            UnsupportedFrameworkError,
+            UnsupportedProfileError,
+            PresetNotFoundError,
+        ) as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        except PresetParseError as exc:
+            typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
 
 
 @app.command("list")
