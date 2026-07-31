@@ -1,0 +1,7 @@
+---
+fullname: Git Workflow
+icon: "🔀"
+# Escape hatch: needs precise OSError handling around directory iteration
+# that a declarative rule can't express. Resolves against a fixed allowlist
+# in detector.py's _DETECTOR_REGISTRY.
+detect: "python:_has_github_workflows"

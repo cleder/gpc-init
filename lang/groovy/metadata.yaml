@@ -1,0 +1,10 @@
+---
+fullname: Groovy
+icon: "💧"
+extensions:
+  - .groovy
+  - .gvy
+  - .gradle
+filenames:
+  - jenkinsfile
+aliases: []

@@ -3,10 +3,12 @@
 from typing import Any
 
 from gpc_init.merger import (
+    DEFAULT_CATEGORY,
     _deep_merge_top_level,
     _merge_hooks_list,
     _merge_repos,
     _repo_key,
+    filter_by_category,
     merge_presets,
 )
 
@@ -184,6 +186,16 @@ class TestMergeRepos:
         assert len(result) == 1
         assert [h["id"] for h in result[0]["hooks"]] == ["ha"]
 
+    def test_higher_repo_extra_top_level_field_wins(self) -> None:
+        # A field on the higher-layer repo entry other than repo/rev/hooks must
+        # now survive into the merged result, matching how _merge_hook already
+        # lets higher-precedence fields replace lower fields.
+        lower = {**make_repo("https://a.com", "v1", [make_hook("ha")]), "quiet": False}
+        higher = {**make_repo("https://a.com", "v1", [make_hook("hb")]), "quiet": True}
+        result = _merge_repos([lower], [higher])
+        assert len(result) == 1
+        assert result[0]["quiet"] is True
+
     def test_higher_repo_without_hooks_key_merged_safely(self) -> None:
         # A higher-layer repo entry for the same (repo, rev) key that has no
         # "hooks" key at all must default to an empty list, not raise TypeError.
@@ -194,6 +206,48 @@ class TestMergeRepos:
         result = _merge_repos(lower, higher)
         assert len(result) == 1
         assert [h["id"] for h in result[0]["hooks"]] == ["ha"]
+
+    def test_repo_entries_hook_without_id_does_not_merge_with_hook_id_string_none(
+        self,
+    ) -> None:
+        # Within a merged repo entry (same repo+rev), a lower hook with the
+        # literal id "None" and a higher hook with no "id" key at all must NOT
+        # be treated as the same hook. The original default for a missing id
+        # is "" (distinct from "None"). Mutant 30 changes the default to None,
+        # so str(None) == "None" collides with the explicit id "None" and the
+        # two hooks get merged into one instead of staying separate.
+        lower = [
+            make_repo("https://a.com", "v1", [make_hook("None", args=["--lower"])])
+        ]
+        higher = [make_repo("https://a.com", "v1", [{"args": ["--higher"]}])]
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1
+        hooks = result[0]["hooks"]
+        assert len(hooks) == 2
+        assert hooks[0]["id"] == "None"
+        assert hooks[0]["args"] == ["--lower"]
+        assert hooks[1]["args"] == ["--higher"]
+
+    def test_repo_entries_hook_without_id_does_not_merge_with_hook_id_string_xxxx(
+        self,
+    ) -> None:
+        # Within a merged repo entry (same repo+rev), a lower hook with the
+        # literal id "XXXX" and a higher hook with no "id" key at all must NOT
+        # be treated as the same hook. The original default for a missing id
+        # is "" (distinct from "XXXX"). Mutant 35 changes the default to
+        # "XXXX", so it collides with the explicit id "XXXX" and the two
+        # hooks get merged into one instead of staying separate.
+        lower = [
+            make_repo("https://a.com", "v1", [make_hook("XXXX", args=["--lower"])])
+        ]
+        higher = [make_repo("https://a.com", "v1", [{"args": ["--higher"]}])]
+        result = _merge_repos(lower, higher)
+        assert len(result) == 1
+        hooks = result[0]["hooks"]
+        assert len(hooks) == 2
+        assert hooks[0]["id"] == "XXXX"
+        assert hooks[0]["args"] == ["--lower"]
+        assert hooks[1]["args"] == ["--higher"]
 
 
 class TestMergePresets:
@@ -298,6 +352,99 @@ class TestDeepMergeTopLevel:
         result = _deep_merge_top_level(lower, higher)
         assert result["versions"]["python"] == "3.12"
         assert result["versions"]["node"] == "18"
+
+
+class TestFilterByCategory:
+    def test_hook_without_category_defaults_to_preset_and_survives(self) -> None:
+        merged = {"repos": [make_repo("https://a.com", "v1", [make_hook("ha")])]}
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert [h["id"] for h in result["repos"][0]["hooks"]] == ["ha"]
+
+    def test_legacy_hook_dropped_by_default(self) -> None:
+        merged = {
+            "repos": [
+                make_repo("https://a.com", "v1", [make_hook("ha", category="legacy")])
+            ]
+        }
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert result["repos"] == []
+
+    def test_legacy_hook_kept_when_legacy_active_and_category_key_stripped(
+        self,
+    ) -> None:
+        merged = {
+            "repos": [
+                make_repo("https://a.com", "v1", [make_hook("ha", category="legacy")])
+            ]
+        }
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY, "legacy"}))
+        hooks = result["repos"][0]["hooks"]
+        assert [h["id"] for h in hooks] == ["ha"]
+        assert "category" not in hooks[0]
+
+    def test_repo_with_only_non_active_hooks_is_removed_entirely(self) -> None:
+        merged = {
+            "repos": [
+                make_repo(
+                    "https://legacy-only.com",
+                    "v1",
+                    [make_hook("legacy-hook", category="legacy")],
+                ),
+                make_repo("https://kept.com", "v1", [make_hook("preset-hook")]),
+            ]
+        }
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert [r["repo"] for r in result["repos"]] == ["https://kept.com"]
+
+    def test_mixed_category_repo_keeps_only_active_hooks(self) -> None:
+        merged = {
+            "repos": [
+                make_repo(
+                    "https://a.com",
+                    "v1",
+                    [
+                        make_hook("preset-hook"),
+                        make_hook("legacy-hook", category="legacy"),
+                    ],
+                )
+            ]
+        }
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert [h["id"] for h in result["repos"][0]["hooks"]] == ["preset-hook"]
+
+    def test_no_repos_key_returns_input_unchanged(self) -> None:
+        merged = {"default_language_version": {"python": "python3.12"}}
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert result == merged
+
+    def test_repo_without_hooks_key_is_treated_as_empty_and_removed(self) -> None:
+        merged = {"repos": [{"repo": "https://a.com", "rev": "v1"}]}
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert result["repos"] == []
+
+    def test_experimental_active_keeps_experimental_hook(self) -> None:
+        merged = {
+            "repos": [
+                make_repo(
+                    "https://a.com",
+                    "v1",
+                    [make_hook("new-hook", category="experimental")],
+                )
+            ]
+        }
+        result = filter_by_category(
+            merged, frozenset({DEFAULT_CATEGORY, "experimental"})
+        )
+        assert [h["id"] for h in result["repos"][0]["hooks"]] == ["new-hook"]
+
+    def test_repo_without_hooks_key_does_not_raise(self) -> None:
+        # A repo entry with no "hooks" key at all must default to an empty
+        # list rather than None. The mutant removes the default `[]` from
+        # `repo.get("hooks", [])`, causing `_filter_hooks(None, ...)` to raise
+        # TypeError when it tries to iterate over None.
+        merged = {"repos": [{"repo": "https://a.com", "rev": "v1"}]}
+        result = filter_by_category(merged, frozenset({DEFAULT_CATEGORY}))
+        assert result["repos"] == []
 
 
 class TestMergePresetsHigherHookReplaces:

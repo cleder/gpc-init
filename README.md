@@ -1,6 +1,6 @@
 # pc-init
 
-[![Tests](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml/badge.svg?branch=main)](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml) [![codecov](https://codecov.io/gh/cleder/gpc-init/graph/badge.svg?token=3enkN1Q8JM)](https://codecov.io/gh/cleder/gpc-init) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![pyrefly](https://img.shields.io/badge/type_checker-pyrefly-blue)](https://github.com/facebook/pyrefly) [![ty](https://img.shields.io/badge/type_checker-ty-blue)](https://github.com/astral-sh/ty) [![GPLv3 License](https://img.shields.io/pypi/l/pc-init)](https://opensource.org/license/gpl-3-0/) [![Python Version](https://img.shields.io/pypi/pyversions/pc-init)](https://www.python.org/) [![PyPI - Version](https://img.shields.io/pypi/v/pc-init)](https://pypi.org/project/pc-init/) [![Status](https://img.shields.io/pypi/status/pc-init)](https://pypi.org/project/pc-init/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pc-init?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads%2Fmonth)](https://pepy.tech/projects/pc-init)
+[![Tests](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml/badge.svg?branch=main)](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml) [![codecov](https://codecov.io/gh/cleder/gpc-init/graph/badge.svg?token=3enkN1Q8JM)](https://codecov.io/gh/cleder/gpc-init) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![pyrefly](https://img.shields.io/badge/type_checker-pyrefly-blue)](https://github.com/facebook/pyrefly) [![ty](https://img.shields.io/badge/type_checker-ty-blue)](https://github.com/astral-sh/ty) [![zuban](https://img.shields.io/badge/type_checker-zuban-blue)](https://github.com/zubanls/zubanls-python) [![GPLv3 License](https://img.shields.io/pypi/l/pc-init)](https://opensource.org/license/gpl-3-0/) [![Python Version](https://img.shields.io/pypi/pyversions/pc-init)](https://www.python.org/) [![PyPI - Version](https://img.shields.io/pypi/v/pc-init)](https://pypi.org/project/pc-init/) [![Status](https://img.shields.io/pypi/status/pc-init)](https://pypi.org/project/pc-init/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pc-init?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads%2Fmonth)](https://pepy.tech/projects/pc-init)
 
 Generate a [pre-commit](https://pre-commit.com/) or [prek](https://github.com/j178/prek/) `.pre-commit-config.yaml` for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
 Works with [prek](https://github.com/j178/prek/) and [pre-commit](https://pre-commit.com/)
@@ -69,6 +69,10 @@ Options:
   --detect           Auto-detect languages and frameworks from the current
                      directory and merge them with any explicitly supplied
                      --lang/--framework values.
+  --profile    TEXT  Hook profile to include on top of the default preset
+                     baseline (repeatable, or comma-delimited:
+                     --profile=legacy,experimental). preset hooks are always
+                     included. Supported: legacy, experimental.
   --output     TEXT  Output file path.  [default: .pre-commit-config.yaml]
   --presets    TEXT  Preset catalog to use. Accepts a local directory path or
                      a git repository URL (https://, git@, git://, ssh://).
@@ -96,6 +100,9 @@ Languages:
 
 Frameworks:
   ansible, behave, django, git, k8s, react, sphinx
+
+Profiles (opt in with --profile; preset is always included):
+  experimental, legacy
 ```
 
 Use `--presets` to list what a custom catalog provides:
@@ -150,6 +157,7 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`,
 | `k8s` | Kubernetes |
 | `ansible` | Ansible |
 | `behave` | Behave BDD for Python |
+| `nika` | Nika AI workflow auditing |
 
 ## Auto-detecting languages and frameworks
 
@@ -219,6 +227,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.github/workflows/` directory with at least one `.yml` file | `git` |
 | `ansible.cfg` at the repo root | `ansible` |
 | `features/steps/` directory, or `behave.ini`/`.behaverc` at the repo root | `behave` |
+| Any `*.nika.yaml` file | `nika` |
 
 ## Language suggestions for frameworks
 
@@ -243,6 +252,19 @@ You can also omit `--lang` entirely when using `--recommended` with at least one
 ```bash
 pc-init --framework django --recommended
 ```
+
+## Hook profiles
+
+Every hook belongs to a category: `preset` (the curated default, always included), `legacy` (superseded by a newer hook already in the same preset, but still usable — e.g. Python's `mypy`/`flake8`/`isort`/`black`/`pyright`, superseded by `ty`/`ruff`), or `experimental` (brand-new, not-yet-proven hooks).
+By default only `preset` hooks are included.
+Use `--profile` to add `legacy` and/or `experimental` hooks on top of the default baseline:
+
+```bash
+pc-init --lang py --profile legacy
+pc-init --lang py --profile legacy,experimental
+```
+
+`--profile` is repeatable/comma-delimited, just like `--lang`/`--framework`.
 
 ## Examples
 
@@ -307,4 +329,4 @@ pc-init --lang py --presets https://github.com/org/my-presets
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, preset guidelines, and the pull request checklist.
+See [CONTRIBUTING.md](https://github.com/cleder/gpc-init/blob/main/CONTRIBUTING.md) for development setup, preset guidelines, and the pull request checklist.

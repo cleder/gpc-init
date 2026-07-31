@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+import pytest
+
 from gpc_init import detector as _detector
 from gpc_init.detector import detect_frameworks, detect_languages
 
@@ -35,7 +37,16 @@ ALL_LANGS = [
     "ts",
     "yaml",
 ]
-ALL_FRAMEWORKS = ["ansible", "behave", "django", "git", "k8s", "react", "sphinx"]
+ALL_FRAMEWORKS = [
+    "ansible",
+    "behave",
+    "django",
+    "git",
+    "k8s",
+    "nika",
+    "react",
+    "sphinx",
+]
 
 
 class TestDetectLanguages:
@@ -238,6 +249,34 @@ class TestDetectLanguages:
         (venv / "pyvenv.cfg").touch()
         assert "env" not in detect_languages(tmp_path, ALL_LANGS)
 
+    def test_dotenv_style_filename_with_known_extension_keeps_extension_lang(
+        self, tmp_path: Path
+    ) -> None:
+        # ".env.yaml" matches the dotenv naming pattern (_is_dotenv_file) but
+        # also has a known extension (.yaml). The extension-derived language
+        # must win; it must not be overwritten to "env".
+        (tmp_path / ".env.yaml").touch()
+        result = detect_languages(tmp_path, ALL_LANGS)
+        assert "yaml" in result
+
+    def test_base_dir_is_forwarded_to_catalog(self, tmp_path: Path) -> None:
+        # Create a language that cannot exist in the real package install.
+        lang_dir = tmp_path / "lang" / "xtest-only-lang"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("repos: []\n")
+        (lang_dir / "metadata.yaml").write_text("extensions:\n  - .xtestonly\n")
+
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "main.xtestonly").touch()
+
+        # With the correct base_dir the synthetic extension is recognized.
+        result = detect_languages(repo_dir, ["xtest-only-lang"], base_dir=tmp_path)
+
+        # If base_dir were ignored (mutant: None), the real install's catalog
+        # would be used instead and ".xtestonly" would be unknown.
+        assert "xtest-only-lang" in result
+
 
 class TestDetectFrameworks:
     def test_detects_django_by_manage_py(self, tmp_path: Path) -> None:
@@ -272,6 +311,13 @@ class TestDetectFrameworks:
     def test_no_behave_from_features_dir_without_steps(self, tmp_path: Path) -> None:
         (tmp_path / "features").mkdir()
         assert "behave" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_detects_nika_by_nika_yaml_file(self, tmp_path: Path) -> None:
+        (tmp_path / "workflow.nika.yaml").touch()
+        assert "nika" in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    def test_no_nika_without_nika_yaml_file(self, tmp_path: Path) -> None:
+        assert "nika" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
 
     def test_detects_react_from_package_json(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").write_text(
@@ -378,7 +424,7 @@ class TestDetectFrameworks:
     def test_reads_package_json_with_utf8_encoding(self, tmp_path: Path) -> None:
         (tmp_path / "package.json").touch()
 
-        recorded: dict = {}
+        recorded: dict[str, Any] = {}
 
         def _mock_read_text(_self: Path, **kwargs: Any) -> str:
             recorded.update(kwargs)
@@ -576,7 +622,7 @@ class TestDetectFrameworks:
             "apiVersion: apps/v1\nkind: Deployment\n", encoding="utf-8"
         )
 
-        recorded: dict = {}
+        recorded: dict[str, Any] = {}
         _original_read_text = Path.read_text
 
         def tracking_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
@@ -620,5 +666,67 @@ class TestDetectFrameworks:
         workflows.mkdir(parents=True)
         (workflows / "ci.yml").touch()
 
-        with patch.object(Path, "iterdir", side_effect=OSError):
+        _original_iterdir = Path.iterdir
+
+        def _iterdir(self: Path) -> Any:
+            if self == workflows:
+                raise OSError
+            return _original_iterdir(self)
+
+        with patch.object(Path, "iterdir", _iterdir):
             assert "git" not in detect_frameworks(tmp_path, ALL_FRAMEWORKS)
+
+    # mutmut_2: load_catalog(base_dir) changed to load_catalog(None)
+    def test_base_dir_is_forwarded_to_catalog_loading(self, tmp_path: Path) -> None:
+        # Build a synthetic framework catalog that cannot exist in the real
+        # package install.
+        custom_base = tmp_path / "base"
+        fw_dir = custom_base / "framework" / "xtest-only-fw"
+        fw_dir.mkdir(parents=True)
+        (fw_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+        (fw_dir / "metadata.yaml").write_text(
+            "detect:\n  - file_exists: sentinel.txt\n", encoding="utf-8"
+        )
+
+        repo_dir = tmp_path / "repo"
+        repo_dir.mkdir()
+        (repo_dir / "sentinel.txt").touch()
+
+        # With the correct base_dir the synthetic framework's catalog entry
+        # is visible and its detect rule matches — it is reported as detected.
+        result = detect_frameworks(repo_dir, ["xtest-only-fw"], base_dir=custom_base)
+        assert "xtest-only-fw" in result
+
+        # If base_dir were ignored (mutant: None), the real install would be
+        # used instead, "xtest-only-fw" would be absent from its catalog, and
+        # detection would find nothing.
+
+
+class TestEvaluateDetectRule:
+    def test_unknown_escape_hatch_name_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="Unknown escape-hatch detector"):
+            _detector._evaluate_detect_rule(tmp_path, "python:_does_not_exist")
+
+    def test_unknown_rule_type_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="Unknown detect rule type"):
+            _detector._evaluate_detect_rule(tmp_path, {"bogus_rule": "x"})
+
+    def test_multi_key_rule_dict_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(ValueError, match="exactly one key"):
+            _detector._evaluate_detect_rule(
+                tmp_path, {"file_exists": "a", "dir_exists": "b"}
+            )
+
+    def test_non_str_non_dict_rule_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(TypeError, match="Invalid detect rule"):
+            _detector._evaluate_detect_rule(tmp_path, 123)
+
+    def test_glob_rule_matches_filename_pattern(self, tmp_path: Path) -> None:
+        (tmp_path / "workflow.nika.yaml").touch()
+        assert _detector._evaluate_detect_rule(tmp_path, {"glob": "*.nika.yaml"})
+
+    def test_dir_exists_rule(self, tmp_path: Path) -> None:
+        (tmp_path / "features" / "steps").mkdir(parents=True)
+        rule = {"dir_exists": "features/steps"}
+        assert _detector._evaluate_detect_rule(tmp_path, rule)
+        assert not _detector._evaluate_detect_rule(tmp_path, {"dir_exists": "nope"})

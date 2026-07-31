@@ -1,0 +1,5 @@
+---
+fullname: Ansible
+icon: "🤖"
+detect:
+  - file_exists: ansible.cfg

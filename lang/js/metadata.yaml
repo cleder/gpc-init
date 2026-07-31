@@ -1,0 +1,11 @@
+---
+fullname: JavaScript
+icon: "🟨"
+extensions:
+  - .js
+  - .mjs
+  - .cjs
+  - .jsx
+filenames: []
+aliases:
+  - javascript

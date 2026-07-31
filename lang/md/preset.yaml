@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: v0.2.45
+    rev: v0.2.46
     hooks:
       - id: rumdl-fmt
         description: "Format Markdown files in place. Always exits 0; relies on pre-commit file-change detection."
@@ -23,3 +23,17 @@ repos:
       - id: markdownlint-cli2
         args: []
         description: "Checks the style of Markdown/CommonMark files."
+  - repo: https://github.com/txemi/darnlink
+    rev: v0.18.0
+    hooks:
+      - id: darnlink
+        description: "Fail the commit if any robust link is broken"
+      - id: darnlink-repair
+        description: "Auto-repair broken links in place instead of failing"
+      - id: darnlink-strict
+        description: "Fail the commit if any anchorable link is not robust"
+  - repo: https://github.com/AlexanderDokuchaev/md-dead-link-check
+    rev: v1.3.0
+    hooks:
+      - id: md-dead-link-check
+        description: "Check for dead links in Markdown files."

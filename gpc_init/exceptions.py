@@ -9,6 +9,10 @@ class PresetParseError(Exception):
     """Raised when a preset file contains invalid YAML or unexpected structure."""
 
 
+class MetadataConflictError(Exception):
+    """Raised when two langs/frameworks claim the same extension/filename/alias."""
+
+
 class UnsupportedLanguageError(Exception):
     """Raised when a requested language is not in the language catalog."""
 
@@ -29,6 +33,17 @@ class UnsupportedFrameworkError(Exception):
         self.supported = supported
         supported_str = ", ".join(sorted(supported))
         super().__init__(f"Unsupported framework '{fw}'. Supported: {supported_str}")
+
+
+class UnsupportedProfileError(Exception):
+    """Raised when a requested profile/category is not supported."""
+
+    def __init__(self, profile: str, supported: list[str]) -> None:
+        """Initialize with the unsupported profile and supported profile list."""
+        self.profile = profile
+        self.supported = supported
+        supported_str = ", ".join(sorted(supported))
+        super().__init__(f"Unsupported profile '{profile}'. Supported: {supported_str}")
 
 
 class TargetFileExistsError(Exception):

@@ -4,9 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from gpc_init.exceptions import UnsupportedFrameworkError, UnsupportedLanguageError
+from gpc_init.exceptions import (
+    UnsupportedFrameworkError,
+    UnsupportedLanguageError,
+    UnsupportedProfileError,
+)
 from gpc_init.resolver import (
-    deduplicate_preserving_order,
     expand_recommendations,
     get_recommendations_info,
     get_supported_frameworks,
@@ -15,6 +18,7 @@ from gpc_init.resolver import (
     normalize_lang,
     validate_frameworks,
     validate_langs,
+    validate_profiles,
 )
 
 
@@ -58,6 +62,19 @@ class TestNormalizeLang:
     def test_mixed_case_alias(self) -> None:
         assert normalize_lang("Python") == "py"
 
+    def test_base_dir_is_forwarded_to_alias_lookup(self, tmp_path: Path) -> None:
+        # Create a custom lang with an alias that only exists in this catalog.
+        lang_dir = tmp_path / "lang" / "xtest"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("repos: []\n")
+        (lang_dir / "metadata.yaml").write_text("aliases:\n  - xalias\n")
+
+        # With the correct base_dir the custom alias resolves to "xtest".
+        # If base_dir were ignored (mutant: None), the real install's catalog
+        # would be used instead, which has no "xalias" alias, so the value
+        # would pass through unchanged.
+        assert normalize_lang("xalias", base_dir=tmp_path) == "xtest"
+
 
 class TestNormalizeFramework:
     def test_lowercase(self) -> None:
@@ -65,20 +82,6 @@ class TestNormalizeFramework:
 
     def test_strips_whitespace(self) -> None:
         assert normalize_framework("  django  ") == "django"
-
-
-class TestDeduplicatePreservingOrder:
-    def test_removes_duplicates(self) -> None:
-        assert deduplicate_preserving_order(["py", "js", "py"]) == ["py", "js"]
-
-    def test_preserves_first_occurrence(self) -> None:
-        assert deduplicate_preserving_order(["js", "py", "js"]) == ["js", "py"]
-
-    def test_empty_list(self) -> None:
-        assert deduplicate_preserving_order([]) == []
-
-    def test_no_duplicates(self) -> None:
-        assert deduplicate_preserving_order(["py", "js"]) == ["py", "js"]
 
 
 class TestGetSupportedLanguages:
@@ -161,6 +164,37 @@ class TestValidateFrameworks:
 
         # If base_dir were ignored (mutant: None), the real install would be used
         # and "xtest-only-fw" would be absent, raising UnsupportedFrameworkError.
+
+
+class TestValidateProfiles:
+    def test_legacy_passes(self) -> None:
+        validate_profiles(["legacy"])  # no error
+
+    def test_experimental_passes(self) -> None:
+        validate_profiles(["experimental"])  # no error
+
+    def test_both_pass(self) -> None:
+        validate_profiles(["legacy", "experimental"])  # no error
+
+    def test_empty_passes(self) -> None:
+        validate_profiles([])  # no error
+
+    def test_preset_is_not_selectable(self) -> None:
+        # 'preset' is the always-on baseline, not a user-facing --profile value.
+        with pytest.raises(UnsupportedProfileError) as exc_info:
+            validate_profiles(["preset"])
+        assert "preset" in str(exc_info.value)
+
+    def test_invalid_profile_raises(self) -> None:
+        with pytest.raises(UnsupportedProfileError) as exc_info:
+            validate_profiles(["bogus"])
+        assert "bogus" in str(exc_info.value)
+        assert "Supported:" in str(exc_info.value)
+
+    def test_error_lists_supported(self) -> None:
+        with pytest.raises(UnsupportedProfileError) as exc_info:
+            validate_profiles(["bogus"])
+        assert exc_info.value.supported == ["experimental", "legacy"]
 
 
 class TestGetRecommendationsInfo:

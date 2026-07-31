@@ -1,6 +1,10 @@
 """Merge language and framework presets into a single configuration dict."""
 
+from collections.abc import Callable
 from typing import Any
+
+# Implicit category for hooks with no explicit `category:` field.
+DEFAULT_CATEGORY = "preset"
 
 
 def _repo_key(repo_entry: dict[str, Any]) -> tuple[str, str]:
@@ -18,6 +22,56 @@ def _merge_hook(lower: dict[str, Any], higher: dict[str, Any]) -> dict[str, Any]
     return {**lower, **higher}
 
 
+def _merge_by_key(
+    lower: list[dict[str, Any]],
+    higher: list[dict[str, Any]],
+    *,
+    key_fn: Callable[[dict[str, Any]], Any],
+    merge_fn: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """
+    Merge two lists of dicts by an identity key.
+
+    - Preserves first-seen order from the lower-precedence layer.
+    - Appends new keys from the higher-precedence layer.
+    - When the same key appears in both, entries are combined via merge_fn.
+    """
+    result: list[dict[str, Any]] = []
+    lower_by_key: dict[Any, int] = {}
+    for i, item in enumerate(lower):
+        lower_by_key[key_fn(item)] = i
+        result.append(dict(item))
+
+    for item in higher:
+        key = key_fn(item)
+        if key in lower_by_key:
+            idx = lower_by_key[key]
+            result[idx] = merge_fn(result[idx], item)
+        else:
+            result.append(dict(item))
+
+    return result
+
+
+def _merge_repo_entries(
+    lower: dict[str, Any], higher: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Merge two repo entries.
+
+    Higher-precedence fields replace lower fields, and hooks are merged by
+    hook id rather than replaced wholesale.
+    """
+    merged = {**lower, **higher}
+    merged["hooks"] = _merge_by_key(
+        list(lower.get("hooks", [])),
+        list(higher.get("hooks", [])),
+        key_fn=lambda h: str(h.get("id", "")),
+        merge_fn=_merge_hook,
+    )
+    return merged
+
+
 def _merge_hooks_list(
     lower: list[dict[str, Any]], higher: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
@@ -29,22 +83,9 @@ def _merge_hooks_list(
     - When the same hook id appears in both, higher-precedence fields
       replace lower fields.
     """
-    result: list[dict[str, Any]] = []
-    lower_by_id: dict[str, int] = {}
-    for i, hook in enumerate(lower):
-        hook_id = str(hook.get("id", ""))
-        lower_by_id[hook_id] = i
-        result.append(dict(hook))
-
-    for hook in higher:
-        hook_id = str(hook.get("id", ""))
-        if hook_id in lower_by_id:
-            idx = lower_by_id[hook_id]
-            result[idx] = _merge_hook(result[idx], hook)
-        else:
-            result.append(dict(hook))
-
-    return result
+    return _merge_by_key(
+        lower, higher, key_fn=lambda h: str(h.get("id", "")), merge_fn=_merge_hook
+    )
 
 
 def _merge_repos(
@@ -55,28 +96,10 @@ def _merge_repos(
 
     - Preserves first-seen order from the lower-precedence layer.
     - Appends new (repo, rev) pairs from the higher-precedence layer.
-    - When the same (repo, rev) pair appears in both, hooks are merged by hook id.
+    - When the same (repo, rev) pair appears in both, higher-precedence fields
+      replace lower fields and hooks are merged by hook id.
     """
-    result: list[dict[str, Any]] = []
-    lower_by_key: dict[tuple[str, str], int] = {}
-    for i, repo in enumerate(lower):
-        key = _repo_key(repo)
-        lower_by_key[key] = i
-        result.append(dict(repo))
-
-    for repo in higher:
-        key = _repo_key(repo)
-        if key in lower_by_key:
-            idx = lower_by_key[key]
-            merged_repo = dict(result[idx])
-            lower_hooks = list(result[idx].get("hooks", []))
-            higher_hooks = list(repo.get("hooks", []))
-            merged_repo["hooks"] = _merge_hooks_list(lower_hooks, higher_hooks)
-            result[idx] = merged_repo
-        else:
-            result.append(dict(repo))
-
-    return result
+    return _merge_by_key(lower, higher, key_fn=_repo_key, merge_fn=_merge_repo_entries)
 
 
 def _deep_merge_top_level(
@@ -148,3 +171,46 @@ def merge_presets(
         result["repos"] = merged_repos
 
     return result
+
+
+def _filter_hooks(
+    hooks: list[dict[str, Any]], active_categories: frozenset[str]
+) -> list[dict[str, Any]]:
+    """Return hooks whose category is active, with the 'category' key stripped."""
+    return [
+        {k: v for k, v in hook.items() if k != "category"}
+        for hook in hooks
+        if hook.get("category", DEFAULT_CATEGORY) in active_categories
+    ]
+
+
+def filter_by_category(
+    merged: dict[str, Any], active_categories: frozenset[str]
+) -> dict[str, Any]:
+    """
+    Drop hooks whose category isn't active, from an already-merged config dict.
+
+    Each hook's `category` field (default: 'preset') is checked against
+    active_categories. Surviving hooks have the 'category' key stripped
+    (it isn't a pre-commit config field). A repo entry left with zero hooks
+    after filtering is removed entirely from the result.
+
+    Args:
+        merged: Merged configuration dict, as returned by merge_presets().
+        active_categories: Categories to keep (always includes 'preset').
+
+    Returns:
+        A new configuration dict with non-active-category hooks removed.
+
+    """
+    repos = merged.get("repos", [])
+    if not repos:
+        return dict(merged)
+
+    filtered_repos: list[dict[str, Any]] = []
+    for repo in repos:
+        kept_hooks = _filter_hooks(repo.get("hooks", []), active_categories)
+        if kept_hooks:
+            filtered_repos.append({**repo, "hooks": kept_hooks})
+
+    return {**merged, "repos": filtered_repos}

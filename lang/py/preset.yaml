@@ -34,7 +34,7 @@ repos:
       - id: pyrefly-check
         description: "Run `pyrefly check` for Python type checking."
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.64
+    rev: v0.0.65
     hooks:
       - id: ty
         description: "Run 'ty' for extremely fast Python type checking"
@@ -42,7 +42,33 @@ repos:
     rev: v2.3.0
     hooks:
       - id: mypy
+        category: legacy
         description: "Mirror of mypy for pre-commit"
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.411
+    hooks:
+      - id: pyright
+        category: legacy
+        description: "Run 'pyright' for Python type checking (Microsoft)"
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        category: legacy
+        description: "Style guide enforcement (superseded by ruff-check)"
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        category: legacy
+        description: "Sort Python imports (superseded by ruff-check's import-sorting rules)"
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 26.5.1
+    hooks:
+      - id: black
+        category: legacy
+        language_version: python3
+        description: "The uncompromising Python code formatter (superseded by ruff-format)"
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
     rev: v6.2.0
     hooks:
@@ -61,24 +87,28 @@ repos:
         args: ["-ll"]
         files: \.py$
         description: "Bandit is a tool for finding common security issues in Python code"
+        category: legacy
   - repo: https://github.com/PyCQA/docformatter
     rev: v1.7.8
     hooks:
       - id: docformatter
         args: [--in-place]
         description: "Formats docstrings to follow PEP 257."
+        category: legacy
   - repo: https://github.com/econchick/interrogate
     rev: 1.7.0
     hooks:
       - id: interrogate
         args: ["--quiet", "--fail-under=70"]
         description: "interrogate your code base for missing docstrings"
+        category: legacy
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.21.2
     hooks:
       - id: pyupgrade
         args: [--py313-plus]
         description: "Automatically upgrade syntax for newer versions."
+        category: legacy
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.12.0
     hooks:
@@ -97,6 +127,7 @@ repos:
       - id: numpydoc-validation
         exclude: "tests/"
         description: "This hook validates that docstrings in committed files adhere to numpydoc standards."
+        category: legacy
   - repo: https://github.com/osprey-oss/deptry.git
     rev: "0.25.1"
     hooks:

@@ -1,6 +1,6 @@
 """Render merged configuration dict to YAML string."""
 
-from typing import Any
+from typing import Any, override
 
 import yaml
 
@@ -29,7 +29,7 @@ def _semantic_dict_representer(
     elif "id" in data:
         priority = _HOOK_KEY_ORDER
     else:
-        priority = []
+        priority: list[str] = []
     ordered = [k for k in priority if k in data]
     ordered += sorted(k for k in data if k not in ordered)
     return dumper.represent_mapping(
@@ -38,7 +38,8 @@ def _semantic_dict_representer(
 
 
 class _PrecommitDumper(yaml.Dumper):
-    def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:  # noqa: FBT001, FBT002, ARG002
+    @override
+    def increase_indent(self, flow: bool = False, indentless: bool = False) -> None:
         return super().increase_indent(flow=flow, indentless=False)
 
 

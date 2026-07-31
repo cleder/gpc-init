@@ -1,0 +1,16 @@
+---
+fullname: C / C++
+icon: "🔩"
+extensions:
+  - .c
+  - .h
+  - .cpp
+  - .cc
+  - .cxx
+  - .hpp
+  - .hh
+  - .hxx
+filenames: []
+aliases:
+  - c
+  - "c++"

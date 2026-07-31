@@ -1,0 +1,7 @@
+---
+fullname: Kubernetes
+icon: "☸️"
+# Escape hatch: scans file content across the whole tree with a directory
+# exclusion, which doesn't reduce to a clean declarative rule. Resolves
+# against a fixed allowlist in detector.py's _DETECTOR_REGISTRY.
+detect: "python:_has_kubernetes_files"

@@ -1,0 +1,8 @@
+---
+fullname: Docker
+icon: "🐳"
+extensions: []
+filenames:
+  - dockerfile
+aliases:
+  - dockerfile

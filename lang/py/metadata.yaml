@@ -1,0 +1,9 @@
+---
+fullname: Python
+icon: "🐍"
+extensions:
+  - .py
+  - .pyi
+filenames: []
+aliases:
+  - python

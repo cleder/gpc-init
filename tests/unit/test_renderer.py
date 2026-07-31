@@ -32,8 +32,8 @@ class TestRenderYaml:
         assert out1 == out2
 
     def test_sort_keys_for_determinism(self) -> None:
-        data_a = {"z_key": "last", "a_key": "first", "repos": []}
-        data_b = {"a_key": "first", "z_key": "last", "repos": []}
+        data_a: dict[str, object] = {"z_key": "last", "a_key": "first", "repos": []}
+        data_b: dict[str, object] = {"a_key": "first", "z_key": "last", "repos": []}
         assert render_yaml(data_a) == render_yaml(data_b)
 
     def test_renders_hook_args_as_list(self) -> None:

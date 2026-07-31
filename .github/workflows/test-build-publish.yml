@@ -60,6 +60,7 @@ jobs:
         run: |
           uv run pyrefly check gpc_init tests
           uv run ty check gpc_init tests
+          uv run zuban check gpc_init tests
       - name: Linting
         run: |
           uv run ruff check --no-fix gpc_init tests

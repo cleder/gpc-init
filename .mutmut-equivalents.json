@@ -1,194 +1,122 @@
 [
   {
-    "equivalent_reason": "Python normalises encoding names before looking them up in its codec registry. `\"utf-8\"` and `\"UTF-8\"` both resolve to the canonical name `\"utf-8\"`, making `Path.read_text(encoding=\"utf-8\")` and `Path.read_text(encoding=\"UTF-8\")` completely interchangeable. There is no observable difference in return value, exception type, or side effect, so no test can kill this mutant.",
-    "file_hash": "88277f801957a026c112ac3e13f33de08d3f3411",
-    "mutant_name": "gpc_init.detector.x__has_package_json_dep__mutmut_11",
-    "source_file": "gpc_init/detector.py"
-  },
-  {
-    "equivalent_reason": "Removing `encoding=\"utf-8\"` from `read_text()` while keeping `errors=\"ignore\"` does not change observable behavior on any platform where Python's default locale encoding is UTF-8 (all modern Linux, macOS, and Windows CI environments). Python 3.15+ even makes UTF-8 mode the universal default. Since `errors=\"ignore\"` is present in both versions, any bytes that would cause a decoding error are silently discarded regardless of which encoding is used. No test running in a standard environment can observe a difference between these two calls.",
-    "file_hash": "88277f801957a026c112ac3e13f33de08d3f3411",
-    "mutant_name": "gpc_init.detector.x__has_sphinx_conf__mutmut_16",
-    "source_file": "gpc_init/detector.py"
-  },
-  {
-    "equivalent_reason": "Python's codec registry performs case-insensitive lookup of encoding names (per the codecs module implementation), so \"utf-8\" and \"UTF-8\" resolve to the exact same UTF-8 codec. Path.read_text(encoding=\"utf-8\") and Path.read_text(encoding=\"UTF-8\") produce byte-for-byte identical decoded output for any input file. There is no observable difference in behavior, so no test could ever distinguish the original from the mutant.",
-    "file_hash": "3fa6428807aa536b04adcfd8f7702a7aeada4262",
-    "mutant_name": "gpc_init.detector.x__has_sphinx_conf__mutmut_19",
-    "source_file": "gpc_init/detector.py"
-  },
-  {
-    "equivalent_reason": "On any system where `locale.getpreferredencoding(False)` returns `\"UTF-8\"` (all modern Linux/macOS defaults), passing `encoding=None` is functionally identical to `encoding=\"utf-8\"`. The function only searches for the ASCII substrings `\"apiVersion:\"` and `\"kind:\"`, so the decoded content is always the same. The `errors=\"ignore\"` parameter is unchanged in the mutant, and the mutation does not alter the control flow, return value, or any observable side effect for any realistic input.",
-    "file_hash": "88277f801957a026c112ac3e13f33de08d3f3411",
-    "mutant_name": "gpc_init.detector.x__has_kubernetes_files__mutmut_16",
-    "source_file": "gpc_init/detector.py"
-  },
-  {
-    "equivalent_reason": "The strings being searched for (`apiVersion:` and `kind:`) are pure ASCII and are therefore unaffected by the choice of encoding. With `errors=\"ignore\"` still present, decoding failures under any encoding are silently suppressed. On any platform where the default locale encoding is UTF-8 (the standard on modern Linux, macOS, and Windows 10+), the two calls are byte-for-byte identical in behavior. No observable difference in return value, side effects, or exceptions can be produced by a test that does not explicitly manipulate the process locale.",
-    "file_hash": "88277f801957a026c112ac3e13f33de08d3f3411",
-    "mutant_name": "gpc_init.detector.x__has_kubernetes_files__mutmut_18",
-    "source_file": "gpc_init/detector.py"
-  },
-  {
-    "equivalent_reason": "Python encoding names are case-insensitive by specification. `\"UTF-8\"` and `\"utf-8\"` resolve to the same `codecs.CodecInfo` object, so `file.read_text(encoding=\"UTF-8\", errors=\"ignore\")` is functionally identical to `file.read_text(encoding=\"utf-8\", errors=\"ignore\")`. The function's return value, exception behaviour, and every downstream observable effect are the same for both spellings. A test that checks the exact string passed to `read_text` would be testing an irrelevant implementation detail (string casing), not real behaviour, and mutmut is not designed to be killed by such mock-based encoding-string checks when the actual codec is identical.",
-    "file_hash": "8461871c1a4ed1b1e81702706a393e31c906da0f",
-    "mutant_name": "gpc_init.detector.x__has_kubernetes_files__mutmut_21",
-    "source_file": "gpc_init/detector.py"
-  },
-  {
-    "equivalent_reason": "The `\"repos\"` exclusion in the `non_repo` comprehension is a redundant guard. `_deep_merge_top_level` (line 93) already contains `if key == \"repos\": continue`, which prevents the `repos` key from ever being written into the result dict during the top-level merge. Therefore, passing `repos` through to `_deep_merge_top_level` (as the mutant does) has no effect on the output. The repos data follows the separate `_merge_repos` path and is assigned to `result[\"repos\"]` after the loop (lines 147-148), completely independent of the `non_repo` filter. Verified empirically: running both the original and mutant implementations on a preset with a `repos` key produces byte-for-byte identical output.",
-    "file_hash": "2c5298ce4808c5c406fd73ad6b60d1dc8f55489b",
-    "mutant_name": "gpc_init.merger.x_merge_presets__mutmut_21",
-    "source_file": "gpc_init/merger.py"
-  },
-  {
-    "equivalent_reason": "Even when the mutant allows \"repos\" to pass into non_repo, it is still silently dropped inside _deep_merge_top_level by the existing `if key == \"repos\": continue` guard. The repos list is still built correctly through the dedicated _merge_repos path and inserted at the end. No observable difference exists between the mutant and the original code for any input.",
-    "file_hash": "2c5298ce4808c5c406fd73ad6b60d1dc8f55489b",
-    "mutant_name": "gpc_init.merger.x_merge_presets__mutmut_22",
-    "source_file": "gpc_init/merger.py"
-  },
-  {
-    "equivalent_reason": "Both `[]` (original) and `None` (mutant) are falsy in Python. The code immediately checks `if primary` before using `primary` in any further operation. When the `primary_languages` key is absent from the preset dict, both defaults cause the `if` body to be skipped, resulting in the same outcome: no message is appended. There is no observable behavioral difference between the two values because the only use of `primary` after assignment is gated behind this truthiness check.",
-    "file_hash": "58512a20c2fb25aeb5a143415f50b80a5a9f15fc",
-    "mutant_name": "gpc_init.resolver.x_get_primary_languages_info__mutmut_11",
-    "source_file": "gpc_init/resolver.py"
-  },
-  {
-    "equivalent_reason": "When `primary_languages` is absent from the preset dict, the original code returns `[]` and the mutant returns `None`. Both values are falsy. The immediately following `if primary and not any(...)` condition short-circuits to `False` for both values without evaluating `any(...)`, so no message is appended and no `TypeError` is raised. The return value of `get_primary_languages_info` is identical in every call scenario, making this mutation undetectable by any test.",
-    "file_hash": "58512a20c2fb25aeb5a143415f50b80a5a9f15fc",
-    "mutant_name": "gpc_init.resolver.x_get_primary_languages_info__mutmut_13",
-    "source_file": "gpc_init/resolver.py"
-  },
-  {
-    "equivalent_reason": "PyYAML 6.x sets `default_flow_style=False` by default in its `Dumper` class (`yaml.Dumper(None).default_flow_style` is `False`). Removing the explicit `default_flow_style=False` from `yaml.dump(...)` therefore changes nothing - the rendered YAML output is byte-for-byte identical for all inputs tested (nested dicts, lists, unicode, long strings, empty dicts, etc.). No test can detect this mutation because there is no observable behavioural difference.",
-    "file_hash": "545bc45b0d1d604c086d77c7616f39dbb9157f18",
-    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_7",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "PyYAML's `yaml.dump_all` declares `sort_keys=True` as its default (visible in the function signature `def dump_all(..., sort_keys=True)`). The explicit `sort_keys=True` in the source code is therefore redundant; dropping it leaves the same default in effect. All existing tests (including `test_keys_are_sorted_in_output` and `test_sort_keys_for_determinism`) pass identically against the mutant because the YAML output is byte-for-byte identical.",
-    "file_hash": "545bc45b0d1d604c086d77c7616f39dbb9157f18",
-    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_8",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "The `flow` default is unreachable/unobservable. `_PrecommitDumper.increase_indent` overrides `yaml.Dumper.increase_indent`, and it is only ever called by PyYAML's own `Emitter` internals (in `emitter.py`), which always pass `flow` explicitly as a keyword argument at every call site (`self.increase_indent(flow=True)` in expect_flow_sequence/mapping paths, and `self.increase_indent(flow=False, indentless=indentless)` / `self.increase_indent(flow=False)` in block paths). No caller anywhere \u2014 in PyYAML or in gpc_init \u2014 ever invokes `increase_indent` without specifying `flow`, so the default value is dead code that cannot influence behavior. Additionally, the method body ignores the `indentless` argument entirely (always passes `indentless=False` to `super()`), which is the actual intentional behavior under test, but that logic is untouched by this mutant. Since no test (nor any real call path) can ever hit the default value of `flow`, this mutation is behaviorally equivalent to the original and cannot be killed by any black-box test of the dumper's YAML output.",
-    "file_hash": "ef9a8966d10e866ae12abc4023d9656a72d061af",
-    "mutant_name": "gpc_init.renderer.x\u01c1_PrecommitDumper\u01c1increase_indent__mutmut_1",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "The `indentless` parameter is never read inside the function body \u2014 it is explicitly marked `noqa: ARG002` (unused argument) and the method unconditionally calls `super().increase_indent(flow=flow, indentless=False)`, ignoring whatever value was passed in or defaulted. Additionally, PyYAML always invokes `increase_indent` with explicit keyword arguments internally, never relying on the default. Since the default value can never reach any observable behavior (it's neither used in the body nor triggered by any caller relying on the default), no test can distinguish the mutant from the original code.",
-    "file_hash": "ef9a8966d10e866ae12abc4023d9656a72d061af",
-    "mutant_name": "gpc_init.renderer.x\u01c1_PrecommitDumper\u01c1increase_indent__mutmut_2",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "PyYAML's base Emitter.increase_indent only branches on the `flow` argument when `self.indent is None`, i.e. exactly once per document, at the very first call made while establishing the root container's indentation; for every subsequent (nested) call `self.indent` is already set, so the code takes the `elif not indentless: self.indent += self.best_indent` path where `flow` plays no role at all, making the mutation unobservable there. `render_yaml` always calls `yaml.dump` on a `dict` with `default_flow_style=False`, so the root container is emitted in block style except in the single special case of an empty top-level dict, which PyYAML always renders as flow style (`{}`). I verified empirically (comparing the original vs. mutated Dumper across `{}`, `{\"a\": []}`, `{\"a\": {}}`, `{\"a\": [], \"b\": {}}`, `{\"repos\": []}`, `{\"a\": [[], {}]}`, `{\"a\": {\"b\": {}}}`, and `[]`) that output is byte-for-byte identical in every case: the difference in initial indent value (`best_indent` vs `0`) only matters when there is subsequent content to indent using that value, but an empty flow container `{}`/`[]` has no nested content to display it, and all real (non-empty) containers already pass `flow=False` in both branches since `default_flow_style=False`. Therefore, given how `_PrecommitDumper` is exclusively used inside `render_yaml`, no input produces a detectable difference in output, so the mutant is behaviorally equivalent.",
-    "file_hash": "ef9a8966d10e866ae12abc4023d9656a72d061af",
-    "mutant_name": "gpc_init.renderer.x\u01c1_PrecommitDumper\u01c1increase_indent__mutmut_5",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "The parent method being called is yaml's Emitter.increase_indent(self, flow=False, indentless=False) \u2014 its default value for `indentless` is already False. The original code explicitly passes indentless=False (overriding whatever value the caller/emitter internally intended to pass to this overridden method, which is the whole point of this override \u2014 forcing block-style list indentation for pre-commit YAML output). Omitting the keyword and relying on the parent's own default produces the exact same value (False) in every call, since Python fills in the parent's default when the argument is omitted. There is no code path where this default could differ from the explicit value, so the mutation is behaviorally indistinguishable from the original \u2014 no test (existing or possible) could observe a difference without relying on implementation internals like inspecting call signatures via mocking, which would be testing implementation detail rather than behavior.",
-    "file_hash": "ef9a8966d10e866ae12abc4023d9656a72d061af",
-    "mutant_name": "gpc_init.renderer.x\u01c1_PrecommitDumper\u01c1increase_indent__mutmut_6",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "With the project's installed PyYAML version (6.0.3), yaml.Dumper's built-in default for `default_flow_style` is already `False` (PyYAML changed this default from `None` to `False` starting in version 5.1). Removing the explicit `default_flow_style=False` argument therefore falls back to the library default, which is identical, so output is byte-for-byte unchanged. I verified this empirically by calling yaml.dump both with and without the explicit argument (using the same _PrecommitDumper class) across several representative inputs \u2014 an empty dict, an empty list, nested dicts/lists, and the actual pre-commit-config-style structure used in the test suite \u2014 and all outputs matched exactly. No test can observe a difference because there is no difference in behavior given the pinned/installed dependency version, making this mutant equivalent (not a missing-test gap).",
-    "file_hash": "ef9a8966d10e866ae12abc4023d9656a72d061af",
-    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_10",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "The `sort_keys` parameter only affects PyYAML's built-in `represent_mapping` sorting logic, which triggers only when the object passed in has a `.items()` method (i.e. is dict-like). `_PrecommitDumper` registers `_semantic_dict_representer` for every `dict` in the tree; that representer always builds an already-ordered plain Python `list` of `(key, value)` tuples (via `_REPO_KEY_ORDER`/`_HOOK_KEY_ORDER` plus alphabetical fallback for the rest) and passes that list to `dumper.represent_mapping`. Since a list has no `.items()` attribute, PyYAML's internal `sort_keys` branch (`if hasattr(mapping, 'items'): ... if self.sort_keys: mapping = sorted(mapping)`) is never reached, so the `sort_keys` flag has no observable effect on output for any dict at any depth. Empirically verified: dumping a dict with unordered keys via `_PrecommitDumper` produces byte-identical YAML with `sort_keys=True` and `sort_keys=False`. No test could observe a difference, so the mutant is equivalent.",
-    "file_hash": "ef9a8966d10e866ae12abc4023d9656a72d061af",
-    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_11",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "render_yaml uses _PrecommitDumper with a custom dict representer (_semantic_dict_representer) registered via add_representer(dict, ...). This representer always builds the node's mapping as a plain Python list of (key, value) tuples ([(k, data[k]) for k in ordered]), not a dict. PyYAML's underlying Representer.represent_mapping only applies dumper.sort_keys when hasattr(mapping, 'items') is True; since a list has no .items(), that sort branch is skipped entirely regardless of the sort_keys flag. Because every dict (top-level and nested) in merged_dict is serialized through this custom representer, the sort_keys parameter passed to yaml.dump has zero effect on output for any input. I verified this empirically: dumping the same test dict with sort_keys=False and sort_keys=True via _PrecommitDumper produced byte-identical YAML output. Therefore no test can ever distinguish this mutant from the original, making it a genuine equivalent mutant.",
-    "file_hash": "ef9a8966d10e866ae12abc4023d9656a72d061af",
-    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_16",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "Python's built-in `open()` (and `Path.open()`) normalises encoding names case-insensitively via the `codecs` module. `\"utf-8\"` and `\"UTF-8\"` resolve to the same codec and produce byte-for-byte identical file reads. No caller can observe any difference in return value, raised exceptions, or side effects between the two forms. The existing test at `tests/unit/test_loader.py:108` explicitly uses `.casefold()` on the captured encoding string to accept both variants, confirming that the test authors considered the casing irrelevant to correctness.",
-    "file_hash": "773f6d38fbde5b280630af7c51f570969a2f53f8",
-    "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_5",
-    "source_file": "gpc_init/loader.py"
-  },
-  {
-    "equivalent_reason": "Python normalizes encoding identifiers: `codecs.lookup(\"UTF-8\").name` returns `\"utf-8\"`, the same canonical name as `codecs.lookup(\"utf-8\").name`. Passing `encoding=\"UTF-8\"` to `Path.open()` is functionally identical to `encoding=\"utf-8\"` \u2014 the file is read with the same codec, producing the same bytes-to-str decoding. No test can distinguish the two because there is no runtime difference in behaviour, file content, exceptions raised, or return values.",
-    "file_hash": "773f6d38fbde5b280630af7c51f570969a2f53f8",
-    "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_6",
-    "source_file": "gpc_init/loader.py"
-  },
-  {
-    "equivalent_reason": "Every call to `_generate_content` in the codebase always passes the `recommended` argument explicitly (`recommended=recommended`). The default value of the parameter (`False` or `True`) is never exercised by any code path, so changing it from `False` to `True` produces no observable difference in behaviour.",
-    "file_hash": "8a371bbd0717cbcb7c08dde8b551b8ac2e9d9af2",
-    "mutant_name": "gpc_init.cli.x__generate_content__mutmut_1",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "The `_run` function is only called from `_dispatch` (line 163: `_run(langs, frameworks, target, base_dir, recommended=recommended)`), which always passes `recommended` explicitly as a keyword argument. The default value of the parameter is therefore dead code \u2014 it is never invoked. Changing the default from `False` to `True` does not alter any observable behaviour, making this an equivalent mutant.",
-    "file_hash": "8a371bbd0717cbcb7c08dde8b551b8ac2e9d9af2",
-    "mutant_name": "gpc_init.cli.x__run__mutmut_1",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "The function `_dispatch` is called exactly once in the entire codebase (gpc_init/cli.py line 419), and that call always supplies `recommended=recommended` as a keyword argument. The default value of the parameter is therefore dead code \u2014 it can never be reached. Changing the default from `False` to `True` produces identical observable behaviour in every possible execution path, making the mutant equivalent.",
-    "file_hash": "8a371bbd0717cbcb7c08dde8b551b8ac2e9d9af2",
-    "mutant_name": "gpc_init.cli.x__dispatch__mutmut_1",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "`_handle_existing_file` has exactly one call site in the entire codebase (`_dispatch`, line 159), and that call always passes `recommended=recommended` explicitly. Because the default value is never relied upon by any caller, changing it from `False` to `True` produces identical runtime behavior for every reachable code path. There is no way to write a test that calls `_handle_existing_file` through the CLI and exercises the default value, because `_dispatch` always supplies it.",
-    "file_hash": "8a371bbd0717cbcb7c08dde8b551b8ac2e9d9af2",
-    "mutant_name": "gpc_init.cli.x__handle_existing_file__mutmut_1",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "The mutant status was \"not checked\" (never executed), not \"survived\". After running `mutmut run \"gpc_init.cli.x__handle_existing_file__mutmut_5\"` the mutant was immediately marked \"killed\". The existing test `TestDiffOnExistingFile::test_diff_no_changes_with_custom_presets_uses_custom_presets_for_comparison` in `tests/integration/test_cli_generation.py` (lines 1228\u20131260) already covers this exact scenario: it generates a file with a custom `--presets` directory, then invokes the CLI again with the same custom presets (no `--force`), and asserts `exit_code == 0` plus `\"No changes\"` in output. With the mutant applied, the comparison regenerates content from the bundled catalog instead of the custom dir, producing a spurious diff and exit code 1, which fails the assertion. No new test is needed.",
-    "file_hash": "e433846b64572abbc17a45294b2dd21a5081fa56",
-    "mutant_name": "gpc_init.cli.x__handle_existing_file__mutmut_5",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "Python's `codecs.lookup` normalises codec names by lowercasing and replacing hyphens/spaces, so `\"UTF-8\"` and `\"utf-8\"` both resolve to the same codec object. `Path.read_text` passes the encoding argument directly to the built-in `open()`, which applies the same normalisation. The two calls are therefore functionally identical on all supported Python versions and operating systems, making this mutation undetectable by any test.",
-    "file_hash": "e433846b64572abbc17a45294b2dd21a5081fa56",
-    "mutant_name": "gpc_init.cli.x__handle_existing_file__mutmut_14",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "The mutant is not semantically equivalent but is already caught by the existing test `TestDiffOnExistingFile::test_force_command_hint_uses_comma_separator_for_multiple_frameworks` in `/home/christian/devel/private/gpc-init/tests/integration/test_cli_generation.py`. When the mutant is applied, that test's assertion `assert \"--framework=django,react\" in result.output` fails because `_build_force_command(langs, None)` omits the `--framework` clause from the hint. The mutmut status \"not checked\" means the mutant was never evaluated against the test suite (likely added after the last full mutmut run), not that it actually survives. No new test is needed.",
-    "file_hash": "e433846b64572abbc17a45294b2dd21a5081fa56",
-    "mutant_name": "gpc_init.cli.x__handle_existing_file__mutmut_42",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "The mutant gpc_init.cli.x__handle_existing_file__mutmut_51 has never existed in any version of the source code. Running mutmut's mutation engine against every historical commit of gpc_init/cli.py confirms the function `_handle_existing_file` generates at most 50 mutations (numbered 1-50). Mutant 51 was never produced, so it cannot alter any observable behaviour \u2014 there is no code change to detect.",
-    "file_hash": "e433846b64572abbc17a45294b2dd21a5081fa56",
-    "mutant_name": "gpc_init.cli.x__handle_existing_file__mutmut_51",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "Python's `importlib.metadata.version()` implements PEP 503 package name normalization: it lowercases the name and collapses `[-_.]` sequences before the filesystem lookup. Therefore `version(\"PC-INIT\")` resolves to exactly the same distribution as `version(\"pc-init\")` and returns the same version string. No test can observe a difference in the output or exit code, making this mutant equivalent. The existing `TestVersion` tests mock `importlib.metadata.version` entirely, so they never exercise the real lookup argument at all.",
-    "file_hash": "e433846b64572abbc17a45294b2dd21a5081fa56",
-    "mutant_name": "gpc_init.cli.x__version_callback__mutmut_4",
-    "source_file": "gpc_init/cli.py"
-  },
-  {
-    "equivalent_reason": "Path.walk delegates directly to os.walk(root_dir, top_down, on_error, follow_symlinks) with on_error passed through unchanged. Inspecting the CPython os.walk implementation, the error-handling code is exactly: `except OSError as error: if onerror is not None: onerror(error); continue`. Whether on_error is None or a no-op lambda (`lambda _: None`), the observable behavior is identical in every case: on an OSError during scandir, the loop simply continues without recursing into or yielding that directory's contents, and the lambda (when present) does nothing observable anyway (returns None, no side effects). There is no code path where passing None vs. a None-returning lambda produces a different result \u2014 both silently ignore scan errors. Hence no test (property-based, unit, or otherwise) could observe a behavioral difference, making this mutant equivalent.",
-    "file_hash": "3fa6428807aa536b04adcfd8f7702a7aeada4262",
+    "equivalent_reason": "Path.walk forwards on_error directly to os.walk (verified via inspect.getsource on Python 3.14). os.walk's documented and implemented behavior is: \"By default errors from the os.scandir() call are ignored\" when onerror is None, and if onerror is provided it is called with the OSError but the walk continues regardless (no return value is used to alter behavior). Both `on_error=None` and `on_error=lambda _: None` result in the OSError being swallowed and the walk continuing identically \u2014 there is no code path where these two produce different dirs/files/roots. Hence no test (unit or otherwise) can observe a difference, making this mutant equivalent.",
+    "file_hash": "782a1c7a8e4e33ddcc4cd7aa856f7cf951fef62b",
     "mutant_name": "gpc_init.detector.x__walk__mutmut_1",
     "source_file": "gpc_init/detector.py"
   },
   {
-    "equivalent_reason": "Path.walk's on_error callback (like os.walk's onerror) is invoked purely for its side effect when an OS error occurs while scanning a directory during the walk; its return value is never read, stored, or used to influence control flow by the walk implementation (confirmed via Path.walk docs in the project's Python 3.14 venv). Since the lambda's return value (None vs 0) is discarded either way, there is no way for any test \u2014 regardless of whether an error occurs during the walk \u2014 to observe a difference between the two mutants. The change is behaviorally unobservable.",
-    "file_hash": "3fa6428807aa536b04adcfd8f7702a7aeada4262",
+    "equivalent_reason": "Path.walk() delegates to os.walk(), passing on_error through as the onerror callback. Both CPython's os.walk and pathlib.Path.walk only invoke this callback for its side effects (e.g. logging or re-raising) when an OSError occurs while scanning a directory; the callback's return value is never read or used to alter control flow. Since neither lambda raises or has any other side effect, and both return values (None vs 0) are discarded identically, there is no observable difference in behavior between the original and mutated code under any input, including error conditions. No test can distinguish them.",
+    "file_hash": "782a1c7a8e4e33ddcc4cd7aa856f7cf951fef62b",
     "mutant_name": "gpc_init.detector.x__walk__mutmut_2",
     "source_file": "gpc_init/detector.py"
+  },
+  {
+    "equivalent_reason": "Python's text codec lookup (used internally by str.encode/decode and Path.read_text) normalizes encoding names by lowercasing and collapsing separators before resolving the codec (see encodings.normalize_encoding / codecs.lookup). \"utf-8\" and \"UTF-8\" therefore resolve to the identical codec and produce byte-for-byte identical decoded output for any file content. No observable behavior differs, so no test \u2014 however constructed \u2014 can distinguish the original from the mutant. Verified empirically: decoding the same bytes with encoding=\"utf-8\" vs encoding=\"UTF-8\" gives identical results.",
+    "file_hash": "782a1c7a8e4e33ddcc4cd7aa856f7cf951fef62b",
+    "mutant_name": "gpc_init.detector.x__has_sphinx_conf__mutmut_19",
+    "source_file": "gpc_init/detector.py"
+  },
+  {
+    "equivalent_reason": "`non_repo` is only ever consumed by `_deep_merge_top_level(result, non_repo)`, and that function independently guards against the \"repos\" key itself: `for key, value in higher.items(): if key == \"repos\": continue`. So even when the mutant lets \"repos\" slip into `non_repo`, `_deep_merge_top_level` drops it again before it can affect `result`. The two exclusions are redundant with each other by construction, so no input can make the mutant's output differ from the original's. Verified empirically: applied the mutation locally and ran merge_presets with overlapping \"repos\" entries across two layers (plus a \"recommended\" key) \u2014 output was byte-identical to the unmutated version. No test can distinguish this mutant from the original.",
+    "file_hash": "a92ddfa1689d36f4ac7779e10c914cd0daa233be",
+    "mutant_name": "gpc_init.merger.x_merge_presets__mutmut_21",
+    "source_file": "gpc_init/merger.py"
+  },
+  {
+    "equivalent_reason": "This has no observable effect because `_deep_merge_top_level` (the function `non_repo` is passed into) already unconditionally skips the \"repos\" key itself: its loop does `if key == \"repos\": continue` before ever writing into the merged result, regardless of what the caller passed in. So whether or not \"repos\" survives the `non_repo` filtering is irrelevant \u2014 `_deep_merge_top_level` will drop it either way, and the actual repos merging is handled entirely by the separate `merged_repos`/`_merge_repos` logic. I verified this empirically: reimplementing merge_presets with the mutated set literal (`{\"REPOS\", ...}`) and comparing its output against the real `merge_presets` on inputs where layers contain both 'repos' and other keys produces byte-identical results. Since no test can observe a behavioral difference, the mutant is equivalent and the exclusion of 'repos' in `non_repo` is redundant/dead code relative to `_deep_merge_top_level`'s own guard.",
+    "file_hash": "a92ddfa1689d36f4ac7779e10c914cd0daa233be",
+    "mutant_name": "gpc_init.merger.x_merge_presets__mutmut_22",
+    "source_file": "gpc_init/merger.py"
+  },
+  {
+    "equivalent_reason": "`_run` is a private module-level helper with exactly one call site in the entire codebase: `_dispatch()` (line 90), which always passes `recommended=recommended` explicitly as a keyword argument. No test (nor any other production code) ever invokes `_run` without supplying `recommended` explicitly \u2014 tests only drive the CLI through `app`/`entry_point` via Typer's CliRunner, which flows through `_dispatch` and always supplies the argument. Since the default value of `recommended` is never actually used at the only call site, changing it from `False` to `True` has no observable effect on program behavior, making this mutant equivalent (dead default value).",
+    "file_hash": "b25aab317e980beb62e87dec45aa3cae0d61b042",
+    "mutant_name": "gpc_init.cli.x__run__mutmut_1",
+    "source_file": "gpc_init/cli.py"
+  },
+  {
+    "equivalent_reason": "`_dispatch` has exactly one call site in the codebase (in the CLI's `_generate_config`/command flow around line 385-393 of gpc_init/cli.py), and that call always passes `recommended=recommended` explicitly, never relying on the default. No test calls `_dispatch` directly either \u2014 tests only exercise it indirectly through the Typer `app`, which always goes through the same single call site with an explicit `recommended` argument. Since the default value is never actually consulted at runtime, flipping it from `False` to `True` cannot change any observable behavior, so no test can distinguish the mutant from the original.",
+    "file_hash": "b25aab317e980beb62e87dec45aa3cae0d61b042",
+    "mutant_name": "gpc_init.cli.x__dispatch__mutmut_1",
+    "source_file": "gpc_init/cli.py"
+  },
+  {
+    "equivalent_reason": "`_handle_existing_file` has exactly one call site in the entire codebase (inside `_dispatch` at gpc_init/cli.py:81), and that call always passes `recommended=recommended` explicitly \u2014 never relying on the default. No test (including the existing `test_recommended_flag_forwarded_to_handle_existing_file` and `test_recommended_forwarded_to_generate_content_in_handle_existing_file`) calls `_handle_existing_file` directly either; they all go through the public CLI/`_dispatch`, which always supplies the argument explicitly. Since the default value of `recommended` can never be reached by any real invocation path, changing it from False to True is unobservable and the mutant is equivalent (dead default).",
+    "file_hash": "b25aab317e980beb62e87dec45aa3cae0d61b042",
+    "mutant_name": "gpc_init.cli.x__handle_existing_file__mutmut_1",
+    "source_file": "gpc_init/cli.py"
+  },
+  {
+    "equivalent_reason": "`increase_indent` is only ever called by PyYAML's own `Emitter` internals (via `yaml.dump`), never directly by gpc_init code or its tests. Inspection of `.venv/lib/python3.14/site-packages/yaml/emitter.py` shows every call site (`increase_indent(flow=True)` at lines 267/277/313, and `increase_indent(flow=False, indentless=...)` / `increase_indent(flow=False)` at lines 370/389) always passes `flow=` explicitly as a keyword argument \u2014 the default value is never relied upon by any caller. Additionally, the override hardcodes `indentless=False` in the `super().increase_indent(...)` call regardless of the caller-supplied `indentless`, but that's unrelated to this particular mutation. Since no code path in PyYAML or gpc_init ever invokes `increase_indent()` without explicitly supplying `flow`, changing the parameter's default from `False` to `True` cannot change any observable output of `render_yaml`, so no test (existing or newly written) can distinguish the mutant from the original.",
+    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
+    "mutant_name": "gpc_init.renderer.x\u01c1_PrecommitDumper\u01c1increase_indent__mutmut_1",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "The `indentless` parameter is marked `# noqa: ARG002` (unused argument) and the method body ignores whatever value is passed in, always calling `super().increase_indent(flow=flow, indentless=False)` with a hardcoded `False`. PyYAML's internal Dumper machinery always invokes `increase_indent` with explicit arguments rather than relying on Python's default-value mechanism, so the default is never actually used by any caller. Changing the default from False to True therefore cannot change any observable output of the YAML dumper \u2014 there is no input or call path that distinguishes the original from the mutant, making this an equivalent mutant that no test could meaningfully kill.",
+    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
+    "mutant_name": "gpc_init.renderer.x\u01c1_PrecommitDumper\u01c1increase_indent__mutmut_2",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "The `flow` argument to PyYAML's `Emitter.increase_indent` only changes behavior in the branch `if self.indent is None: self.indent = self.best_indent if flow else 0` \u2014 i.e. it only matters for the very first `increase_indent` call of the whole emission, before `self.indent` is set for the first time. For every subsequent call the `elif not indentless` branch is taken and `flow` is irrelevant. `render_yaml` always calls `yaml.dump(merged_dict, ...)` with `merged_dict: dict[str, Any]` as the document root. For any non-empty root dict, the very first `increase_indent` call comes from `expect_block_mapping`, which calls `self.increase_indent(flow=False)` explicitly (hardcoded in PyYAML's emitter, unrelated to the override) \u2014 so the override's `flow` parameter is already `False` on both the original and mutated code paths, producing identical output. For the one edge case where the root dict is empty (`{}`), PyYAML instead takes the flow-mapping path (`increase_indent(flow=True)`) while `self.indent is None`, which is where original and mutant diverge internally (`best_indent` vs `0`) \u2014 but since the mapping is empty, no indented content is ever written for that node, so the divergence in the internal `self.indent` value never surfaces in the emitted text (verified empirically: `render_yaml({})` produces `'--- {}\\n'` under both the original and the hand-rolled mutant implementation, and a more complex document containing nested `[]`/`{}` values plus nested lists produced byte-identical output under both implementations). Since `render_yaml` is the sole caller/consumer of this Dumper and always passes a dict, there is no reachable input for which the mutation changes observable output; it is behaviorally equivalent.",
+    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
+    "mutant_name": "gpc_init.renderer.x\u01c1_PrecommitDumper\u01c1increase_indent__mutmut_5",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "The base class `increase_indent` (from PyYAML's `Emitter`/`Dumper`) has signature `increase_indent(self, flow=False, indentless=False)` \u2014 its default value for `indentless` is already `False`. The original override's entire purpose is to always force `indentless=False` regardless of the caller's `indentless` argument (a well-known PyYAML trick to indent list items under mapping keys). Omitting the explicit `indentless=False` keyword and relying on the base class's own default produces exactly the same call: `increase_indent(flow=flow, indentless=False)`. No observable difference in output can occur, so no test (property-based, snapshot, or otherwise) can distinguish the mutant from the original \u2014 it is behaviorally equivalent.",
+    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
+    "mutant_name": "gpc_init.renderer.x\u01c1_PrecommitDumper\u01c1increase_indent__mutmut_6",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "PyYAML's `yaml.dumper.Dumper.__init__` (and by inheritance `_PrecommitDumper`) already defaults `default_flow_style=False` (confirmed via `inspect.signature` on the installed PyYAML 6.0.3). Passing `default_flow_style=False` explicitly is therefore a no-op equivalent to omitting it entirely. Verified empirically: calling `yaml.dump` with and without the explicit argument on representative pre-commit-config-like data produces byte-for-byte identical output. No test, however constructed, can observe a behavioral difference, so this mutant is equivalent and cannot be killed by any assertion on `render_yaml`'s output.",
+    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
+    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_10",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "`_PrecommitDumper` registers `_semantic_dict_representer` as the representer for `dict`, and that function always builds its own explicitly ordered `list[(k, v), ...]` and passes it to `dumper.represent_mapping(...)`. PyYAML's `represent_mapping` only applies its internal `sort_keys` sorting when the passed mapping has an `.items()` attribute (`if hasattr(mapping, \"items\"): if self.sort_keys: mapping = sorted(mapping.items())`); since a plain list of tuples has no `.items()`, that branch never executes, so `self.sort_keys` is never consulted for any mapping produced through this custom representer \u2014 including the top-level dict and every nested dict (repo entries, hook entries), all of which are plain `dict` and thus routed through the same representer. I verified empirically that `yaml.dump(d, Dumper=_PrecommitDumper, ..., sort_keys=False, ...)` and the same call without `sort_keys` produce byte-identical output for a dict containing out-of-order/unsorted keys at both top level and nested hook level. Therefore `sort_keys=False` is dead configuration in this code path and no test (however crafted) can distinguish its presence from its absence \u2014 the mutant is behaviorally equivalent.",
+    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
+    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_11",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "`render_yaml` registers a custom representer (`_semantic_dict_representer`) for the `dict` type on `_PrecommitDumper`. This representer always computes its own explicit key ordering (priority-key list plus alphabetically-sorted remainder) and calls `dumper.represent_mapping(tag, [(k, data[k]) for k in ordered])`, passing a plain `list` of tuples rather than a dict. PyYAML's `BaseRepresenter.represent_mapping` only applies its internal `sort_keys`-driven sort when the passed `mapping` argument has an `.items()` method (i.e., is still a dict-like object); since a list of tuples has no `.items()`, that internal sort step is always skipped regardless of the `sort_keys` flag passed to `yaml.dump`. Every dict value in `merged_dict` (including nested ones) is a plain `dict`, so every mapping node in the document is produced via this custom representer. I verified empirically that `yaml.dump(d, Dumper=_PrecommitDumper, sort_keys=False, ...)` and the same call with `sort_keys=True` produce byte-identical output for representative nested dict structures (including keys not in the priority lists). Since `render_yaml`'s only callers (`gpc_init/generator.py` and the test suite) always pass plain `dict` instances, no input can make `sort_keys` observably affect the output, so the mutant is behaviorally equivalent to the original.",
+    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
+    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_16",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "Python's codec lookup machinery (codecs.lookup) normalizes encoding names by lowercasing and treating '-'/'_' interchangeably, so \"utf-8\" and \"UTF-8\" resolve to the identical codec object (verified: codecs.lookup('utf-8') == codecs.lookup('UTF-8') is True). The file is opened with an encoding that behaves identically for every possible input, so no observable difference in behavior exists and no test can distinguish the mutant from the original.",
+    "file_hash": "f1564a8bca9e4081fa32c06d9eebe775b48de82f",
+    "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_6",
+    "source_file": "gpc_init/loader.py"
+  },
+  {
+    "equivalent_reason": "The default value supplied to .get(\"repos\", ...) is only used when the \"repos\" key is absent from merged. In that scenario the original returns [] and the mutant returns None, but both are falsy under Python's truthiness rules, so the very next line `if not repos: return dict(merged)` takes the identical branch in both cases. `repos` is never referenced again after that guard (the subsequent `for repo in repos` loop is unreachable whenever the key was missing), so there is no input for which the mutant produces a different observable result than the original. The mutation is behaviorally equivalent and cannot be killed by any test.",
+    "file_hash": "a92ddfa1689d36f4ac7779e10c914cd0daa233be",
+    "mutant_name": "gpc_init.merger.x_filter_by_category__mutmut_3",
+    "source_file": "gpc_init/merger.py"
+  },
+  {
+    "equivalent_reason": "The only use of `repos` immediately after the .get() call is `if not repos: return dict(merged)`. Both None and [] are falsy, so this guard behaves identically for a missing \"repos\" key regardless of which default is used. If the \"repos\" key is present, the default argument is never consulted at all. Since `repos` is only ever iterated later inside the branch where it is already known to be truthy (and thus a real list in both mutant and original, because \"repos\" must be present and non-empty for that path to be reached), there is no reachable input for which the mutant's behavior differs from the original's. Hence no test can distinguish them \u2014 the mutant is equivalent.",
+    "file_hash": "a92ddfa1689d36f4ac7779e10c914cd0daa233be",
+    "mutant_name": "gpc_init.merger.x_filter_by_category__mutmut_5",
+    "source_file": "gpc_init/merger.py"
+  },
+  {
+    "equivalent_reason": "Python's codec name lookup (via the codecs module, used internally by open/io.TextIOWrapper) is case-insensitive and also normalizes hyphens/underscores. codecs.lookup(\"utf-8\").name == codecs.lookup(\"UTF-8\").name == \"utf-8\", so the two encoding strings resolve to the exact same codec object. There is no difference in decoding behavior, error handling, or any other observable output between the original and mutated code \u2014 no test could ever distinguish them, since the runtime behavior is byte-for-byte identical.",
+    "file_hash": "7ecac342b4130befd8c03813528f63c2b1d6e909",
+    "mutant_name": "gpc_init.catalog.x__load_metadata_file__mutmut_4",
+    "source_file": "gpc_init/catalog.py"
+  },
+  {
+    "equivalent_reason": "Python's codec name lookup (codecs.lookup) is case-insensitive and normalizes hyphens/underscores, so \"utf-8\" and \"UTF-8\" resolve to the exact same CodecInfo object (verified: codecs.lookup(\"utf-8\") == codecs.lookup(\"UTF-8\") is True). Reading, decoding, and any resulting yaml.safe_load output are byte-for-byte identical regardless of which casing is used. No test, however constructed, can observe a behavioral difference between the original and mutated line, making this mutant equivalent.",
+    "file_hash": "f1564a8bca9e4081fa32c06d9eebe775b48de82f",
+    "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_5",
+    "source_file": "gpc_init/loader.py"
   }
 ]

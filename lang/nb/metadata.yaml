@@ -1,0 +1,9 @@
+---
+fullname: Jupyter Notebooks
+icon: "📓"
+extensions:
+  - .ipynb
+filenames: []
+aliases:
+  - jupyter
+  - notebook

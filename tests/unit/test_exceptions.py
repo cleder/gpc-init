@@ -5,6 +5,7 @@ from gpc_init.exceptions import (
     TargetFileExistsError,
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
+    UnsupportedProfileError,
 )
 
 
@@ -58,6 +59,29 @@ class TestUnsupportedLanguageError:
         exc = UnsupportedLanguageError("cobol", ["python", "javascript"])
         msg = str(exc)
         assert "javascript, python" in msg or "python, javascript" in msg
+
+
+class TestUnsupportedProfileError:
+    def test_profile_attribute(self) -> None:
+        exc = UnsupportedProfileError("bogus", ["experimental", "legacy"])
+        assert exc.profile == "bogus"
+
+    def test_supported_attribute(self) -> None:
+        supported = ["experimental", "legacy"]
+        exc = UnsupportedProfileError("bogus", supported)
+        assert exc.supported == supported
+
+    def test_message_includes_profile(self) -> None:
+        assert "bogus" in str(UnsupportedProfileError("bogus", ["legacy"]))
+
+    def test_message_lists_supported_sorted(self) -> None:
+        exc = UnsupportedProfileError("bogus", ["legacy", "experimental"])
+        msg = str(exc)
+        assert msg.index("experimental") < msg.index("legacy")  # sorted order
+
+    def test_message_lists_supported_with_comma_separator(self) -> None:
+        exc = UnsupportedProfileError("bogus", ["legacy", "experimental"])
+        assert "experimental, legacy" in str(exc)
 
 
 class TestTargetFileExistsError:

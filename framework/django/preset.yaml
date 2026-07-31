@@ -22,7 +22,7 @@ repos:
       - id: django-urlconfchecks
         description: "a pre-commit for type checking the urls and associated views"
   - repo: https://github.com/browniebroke/django-codemod
-    rev: v2.4.6
+    rev: v2.4.7
     hooks:
       - id: djcodemod
         description: "A tool to automatically fix Django deprecations."

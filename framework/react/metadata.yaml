@@ -1,0 +1,5 @@
+---
+fullname: React
+icon: "⚛️"
+detect:
+  - package_json_dep: react

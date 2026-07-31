@@ -11,15 +11,19 @@ repos:
       - id: nbqa-mypy
         additional_dependencies: [mypy]
         description: "Run 'mypy' on a Jupyter Notebook"
-      - id: nbqa-ruff
+      - id: nbqa-ruff-check
         additional_dependencies: [ruff]
         description: "Run 'ruff check' on a Jupyter Notebook"
+      - id: nbqa-ruff-format
+        additional_dependencies: [ruff]
+        description: "Run 'ruff format' on a Jupyter Notebook"
       - id: nbqa-check-ast
         description: "Run 'check-ast' on a Jupyter Notebook"
+        category: legacy
       - id: nbqa-isort
         additional_dependencies: [isort]
         description: "Run 'isort' on a Jupyter Notebook"
+        category: legacy
       - id: nbqa-pyupgrade
         description: "Run 'pyupgrade' on a Jupyter Notebook"
-      - id: nbqa-ruff-format
-        description: "Run 'ruff format' on a Jupyter Notebook"
+        category: legacy

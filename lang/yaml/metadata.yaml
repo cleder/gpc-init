@@ -1,0 +1,8 @@
+---
+fullname: YAML
+icon: "📄"
+extensions:
+  - .yaml
+  - .yml
+filenames: []
+aliases: []

@@ -5,7 +5,7 @@ import importlib.metadata
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated, Any, NamedTuple
+from typing import Annotated
 
 import typer
 
@@ -17,101 +17,18 @@ from gpc_init.exceptions import (
     PresetParseError,
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
+    UnsupportedProfileError,
 )
-from gpc_init.loader import (
-    load_common_preset,
-    load_framework_preset,
-    load_language_preset,
-)
-from gpc_init.merger import merge_presets
-from gpc_init.renderer import render_yaml
+from gpc_init.generator import generate
 from gpc_init.resolver import (
-    deduplicate_preserving_order,
-    expand_recommendations,
+    SELECTABLE_PROFILES,
     get_recommendations_info,
     get_supported_frameworks,
     get_supported_languages,
     normalize_framework,
     normalize_lang,
-    validate_frameworks,
-    validate_langs,
 )
-
-
-class _GenerationResult(NamedTuple):
-    yaml_content: str
-    langs: list[str]
-    frameworks: list[str]
-    lang_presets: list[dict[str, Any]]
-    fw_presets: list[dict[str, Any]]
-
-
-def _generate_content(
-    langs: list[str],
-    frameworks: list[str],
-    base_dir: Path | None,
-    *,
-    recommended: bool = False,
-) -> _GenerationResult:
-    """
-    Validate, load, merge, render.
-
-    Returns (yaml_content, final_langs, final_frameworks, lang_presets, fw_presets).
-    When recommended=True the lang/framework lists are expanded with every
-    recommendation from the selected presets before merging.
-    """
-    if base_dir is not None and not (base_dir / "lang").is_dir():
-        typer.echo(f"Error: '{base_dir}' must contain a 'lang' subdirectory.", err=True)
-        raise typer.Exit(code=1)
-
-    try:
-        validate_langs(langs, base_dir=base_dir)
-        validate_frameworks(frameworks, base_dir=base_dir)
-
-        common = load_common_preset(base_dir=base_dir)
-        lang_presets = [
-            load_language_preset(lang_id, base_dir=base_dir) for lang_id in langs
-        ]
-        fw_presets = [
-            load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
-        ]
-
-        if recommended:
-            langs, frameworks = expand_recommendations(
-                langs=langs,
-                frameworks=frameworks,
-                lang_presets=lang_presets,
-                fw_presets=fw_presets,
-                supported_langs=get_supported_languages(base_dir),
-                supported_frameworks=get_supported_frameworks(base_dir),
-            )
-            lang_presets = [
-                load_language_preset(lang_id, base_dir=base_dir) for lang_id in langs
-            ]
-            fw_presets = [
-                load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
-            ]
-
-        merged = merge_presets(common, lang_presets, fw_presets)
-        return _GenerationResult(
-            render_yaml(merged), langs, frameworks, lang_presets, fw_presets
-        )
-
-    except UnsupportedLanguageError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except UnsupportedFrameworkError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except PresetNotFoundError as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    except PresetParseError as exc:
-        typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
+from gpc_init.util import deduplicate_preserving_order
 
 
 def _run(
@@ -121,10 +38,11 @@ def _run(
     base_dir: Path | None,
     *,
     recommended: bool = False,
+    profiles: tuple[str, ...] = (),
 ) -> None:
     """Generate and write the preset config to target."""
-    content, langs, frameworks, lang_presets, fw_presets = _generate_content(
-        langs, frameworks, base_dir, recommended=recommended
+    content, langs, frameworks, lang_presets, fw_presets = generate(
+        langs, frameworks, base_dir, recommended=recommended, profiles=profiles
     )
 
     overwritten = target.exists()
@@ -142,7 +60,10 @@ def _run(
     lang_str = ", ".join(langs)
     fw_str = (", ".join(frameworks)) if frameworks else "none"
     action = "Overwrote" if overwritten else "Generated"
-    typer.echo(f"{action} {target} with languages: {lang_str} and frameworks: {fw_str}")
+    msg = f"{action} {target} with languages: {lang_str} and frameworks: {fw_str}"
+    if profiles:
+        msg += f" and profiles: {', '.join(profiles)}"
+    typer.echo(msg)
 
 
 def _dispatch(
@@ -153,23 +74,40 @@ def _dispatch(
     *,
     force: bool,
     recommended: bool = False,
+    profiles: tuple[str, ...] = (),
 ) -> None:
     """Route to diff display or write depending on whether target exists."""
     if target.exists() and not force:
         _handle_existing_file(
-            langs, frameworks, target, base_dir, recommended=recommended
+            langs,
+            frameworks,
+            target,
+            base_dir,
+            recommended=recommended,
+            profiles=profiles,
         )
     else:
-        _run(langs, frameworks, target, base_dir, recommended=recommended)
+        _run(
+            langs,
+            frameworks,
+            target,
+            base_dir,
+            recommended=recommended,
+            profiles=profiles,
+        )
 
 
-def _build_force_command(langs: list[str], frameworks: list[str]) -> str:
+def _build_force_command(
+    langs: list[str], frameworks: list[str], profiles: tuple[str, ...] = ()
+) -> str:
     """Return a ready-to-run pc-init command string that includes --force."""
     parts = ["pc-init"]
     if langs:
         parts.append(f"--lang={','.join(langs)}")
     if frameworks:
         parts.append(f"--framework={','.join(frameworks)}")
+    if profiles:
+        parts.append(f"--profile={','.join(profiles)}")
     parts.append("--force")
     return " ".join(parts)
 
@@ -181,10 +119,11 @@ def _handle_existing_file(
     base_dir: Path | None,
     *,
     recommended: bool = False,
+    profiles: tuple[str, ...] = (),
 ) -> None:
     """Show unified diff vs existing file. Always raises typer.Exit."""
-    content, *_ = _generate_content(
-        langs, frameworks, base_dir, recommended=recommended
+    content, *_ = generate(
+        langs, frameworks, base_dir, recommended=recommended, profiles=profiles
     )
     try:
         existing = target.read_text(encoding="utf-8")
@@ -201,7 +140,7 @@ def _handle_existing_file(
     )
     if diff_lines:
         typer.echo("".join(diff_lines))
-        cmd = _build_force_command(langs, frameworks)
+        cmd = _build_force_command(langs, frameworks, profiles)
         typer.echo(
             f"\nRun with --force to overwrite '{target}'.\n  Try: {cmd}", err=True
         )
@@ -256,9 +195,11 @@ def _apply_detection(
 ) -> tuple[list[str], list[str]]:
     """Run auto-detection, print results, and merge with explicit flags."""
     repo_dir = Path.cwd()
-    detected_langs = detect_languages(repo_dir, get_supported_languages(base_dir))
+    detected_langs = detect_languages(
+        repo_dir, get_supported_languages(base_dir), base_dir=base_dir
+    )
     detected_frameworks = detect_frameworks(
-        repo_dir, get_supported_frameworks(base_dir)
+        repo_dir, get_supported_frameworks(base_dir), base_dir=base_dir
     )
     if detected_langs:
         typer.echo(f"Detected languages: {', '.join(detected_langs)}")
@@ -299,10 +240,15 @@ def _expand_comma_separated(raw: list[str] | None) -> list[str]:
     ]
 
 
-def _normalize_langs(raw_langs: list[str] | None) -> list[str]:
+def _normalize_langs(
+    raw_langs: list[str] | None, base_dir: Path | None = None
+) -> list[str]:
     """Lowercase, resolve aliases, and deduplicate language values."""
     return deduplicate_preserving_order(
-        [normalize_lang(v) for v in _expand_comma_separated(raw_langs)]
+        [
+            normalize_lang(v, base_dir=base_dir)
+            for v in _expand_comma_separated(raw_langs)
+        ]
     )
 
 
@@ -313,11 +259,24 @@ def _normalize_frameworks(raw_frameworks: list[str] | None) -> list[str]:
     )
 
 
+def _normalize_profiles(raw_profiles: list[str] | None) -> list[str]:
+    """Lowercase and deduplicate profile (hook category) values."""
+    return deduplicate_preserving_order(
+        [v.strip().lower() for v in _expand_comma_separated(raw_profiles)]
+    )
+
+
 _PRESETS_HELP = (
     "Preset catalog to use. Accepts a local directory path or a git "
     "repository URL (https://, git@, git://, ssh://). The directory / "
     "repo root must contain lang/ and framework/ subdirectories. "
     "Defaults to the bundled presets."
+)
+
+_PROFILE_HELP = (
+    "Hook profile to include on top of the default preset baseline "
+    "(repeatable, or comma-delimited: --profile=legacy,experimental). "
+    "preset hooks are always included. Supported: legacy, experimental."
 )
 
 
@@ -381,6 +340,10 @@ def main(  # noqa: PLR0917
             ),
         ),
     ] = False,
+    profile: Annotated[
+        list[str] | None,
+        typer.Option("--profile", help=_PROFILE_HELP),
+    ] = None,
     presets: Annotated[
         str | None,
         typer.Option("--presets", help=_PRESETS_HELP),
@@ -400,7 +363,8 @@ def main(  # noqa: PLR0917
 
     At least one --lang value is required (or use --detect).
     --framework values are optional. Use --force to overwrite an existing config file.
-    Run `pc-init list` to see all available languages and frameworks.
+    Use --profile to include legacy or experimental hooks on top of the default
+    preset baseline. Run `pc-init list` to see all available languages and frameworks.
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -411,19 +375,33 @@ def main(  # noqa: PLR0917
 
         _require_lang_or_exit(lang, framework, recommended=recommended, detect=detect)
 
-        langs = _normalize_langs(lang)
+        langs = _normalize_langs(lang, base_dir=base_dir)
         frameworks = _normalize_frameworks(framework)
+        profiles = tuple(_normalize_profiles(profile))
 
         target = Path(output)
 
-        _dispatch(
-            langs,
-            frameworks,
-            target,
-            base_dir,
-            force=force,
-            recommended=recommended,
-        )
+        try:
+            _dispatch(
+                langs,
+                frameworks,
+                target,
+                base_dir,
+                force=force,
+                recommended=recommended,
+                profiles=profiles,
+            )
+        except (
+            UnsupportedLanguageError,
+            UnsupportedFrameworkError,
+            UnsupportedProfileError,
+            PresetNotFoundError,
+        ) as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        except PresetParseError as exc:
+            typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
 
 
 @app.command("list")
@@ -442,6 +420,8 @@ def list_presets(
     typer.echo("  " + ", ".join(langs))
     typer.echo("\nFrameworks:")
     typer.echo("  " + ", ".join(frameworks))
+    typer.echo("\nProfiles (opt in with --profile; preset is always included):")
+    typer.echo("  " + ", ".join(sorted(SELECTABLE_PROFILES)))
 
 
 def entry_point() -> None:

@@ -1,0 +1,8 @@
+---
+fullname: Markdown
+icon: "📝"
+extensions:
+  - .md
+  - .markdown
+filenames: []
+aliases: []
