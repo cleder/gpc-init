@@ -175,3 +175,10 @@ repos:
         args: [--fix]
         description: Check if __all__ is properly defined in __init__.py files and updates it if necessary.
         category: experimental
+  - repo: https://github.com/15r10nk/matchify
+    rev: v0.0.1
+    hooks:
+      - id: matchify
+        description: "Automatically convert if-else statements to match-case statements in Python 3.10+"
+      - id: matchify-check
+        description: "Check if if-else statements can be converted to match-case statements in Python 3.10+"
