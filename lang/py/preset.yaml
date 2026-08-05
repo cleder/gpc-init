@@ -29,12 +29,12 @@ repos:
       - id: blacken-docs
         description: "Run `black` on python code blocks in documentation files"
   - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: 1.2.0.dev3
+    rev: 1.2.0
     hooks:
       - id: pyrefly-check
         description: "Run `pyrefly check` for Python type checking."
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.65
+    rev: v0.0.66
     hooks:
       - id: ty
         description: "Run 'ty' for extremely fast Python type checking"
@@ -134,7 +134,7 @@ repos:
       - id: deptry
         description: "deptry is a command line tool to check for issues with dependencies in a Python project, such as unused or missing dependencies."
   - repo: https://github.com/shelkesays/safelint
-    rev: v2.11.0rc1  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
+    rev: v2.11.0  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
     hooks:
       - id: safelint
         # Required in v2.0.0+, pick the line for the language(s) your repo lints:
@@ -176,7 +176,7 @@ repos:
         description: Check if __all__ is properly defined in __init__.py files and updates it if necessary.
         category: experimental
   - repo: https://github.com/15r10nk/matchify
-    rev: v0.0.1
+    rev: v0.1.0
     hooks:
       - id: matchify
         description: "Automatically convert if-else statements to match-case statements in Python 3.10+"

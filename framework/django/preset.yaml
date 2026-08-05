@@ -33,7 +33,7 @@ repos:
         args: ["run", "--deprecated-in", "3.0"]
         description: "Automatically upgrade your Django project code."
   - repo: https://github.com/djlint/djLint
-    rev: v1.43.1
+    rev: v1.44.0
     hooks:
       - id: djlint-reformat-django
         description: "djLint formatting for Django"

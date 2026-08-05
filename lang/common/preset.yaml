@@ -76,7 +76,7 @@ repos:
       - id: pre-commit-sort
         description: "Sort .pre-commit-config.yaml & .pre-commit-hooks.yaml"
   - repo: https://github.com/crate-ci/typos
-    rev: v1.48.0
+    rev: v1.49.0
     hooks:
       - id: typos
         description: "Source code spell checker, binary install"

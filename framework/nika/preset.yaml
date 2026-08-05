@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/supernovae-st/nika
-    rev: v0.106.1
+    rev: v0.107.2
     hooks:
       - id: nika-check
         name: nika check

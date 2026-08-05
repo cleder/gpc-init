@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/commit-check/commit-check
-    rev: v2.12.2
+    rev: v2.13.1
     hooks:
       - id: check-message
         args:
@@ -34,7 +34,7 @@ repos:
       - id: gitlint-ci
         description: "gitlint"
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.28.0
+    rev: v1.29.0
     hooks:
       - id: zizmor
         description: "Find security issues in GitHub Actions CI/CD setups"
