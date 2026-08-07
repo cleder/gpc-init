@@ -1,0 +1,9 @@
+---
+fullname: Agent Skills
+icon: "🧩"
+detect:
+  - glob: "SKILL.md"
+  - file_exists: .claude-plugin/plugin.json
+  - file_exists: .claude-plugin/marketplace.json
+  - dir_exists: .claude/agents
+  - dir_exists: .claude/commands

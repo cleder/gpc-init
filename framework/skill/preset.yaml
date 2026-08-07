@@ -1,0 +1,22 @@
+---
+repos:
+  - repo: https://github.com/bitflight-devops/skilllint
+    rev: v1.7.0
+    hooks:
+      - id: skilllint
+        description: >-
+          Validate staged agent plugin files (skills, agents, commands, hooks, .mdc rules,
+          plugin/hooks/marketplace JSON) under typical layout roots. Uses `skilllint check`
+          with stable CI-style output (`--no-color`). Append hook `args` for `--platform`,
+          `--verbose`, `--show-summary`, `--show-progress`, `--filter`, `--filter-type`, etc.
+      - id: skilllint-fix
+        description: >-
+          Same file selection as `skilllint`, but apply auto-fixes where supported. Skips
+          fix application for paths containing `failing-examples/` (skilllint also guards
+          fixtures). Review `git diff` before committing.
+      - id: skilllint-by-file-type
+        description: >-
+          Runs on all staged markdown, JSON, and YAML (pre-commit file tags). Use when your
+          layout is non-standard; you must `exclude` paths skilllint does not understand
+          (e.g. package.json, docker-compose.yml) or commits will fail with “Cannot determine
+          file type”.

@@ -96,10 +96,10 @@ pc-init list
 
 ```text
 Languages:
-  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, r, rb, rs, sh, sql, swift, tf, toml, ts, yaml
+  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, pyx, r, rb, rs, rst, sh, sql, swift, tex, tf, toml, ts, yaml
 
 Frameworks:
-  ansible, behave, django, git, k8s, react, sphinx
+  ansible, behave, django, git, k8s, nika, react, skill, sphinx
 
 Profiles (opt in with --profile; preset is always included):
   experimental, legacy
@@ -143,8 +143,11 @@ pc-init list --presets https://github.com/org/my-presets
 | `env` | Env / Dotenv Files |
 | `groovy` | Groovy |
 | `lua` | Lua |
+| `pyx` | Cython |
+| `rst` | reStructuredText |
+| `tex` | LaTeX |
 
-Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, and `kotlin` are also accepted.
+Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, `kotlin`, and `cython` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -158,6 +161,7 @@ Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`,
 | `ansible` | Ansible |
 | `behave` | Behave BDD for Python |
 | `nika` | Nika AI workflow auditing |
+| `skill` | Agent skill & plugin linting |
 
 ## Auto-detecting languages and frameworks
 
@@ -211,6 +215,9 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg` | `img` |
 | `.lua` | `lua` |
 | `.groovy`, `.gvy`, `.gradle` | `groovy` |
+| `.pyx` | `pyx` |
+| `.rst`, `.rest` | `rst` |
+| `.tex`, `.sty`, `.cls` | `tex` |
 | `.env`, `.env.*` (filename) | `env` |
 | `Dockerfile` (filename) | `docker` |
 | `Makefile` (filename) | `make` |
@@ -228,6 +235,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `ansible.cfg` at the repo root | `ansible` |
 | `features/steps/` directory, or `behave.ini`/`.behaverc` at the repo root | `behave` |
 | Any `*.nika.yaml` file | `nika` |
+| Any `SKILL.md` file, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, or a `.claude/agents`/`.claude/commands` directory | `skill` |
 
 ## Language suggestions for frameworks
 
