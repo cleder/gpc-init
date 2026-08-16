@@ -4,7 +4,7 @@ recommended:
     - yaml
 repos:
   - repo: https://github.com/ansible/ansible-lint
-    rev: v26.6.0
+    rev: v26.8.0
     hooks:
       - id: ansible-lint
         description: "This hook runs ansible-lint."

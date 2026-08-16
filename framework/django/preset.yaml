@@ -22,7 +22,7 @@ repos:
       - id: django-urlconfchecks
         description: "a pre-commit for type checking the urls and associated views"
   - repo: https://github.com/browniebroke/django-codemod
-    rev: v2.4.7
+    rev: v2.5.0
     hooks:
       - id: djcodemod
         description: "A tool to automatically fix Django deprecations."
@@ -33,7 +33,7 @@ repos:
         args: ["run", "--deprecated-in", "3.0"]
         description: "Automatically upgrade your Django project code."
   - repo: https://github.com/djlint/djLint
-    rev: v1.44.0
+    rev: v1.44.2
     hooks:
       - id: djlint-reformat-django
         description: "djLint formatting for Django"

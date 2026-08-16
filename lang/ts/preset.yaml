@@ -1,13 +1,13 @@
 ---
 repos:
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.5.7
+    rev: v2.5.8
     hooks:
       - id: biome-check
         additional_dependencies: ["@biomejs/biome@1.9.4"]
         description: "Biome's pre-commit hooks."
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.8.0
+    rev: v10.8.1
     hooks:
       - id: eslint
         files: \.[jt]sx?$
