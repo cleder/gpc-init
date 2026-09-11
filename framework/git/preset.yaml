@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/commit-check/commit-check
-    rev: v2.15.0
+    rev: v2.17.0
     hooks:
       - id: check-message
         args:
@@ -19,7 +19,7 @@ repos:
       - id: check-no-force-push
         description: "prevents force pushes to remote branches"
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.17.0
+    rev: v4.18.0
     hooks:
       - id: commitizen
         stages: [commit-msg]
@@ -33,8 +33,18 @@ repos:
         description: "Checks your git commit messages for style."
       - id: gitlint-ci
         description: "gitlint"
+  - repo: https://github.com/mishan/no-ai-marks
+    rev: v0.1.1
+    hooks:
+      - id: no-ai-marks-commit-msg
+        category: experimental
+        stages: [commit-msg]
+        description: "Reject AI attribution and hidden characters in commit messages."
+      - id: no-ai-marks-staged
+        category: experimental
+        description: "Reject AI attribution and hidden characters in staged changes."
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.29.0
+    rev: v1.30.1
     hooks:
       - id: zizmor
         description: "Find security issues in GitHub Actions CI/CD setups"
