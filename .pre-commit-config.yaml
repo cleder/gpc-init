@@ -30,12 +30,12 @@ repos:
     hooks:
       - id: absolufy-imports
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.3
+    rev: v0.16.7
     hooks:
       - id: ruff-check
       - id: ruff-format
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.25
+    rev: '0.26'
     hooks:
       - id: validate-pyproject
   - repo: https://github.com/kieran-ryan/pyprojectsort
@@ -52,7 +52,7 @@ repos:
       - id: typos
         exclude: ^\.specify/scripts/
   - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: 1.3.0.dev1
+    rev: 1.3.0
     hooks:
       - id: pyrefly-check
         additional_dependencies:
@@ -61,18 +61,18 @@ repos:
           - ruamel.yaml>=0.18.0
           - typer>=0.26.7
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: v0.2.55
+    rev: v0.2.73
     hooks:
       - id: rumdl-fmt
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.72
+    rev: v0.0.80
     hooks:
       - id: ty
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
-    rev: v7.0.1
+    rev: v8.0.1
     hooks:
       - id: complexipy
   - repo: https://github.com/owenlamont/ryl-pre-commit
-    rev: v0.21.0
+    rev: v0.22.0
     hooks:
       - id: ryl
