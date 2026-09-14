@@ -8,7 +8,8 @@ Adds a `--profile` flag for opting into legacy/experimental hooks, makes languag
 
 ### New Features
 
-- Add a `--profile` flag to opt into `legacy` and `experimental` hook categories on top of the always-on default preset baseline. `pc-init` now lists the available profiles alongside languages and frameworks, and hooks are annotated by category in the generated `AWESOME.md` (#4, #46).
+- Add a `--profile` flag to opt into `legacy` and `experimental` hook categories on top of the always-on default preset baseline.
+  `pc-init` now lists the available profiles alongside languages and frameworks, and hooks are annotated by category in the generated `AWESOME.md` (#4, #46).
 - Add `rst` (reStructuredText) language preset (`rstcheck`).
 - Add `nika` framework preset (`nika-check`) for statically auditing `*.nika.yaml` AI workflow files, auto-detected via any `*.nika.yaml` file in the repo, and added to the generated `AWESOME.md` list with a display name and emoji.
 

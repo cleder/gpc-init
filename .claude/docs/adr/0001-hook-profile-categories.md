@@ -17,7 +17,8 @@ Before this change, `gpc-init` had no notion of hook categories at all: every ho
 
 - Implement exactly three categories: `preset`, `legacy`, `experimental`.
   No `exhaustive` category — since `preset` is always included, selecting all non-default categories has the same effect.
-- `preset` is an unconditional baseline: `pc-init` with no `--profile` flag behaves exactly as before. `legacy` and `experimental` are flat, independent opt-ins layered on top via `--profile` — there is no recursive include-graph to resolve.
+- `preset` is an unconditional baseline: `pc-init` with no `--profile` flag behaves exactly as before.
+  `legacy` and `experimental` are flat, independent opt-ins layered on top via `--profile` — there is no recursive include-graph to resolve.
 - Each hook in a `preset.yaml` may carry an optional `category: legacy|experimental` field.
   Absent ⇒ implicit `preset`.
   Verified this is safe: `pre_commit`'s own `cfgv`-based config schema (`CONFIG_HOOK_DICT` in `pre_commit/clientlib.py`) has no "no additional keys" check at the hook level, so this custom field doesn't break `pre-commit validate-config`/`prek validate-config`.

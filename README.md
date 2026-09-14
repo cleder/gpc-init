@@ -14,7 +14,8 @@ The bundled presets pin specific hook revisions — run `pre-commit autoupdate` 
 
 ## Alternatives
 
-If you'd rather run one all-in-one Docker-based linter instead of wiring up individual pre-commit hooks, see [MegaLinter](https://github.com/oxsecurity/megalinter). `pc-init` takes the opposite approach: it generates a `.pre-commit-config.yaml` of individually-pinned, curated hooks that run natively via `pre-commit`/`prek`, so you can see, version, and update each tool independently.
+If you'd rather run one all-in-one Docker-based linter instead of wiring up individual pre-commit hooks, see [MegaLinter](https://github.com/oxsecurity/megalinter).
+`pc-init` takes the opposite approach: it generates a `.pre-commit-config.yaml` of individually-pinned, curated hooks that run natively via `pre-commit`/`prek`, so you can see, version, and update each tool independently.
 
 ## Awesome Pre-commit Hooks
 
