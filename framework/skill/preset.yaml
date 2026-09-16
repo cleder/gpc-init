@@ -20,3 +20,8 @@ repos:
           layout is non-standard; you must `exclude` paths skilllint does not understand
           (e.g. package.json, docker-compose.yml) or commits will fail with “Cannot determine
           file type”.
+  - repo: https://github.com/hermes-labs-ai/lintlang
+    rev: v0.6.0
+    hooks:
+      - id: lintlang
+        args: [AGENTS.md]
