@@ -76,7 +76,7 @@ repos:
       - id: pre-commit-sort
         description: "Sort .pre-commit-config.yaml & .pre-commit-hooks.yaml"
   - repo: https://github.com/crate-ci/typos
-    rev: v1.49.0
+    rev: v1.50.2
     hooks:
       - id: typos
         description: "Source code spell checker, binary install"
@@ -93,7 +93,7 @@ repos:
       - id: talisman-push
         description: "talisman"
   - repo: https://github.com/trufflesecurity/truffleHog
-    rev: v3.97.0
+    rev: v3.97.5
     hooks:
       - id: trufflehog
         args: ["--only-verified"]
@@ -107,7 +107,7 @@ repos:
         args: ["--baseline", ".secrets.baseline"]
         description: "Detects high entropy strings that are likely to be passwords."
   - repo: https://github.com/semgrep/semgrep
-    rev: v1.173.0
+    rev: v1.177.0
     hooks:
       - id: semgrep
         args: [--config, auto, --error]
@@ -124,12 +124,12 @@ repos:
       - id: vercheck
         description: "Check that the version in pyproject.toml/Cargo.toml is PEP-440 compliant (auto-detects whichever manifest is present; if both exist, they must agree)."
   - repo: https://github.com/kucherenko/jscpd
-    rev: v4.3.0
+    rev: basta-v0.1.2
     hooks:
       - id: jscpd
         description: "Check for duplicated code"
   - repo: https://github.com/errata-ai/vale
-    rev: v3.17.1
+    rev: v3.22.0
     hooks:
       - id: vale
         description: "Run vale on your text"

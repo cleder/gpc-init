@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/commit-check/commit-check
-    rev: v2.15.0
+    rev: v2.18.0
     hooks:
       - id: check-message
         args:
@@ -19,12 +19,13 @@ repos:
       - id: check-no-force-push
         description: "prevents force pushes to remote branches"
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.17.0
+    rev: v4.18.1
     hooks:
       - id: commitizen
         stages: [commit-msg]
         description: "Check whether the current commit message follows committing rules. Allow empty commit messages by default, because they typically indicate to Git that the commit should be aborted."
       - id: commitizen-branch
+        stages: [pre-push]
         description: "Check all commit messages that are already on the current branch but not the default branch on the origin repository. Useful for checking messages after the fact (e.g., pre-push or in CI) without an expensive check of the entire repository history."
   - repo: https://github.com/jorisroovers/gitlint
     rev: v0.19.1
@@ -34,7 +35,7 @@ repos:
       - id: gitlint-ci
         description: "gitlint"
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: v1.29.0
+    rev: v1.30.1
     hooks:
       - id: zizmor
         description: "Find security issues in GitHub Actions CI/CD setups"
