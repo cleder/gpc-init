@@ -38,7 +38,7 @@ repos:
       - id: md-dead-link-check
         description: "Check for dead links in Markdown files."
   - repo: https://github.com/ingrid-owusu/mdoctest
-    rev: v0.1.0
+    rev: v0.5.1
     hooks:
       - id: mdoctest
         category: experimental
