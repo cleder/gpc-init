@@ -187,3 +187,12 @@ repos:
     hooks:
       - id: impact-gate
         description: "ImpactGate is a tool for analyzing the impact of code changes in your project."
+  - repo: https://github.com/zubanls/zuban-pre-commit
+    rev: v0.10.0
+    hooks:
+      - id: zuban
+        args: [--pretty]  # optional
+        description: "Zuban is a tool for static analysis and type checking in Python projects."
+      - id: zmypy
+        args: [--warn-unreachable]  # optional
+        description: "Run mypy type checks with Zuban in Python projects."
