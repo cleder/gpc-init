@@ -34,6 +34,16 @@ repos:
         description: "Checks your git commit messages for style."
       - id: gitlint-ci
         description: "gitlint"
+  - repo: https://github.com/mishan/no-ai-marks
+    rev: v0.1.1
+    hooks:
+      - id: no-ai-marks-commit-msg
+        category: experimental
+        stages: [commit-msg]
+        description: "Reject AI attribution and hidden characters in commit messages."
+      - id: no-ai-marks-staged
+        category: experimental
+        description: "Reject AI attribution and hidden characters in staged changes."
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: v1.30.1
     hooks:
