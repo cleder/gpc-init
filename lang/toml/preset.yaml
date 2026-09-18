@@ -8,7 +8,7 @@ repos:
       - id: taplo-lint
         description: "Lint TOML documents"
   - repo: https://github.com/tombi-toml/tombi-pre-commit
-    rev: v1.2.4
+    rev: v1.5.5
     hooks:
       - id: tombi-format
         args: ["--offline"]
@@ -16,3 +16,10 @@ repos:
       - id: tombi-lint
         args: ["--offline"]
         description: "A TOML linter"
+  - repo: https://github.com/AndrewDongminYoo/toml-tidy
+    rev: v0.6.0
+    hooks:
+      - id: toml-tidy
+        description: Sort TOML keys while preserving table hierarchy, comments, and formatting.
+        args: [--blank-lines, --order, alpha]
+        exclude: ^uv\.lock$ # lockfiles are TOML too

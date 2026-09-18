@@ -4,7 +4,13 @@ recommended:
     - yaml
 repos:
   - repo: https://github.com/ansible/ansible-lint
-    rev: v26.6.0
+    rev: v26.8.0
     hooks:
       - id: ansible-lint
         description: "This hook runs ansible-lint."
+
+  - repo: https://github.com/arhuman/ansible-static-lint
+    rev: v0.5.1
+    hooks:
+      - id: astl
+        description: "Static Ansible linting, no Ansible runtime required."

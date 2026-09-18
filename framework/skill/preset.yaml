@@ -1,0 +1,21 @@
+---
+repos:
+  - repo: https://github.com/bitflight-devops/skilllint
+    rev: v1.19.8
+    hooks:
+      - id: skilllint
+        description: >-
+          Validate staged agent plugin files (skills, agents, commands, hooks, .mdc rules,
+          plugin/hooks/marketplace JSON) under typical layout roots. Uses `skilllint check`
+          with stable CI-style output (`--no-color`). Append hook `args` for `--platform`,
+          `--verbose`, `--show-summary`, `--show-progress`, `--filter`, `--filter-type`, etc.
+      - id: skilllint-fix
+        description: >-
+          Same file selection as `skilllint`, but apply auto-fixes where supported. Skips
+          fix application for paths containing `failing-examples/` (skilllint also guards
+          fixtures). Review `git diff` before committing.
+  - repo: https://github.com/hermes-labs-ai/lintlang
+    rev: v0.6.0
+    hooks:
+      - id: lintlang
+        args: [AGENTS.md]

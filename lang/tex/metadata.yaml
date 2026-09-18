@@ -1,0 +1,9 @@
+---
+fullname: LaTeX
+icon: "📖"
+extensions:
+  - .tex
+  - .sty
+  - .cls
+filenames: []
+aliases: []

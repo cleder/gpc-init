@@ -14,7 +14,7 @@ repos:
       - id: behave-lint
         description: "A fast, opinionated, extensible linter for Gherkin .feature files"
   - repo: https://github.com/MathiasPaulenko/behave-doctor
-    rev: v1.2.1
+    rev: v1.3.0
     hooks:
       - id: behave-doctor
         description: "Static analysis and diagnostics for Behave BDD suites"

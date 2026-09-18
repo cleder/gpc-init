@@ -1,0 +1,16 @@
+repos:
+  - repo: https://github.com/cmhughes/latexindent.pl.git
+    rev: V4.0.2
+    hooks:
+      - id: latexindent
+        description: Run latexindent.pl (get dependencies using CPAN)
+      - id: latexindent-conda
+        description: Run latexindent.pl (get dependencies using conda)
+      - id: latexindent-docker
+        description: Run latexindent.pl (get dependencies using Docker)
+  - repo: https://github.com/WGUNDERWOOD/tex-fmt
+    rev: v0.5.7
+    hooks:
+      - id: tex-fmt
+        description: Format LaTeX files
+        args: [--fail-on-change]

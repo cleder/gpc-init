@@ -16,3 +16,11 @@ See `docs/agents/triage-labels.md`.
 
 Single-context: `CONTEXT.md` at repo root, ADRs at `.claude/docs/adr/` (non-default location).
 See `docs/agents/domain.md`.
+
+<!-- code-map:begin -->
+## Code map (generated)
+
+Before crawling the source, read `docs/README.md` — a generated, always-current map of this repo: subsystems, module dependencies, docstring coverage.
+Per-module API references (signatures, docstrings, callers and callees) live in `docs/architecture/`.
+Those pages are regenerated automatically; never hand-edit them.
+<!-- code-map:end -->

@@ -2,13 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1]
+
+### New Features
+
+- Add Cython, reStructuredText, and LaTeX language presets with detection metadata.
+- Add an Agent Skills framework preset with automatic project detection.
+- Expand the curated hook catalog with additional linting, formatting, documentation, security, and code-quality hooks.
+- Add experimental hooks for Markdown doctests, Python export checks, and Git hygiene validation.
+
+### Enhancements
+
+- Update existing language and framework presets to newer hook revisions and refine selected hook stages and profiles.
+- Improve README quickstart guidance by recommending uvx and document the expanded language, framework, and detection support.
+- Add generated repository code-map guidance to the contributor instructions.
+
 ## [0.8.0]
 
 Adds a `--profile` flag for opting into legacy/experimental hooks, makes language/framework metadata fully data-driven, and rounds out the preset catalog with reStructuredText and dead-link checking.
 
 ### New Features
 
-- Add a `--profile` flag to opt into `legacy` and `experimental` hook categories on top of the always-on default preset baseline. `pc-init` now lists the available profiles alongside languages and frameworks, and hooks are annotated by category in the generated `AWESOME.md` (#4, #46).
+- Add a `--profile` flag to opt into `legacy` and `experimental` hook categories on top of the always-on default preset baseline.
+  `pc-init` now lists the available profiles alongside languages and frameworks, and hooks are annotated by category in the generated `AWESOME.md` (#4, #46).
 - Add `rst` (reStructuredText) language preset (`rstcheck`).
 - Add `nika` framework preset (`nika-check`) for statically auditing `*.nika.yaml` AI workflow files, auto-detected via any `*.nika.yaml` file in the repo, and added to the generated `AWESOME.md` list with a display name and emoji.
 
