@@ -6,14 +6,14 @@ repos:
       - id: absolufy-imports
         description: "Automatically convert relative imports to absolute"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.3
+    rev: v0.16.8
     hooks:
       - id: ruff-check
         description: "Run 'ruff check' for extremely fast Python linting"
       - id: ruff-format
         description: "Run 'ruff format' for extremely fast Python formatting"
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.25
+    rev: "0.26"
     hooks:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
@@ -29,12 +29,12 @@ repos:
       - id: blacken-docs
         description: "Run `black` on python code blocks in documentation files"
   - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: 1.3.0.dev1
+    rev: 1.3.1
     hooks:
       - id: pyrefly-check
         description: "Run `pyrefly check` for Python type checking."
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.72
+    rev: v0.0.82
     hooks:
       - id: ty
         description: "Run 'ty' for extremely fast Python type checking"
@@ -45,7 +45,7 @@ repos:
         category: legacy
         description: "Mirror of mypy for pre-commit"
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.411
+    rev: v1.1.414
     hooks:
       - id: pyright
         category: legacy
@@ -57,7 +57,7 @@ repos:
         category: legacy
         description: "Style guide enforcement (superseded by ruff-check)"
   - repo: https://github.com/PyCQA/isort
-    rev: 9.0.0b2
+    rev: 9.0.1
     hooks:
       - id: isort
         category: legacy
@@ -70,7 +70,7 @@ repos:
         language_version: python3
         description: "The uncompromising Python code formatter (superseded by ruff-format)"
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
-    rev: v7.0.1
+    rev: v8.0.1
     hooks:
       - id: complexipy
         description: "Run 'complexipy' for extremely fast calculation of cognitive complexity of Python files"
@@ -110,7 +110,7 @@ repos:
         description: "Automatically upgrade syntax for newer versions."
         category: legacy
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.12.5
+    rev: 0.12.16
     hooks:
       - id: uv-lock
         description: "Automatically run 'uv lock' on your project dependencies"
@@ -122,7 +122,7 @@ repos:
       - id: uv-export
         description: "Automatically run 'uv export' on your project dependencies"
   - repo: https://github.com/numpy/numpydoc
-    rev: v1.11.0rc0
+    rev: v1.11.0
     hooks:
       - id: numpydoc-validation
         exclude: "tests/"
@@ -134,7 +134,7 @@ repos:
       - id: deptry
         description: "deptry is a command line tool to check for issues with dependencies in a Python project, such as unused or missing dependencies."
   - repo: https://github.com/shelkesays/safelint
-    rev: v2.12.0  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
+    rev: v2.12.1rc1  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
     hooks:
       - id: safelint
         # Required in v2.0.0+, pick the line for the language(s) your repo lints:
@@ -182,3 +182,8 @@ repos:
         description: "Automatically convert if-else statements to match-case statements in Python 3.10+"
       - id: matchify-check
         description: "Check if if-else statements can be converted to match-case statements in Python 3.10+"
+  - repo: https://github.com/officefloor/ImpactGate
+    rev: v0.3.2
+    hooks:
+      - id: impact-gate
+        description: "ImpactGate is a tool for analyzing the impact of code changes in your project."

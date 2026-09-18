@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/MarcoGorelli/cython-lint
-    rev: v0.21.0
+    rev: v0.21.1
     hooks:
       - id: cython-lint
         description: Lint Cython files
