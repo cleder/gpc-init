@@ -15,3 +15,10 @@ repos:
       - id: squawk
         files: path/to/postgres/migrations/written/in/sql
         description: 'Linter for Postgres migrations'
+  - repo: https://github.com/tconbeer/sqlfmt
+    rev: v0.27.0
+    hooks:
+      - id: sqlfmt
+        language_version: python
+        additional_dependencies: ['.[jinjafmt]']
+        description: "Formats sql files with `sqlfmt`"
