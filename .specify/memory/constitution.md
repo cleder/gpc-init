@@ -68,14 +68,12 @@ Rationale: The project serves many repository types; concise defaults with expli
 
 ## Workflow & Quality Gates
 
-- Every change proposal MUST define expected CLI behavior and generated config
-  deltas before implementation.
+- Every change proposal MUST define expected CLI behavior and generated config deltas before implementation.
 - Pull requests MUST include:
   - Failing-then-passing test evidence for behavior changes.
   - `pytest` results for affected scope.
   - strict `pyrefly` results.
-- Reviews MUST reject changes that violate deterministic output, TDD sequence,
-  or strict typing requirements.
+- Reviews MUST reject changes that violate deterministic output, TDD sequence, or strict typing requirements.
 
 ## Governance
 
