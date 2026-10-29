@@ -15,7 +15,7 @@ repos:
           fix application for paths containing `failing-examples/` (skilllint also guards
           fixtures). Review `git diff` before committing.
   - repo: https://github.com/hermes-labs-ai/lintlang
-    rev: v0.6.0
+    rev: v0.8.2
     hooks:
       - id: lintlang
         args: [AGENTS.md]
