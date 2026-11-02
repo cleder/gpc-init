@@ -30,7 +30,7 @@ repos:
     hooks:
       - id: absolufy-imports
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.2
+    rev: v0.17.3
     hooks:
       - id: ruff-check
       - id: ruff-format
@@ -61,18 +61,18 @@ repos:
           - ruamel.yaml>=0.18.0
           - typer>=0.26.7
   - repo: https://github.com/rvben/rumdl-pre-commit
-    rev: v0.3.0
+    rev: v0.3.2
     hooks:
       - id: rumdl-fmt
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.92
+    rev: v0.0.95
     hooks:
       - id: ty
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
-    rev: v8.2.0
+    rev: v8.3.0
     hooks:
       - id: complexipy
   - repo: https://github.com/owenlamont/ryl-pre-commit
-    rev: v0.26.1
+    rev: v0.28.0
     hooks:
       - id: ryl
