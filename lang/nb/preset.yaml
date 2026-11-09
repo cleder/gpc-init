@@ -6,7 +6,7 @@ repos:
       - id: nbstripout
         description: "nbstripout: strip output from Jupyter and IPython notebooks"
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.9.1
+    rev: 1.10.0
     hooks:
       - id: nbqa-mypy
         additional_dependencies: [mypy]

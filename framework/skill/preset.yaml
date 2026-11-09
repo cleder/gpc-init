@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/bitflight-devops/skilllint
-    rev: v1.19.8
+    rev: v1.23.1
     hooks:
       - id: skilllint
         description: >-
@@ -15,7 +15,7 @@ repos:
           fix application for paths containing `failing-examples/` (skilllint also guards
           fixtures). Review `git diff` before committing.
   - repo: https://github.com/hermes-labs-ai/lintlang
-    rev: v0.8.2
+    rev: v0.8.3
     hooks:
       - id: lintlang
         args: [AGENTS.md]
