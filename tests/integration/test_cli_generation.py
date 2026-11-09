@@ -2,7 +2,7 @@
 
 import importlib.metadata
 import shutil
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -883,7 +883,7 @@ class TestPresetsOption:
         output = tmp_path / "out.yaml"
 
         @contextmanager
-        def fake_fetch(_url: str) -> Iterator[Path]:
+        def fake_fetch(_url: str) -> Generator[Path]:
             yield tmp_preset_dir
 
         with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
