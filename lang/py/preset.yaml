@@ -205,3 +205,10 @@ repos:
       - id: zmypy
         args: [--warn-unreachable]  # optional
         description: "Run mypy type checks with Zuban in Python projects."
+  - repo: https://github.com/croc100/pytest-mrt
+    rev: v1.9.1
+    hooks:
+      - id: mrt-check
+        args: [alembic/versions/]
+        description: "Catch Alembic migration rollback failures before they reach production"
+        category: experimental
