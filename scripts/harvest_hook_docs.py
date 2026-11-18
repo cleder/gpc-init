@@ -383,7 +383,7 @@ def fetch_manifest(
             f"Warning: no .pre-commit-hooks.yaml for {owner_repo}@{rev}",
             file=sys.stderr,
         )
-        result = ({}, set())
+        result: tuple[dict[str, dict[str, str]], set[str]] = ({}, set())
         _manifest_cache[key] = result
         return result
 

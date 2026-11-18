@@ -26,6 +26,7 @@ import urllib.error
 import urllib.request
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -36,7 +37,7 @@ GITHUB_URL = re.compile(r"^https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$")
 
 def preset_urls(preset: Path) -> list[str]:
     """Return every ``repo:`` value of one preset file."""
-    data = yaml.safe_load(preset.read_text()) or {}
+    data: dict[str, Any] = yaml.safe_load(preset.read_text()) or {}
     return [str(entry.get("repo", "")) for entry in data.get("repos", [])]
 
 
