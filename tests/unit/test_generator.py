@@ -1,7 +1,9 @@
 """Unit tests for gpc_init/generator.py."""
 
 import tomllib
+from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -21,20 +23,12 @@ def _generate(
     langs: list[str],
     frameworks: list[str],
     catalog: Catalog,
-    *,
-    recommended: bool = False,
-    profiles: tuple[str, ...] = (),
-    fmt: OutputFormat = OutputFormat.YAML,
+    **options: Any,
 ) -> GeneratedConfig:
-    request = GenerationRequest(
-        langs=tuple(langs),
-        frameworks=tuple(frameworks),
-        catalog=catalog,
-        profiles=profiles,
-        fmt=fmt,
-        recommended=recommended,
+    base = GenerationRequest(
+        langs=tuple(langs), frameworks=tuple(frameworks), catalog=catalog
     )
-    return generate(request)
+    return generate(replace(base, **options))
 
 
 class TestGenerationRequest:

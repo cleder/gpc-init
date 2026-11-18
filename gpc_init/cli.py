@@ -52,16 +52,30 @@ def _generate_or_exit(request: GenerationRequest) -> GeneratedConfig:
         raise typer.Exit(code=1) from exc
 
 
+def _read_text(target: Path) -> str:
+    """Read target as UTF-8, turning I/O errors into a clean exit 1."""
+    try:
+        return target.read_text(encoding="utf-8")
+    except (PermissionError, OSError) as exc:
+        typer.echo(f"Error: cannot read '{target}': {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+
+def _write_text(target: Path, content: str) -> None:
+    """Write content to target as UTF-8, turning I/O errors into a clean exit 1."""
+    try:
+        target.write_text(content, encoding="utf-8")
+    except (PermissionError, OSError) as exc:
+        typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+
 def _write_config(
     target: Path, request: GenerationRequest, result: GeneratedConfig
 ) -> None:
     """Write the generated config to target and report what was done."""
     overwritten = target.exists()
-    try:
-        target.write_text(result.content, encoding="utf-8")
-    except (PermissionError, OSError) as exc:
-        typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
-        raise typer.Exit(code=1) from exc
+    _write_text(target, result.content)
 
     if result.advice:
         typer.echo(result.advice)
@@ -94,14 +108,9 @@ def _show_diff_and_exit(
     target: Path, request: GenerationRequest, result: GeneratedConfig
 ) -> NoReturn:
     """Show a unified diff of target vs the generated config. Always exits."""
-    try:
-        existing = target.read_text(encoding="utf-8")
-    except (PermissionError, OSError) as exc:
-        typer.echo(f"Error: cannot read '{target}': {exc}", err=True)
-        raise typer.Exit(code=1) from exc
     diff_lines = list(
         difflib.unified_diff(
-            existing.splitlines(keepends=True),
+            _read_text(target).splitlines(keepends=True),
             result.content.splitlines(keepends=True),
             fromfile=str(target),
             tofile="<generated>",
