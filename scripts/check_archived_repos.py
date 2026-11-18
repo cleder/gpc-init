@@ -92,6 +92,19 @@ def collect_repos() -> dict[str, list[Path]]:
     return repos
 
 
+def _read_info(slug: str, response: Any) -> dict[str, Any]:  # noqa: ANN401
+    """Parse a GitHub API response body; anything but a JSON object is invalid."""
+    try:
+        info = json.load(response)
+    except ValueError as exc:
+        msg = f"could not check {slug}: invalid response"
+        raise RepoCheckError(msg) from exc
+    if not isinstance(info, dict):
+        msg = f"could not check {slug}: invalid response"
+        raise RepoCheckError(msg)
+    return info
+
+
 def _fetch_info(slug: str, token: str | None) -> dict[str, Any] | None:
     """Query the GitHub API once; return None if the repo is missing (404/410)."""
     request = urllib.request.Request(
@@ -102,18 +115,11 @@ def _fetch_info(slug: str, token: str | None) -> dict[str, Any] | None:
         request.add_header("Authorization", f"Bearer {token}")
     try:
         with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
-            info = json.load(response)
+            return _read_info(slug, response)
     except urllib.error.HTTPError as err:
         if err.code in (404, 410):
             return None
         raise
-    except ValueError as exc:
-        msg = f"could not check {slug}: invalid response"
-        raise RepoCheckError(msg) from exc
-    if not isinstance(info, dict):
-        msg = f"could not check {slug}: invalid response"
-        raise RepoCheckError(msg)
-    return info
 
 
 def _server_wait(err: urllib.error.HTTPError) -> float | None:
@@ -147,12 +153,17 @@ def _failure(
     return reason, True, None
 
 
+def _exceeds_cap(wait: float | None) -> bool:
+    """Whether a server-requested wait is too long to sit through."""
+    return wait is not None and wait > MAX_RETRY_WAIT
+
+
 def _wait_or_fail(
     slug: str, attempt: int, err: OSError | http.client.HTTPException
 ) -> None:
     """Sleep before the next attempt, or raise RepoCheckError if retrying is futile."""
     reason, retryable, wait = _failure(err)
-    if retryable and wait is not None and wait > MAX_RETRY_WAIT:
+    if retryable and _exceeds_cap(wait):
         msg = f"could not check {slug}: {reason}, retry after {wait:.0f}s"
         raise RepoCheckError(msg) from err
     if not retryable or attempt == MAX_ATTEMPTS:
