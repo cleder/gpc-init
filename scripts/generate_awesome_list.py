@@ -24,7 +24,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 # so make the repo root importable when this script is run standalone.
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from gpc_init.catalog import load_catalog  # noqa: E402
+from gpc_init.catalog import Catalog  # noqa: E402
 from gpc_init.merger import DEFAULT_CATEGORY  # noqa: E402
 
 LANG_DIR = PROJECT_ROOT / "lang"
@@ -33,7 +33,7 @@ FRAMEWORK_DIR = PROJECT_ROOT / "framework"
 
 def display_label(item_id: str) -> str:
     """Return the emoji + long-form name + id label for a language/framework."""
-    catalog = load_catalog(PROJECT_ROOT)
+    catalog = Catalog.load(PROJECT_ROOT)
     meta = catalog.langs.get(item_id) or catalog.frameworks.get(item_id)
     emoji = meta.icon if meta else ""
     name = meta.fullname if meta else item_id

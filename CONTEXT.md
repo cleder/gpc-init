@@ -26,3 +26,10 @@ When pulling additional hook ids from a repo already in use, only the ids releva
 
 **Recommended language/framework**: A `recommended: {lang: [...], framework: [...]}` entry a preset declares for itself, surfaced to the user as a suggestion (not auto-applied) when their selection doesn't already include it — e.g. `framework/react` recommends `js`, `ts`, `css`.
 _Avoid_: Dependency, requirement (recommendations are advisory, never enforced)
+
+**Catalog**: The directory tree that holds every preset and its metadata — `lang/` (including the `lang/common/` baseline) and `framework/`.
+By default it is the bundled presets; `--presets` points at another one, from a local directory or a git repository.
+_Avoid_: Preset base, base dir, preset root
+
+**Generation request**: Everything that determines one generated config — the selected languages, frameworks and profiles, the output format, whether recommendations are applied, and the Catalog to draw presets from.
+_Avoid_: Options, arguments

@@ -1,20 +1,12 @@
 """Orchestrate validation, loading, merging, and rendering into a config file."""
 
-from pathlib import Path
 from typing import Any, NamedTuple
 
-from gpc_init.exceptions import PresetNotFoundError
-from gpc_init.loader import (
-    load_common_preset,
-    load_framework_preset,
-    load_language_preset,
-)
+from gpc_init.catalog import Catalog
 from gpc_init.merger import DEFAULT_CATEGORY, filter_by_category, merge_presets
 from gpc_init.renderer import OutputFormat, render
 from gpc_init.resolver import (
     expand_recommendations,
-    get_supported_frameworks,
-    get_supported_languages,
     validate_frameworks,
     validate_langs,
     validate_profiles,
@@ -37,21 +29,17 @@ class GeneratedConfig(NamedTuple):
 
 
 def _load_all(
-    langs: list[str], frameworks: list[str], base_dir: Path | None
+    langs: list[str], frameworks: list[str], catalog: Catalog
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    lang_presets = [
-        load_language_preset(lang_id, base_dir=base_dir) for lang_id in langs
-    ]
-    fw_presets = [
-        load_framework_preset(fw_id, base_dir=base_dir) for fw_id in frameworks
-    ]
+    lang_presets = [catalog.lang_preset(lang_id) for lang_id in langs]
+    fw_presets = [catalog.framework_preset(fw_id) for fw_id in frameworks]
     return lang_presets, fw_presets
 
 
 def generate(  # noqa: PLR0913
     langs: list[str],
     frameworks: list[str],
-    base_dir: Path | None,
+    catalog: Catalog,
     *,
     recommended: bool = False,
     profiles: tuple[str, ...] = (),
@@ -67,24 +55,19 @@ def generate(  # noqa: PLR0913
     fmt selects the output format (YAML or prek TOML).
 
     Raises:
-        PresetNotFoundError: If base_dir doesn't contain a 'lang' subdirectory,
-            or a requested preset file is missing.
+        PresetNotFoundError: If a requested preset file is missing.
         UnsupportedLanguageError: If a requested language isn't in the catalog.
         UnsupportedFrameworkError: If a requested framework isn't in the catalog.
         UnsupportedProfileError: If a requested profile isn't in the catalog.
         PresetParseError: If a preset file contains invalid YAML.
 
     """
-    if base_dir is not None and not (base_dir / "lang").is_dir():
-        msg = f"'{base_dir}' must contain a 'lang' subdirectory."
-        raise PresetNotFoundError(msg)
-
-    validate_langs(langs, base_dir=base_dir)
-    validate_frameworks(frameworks, base_dir=base_dir)
+    validate_langs(langs, catalog)
+    validate_frameworks(frameworks, catalog)
     validate_profiles(list(profiles))
 
-    common = load_common_preset(base_dir=base_dir)
-    lang_presets, fw_presets = _load_all(langs, frameworks, base_dir)
+    common = catalog.common_preset()
+    lang_presets, fw_presets = _load_all(langs, frameworks, catalog)
 
     if recommended:
         langs, frameworks = expand_recommendations(
@@ -92,10 +75,10 @@ def generate(  # noqa: PLR0913
             frameworks=frameworks,
             lang_presets=lang_presets,
             fw_presets=fw_presets,
-            supported_langs=get_supported_languages(base_dir),
-            supported_frameworks=get_supported_frameworks(base_dir),
+            supported_langs=catalog.lang_ids,
+            supported_frameworks=catalog.framework_ids,
         )
-        lang_presets, fw_presets = _load_all(langs, frameworks, base_dir)
+        lang_presets, fw_presets = _load_all(langs, frameworks, catalog)
 
     merged = merge_presets(common, lang_presets, fw_presets)
     merged = filter_by_category(merged, frozenset({DEFAULT_CATEGORY, *profiles}))

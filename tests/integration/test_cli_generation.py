@@ -15,11 +15,10 @@ import yaml
 from typer.testing import CliRunner
 
 from gpc_init import cli
+from gpc_init.catalog import Catalog
 from gpc_init.cli import _dispatch, _handle_existing_file, app, entry_point
 from gpc_init.exceptions import (
     PresetFetchError,
-    PresetNotFoundError,
-    PresetParseError,
 )
 
 runner = CliRunner()
@@ -1403,27 +1402,6 @@ class TestErrorPaths:
         assert "must contain a 'lang' subdirectory" in result.stderr
         assert "must contain a 'lang' subdirectory" not in result.stdout
 
-    def test_preset_not_found_error(self, tmp_path: Path) -> None:
-        output = tmp_path / "out.yaml"
-        with patch(
-            "gpc_init.generator.load_language_preset",
-            side_effect=PresetNotFoundError("preset not found"),
-        ):
-            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
-        assert result.exit_code == 1
-        assert "preset not found" in result.output
-
-    def test_preset_not_found_error_goes_to_stderr(self, tmp_path: Path) -> None:
-        output = tmp_path / "out.yaml"
-        with patch(
-            "gpc_init.generator.load_language_preset",
-            side_effect=PresetNotFoundError("preset not found"),
-        ):
-            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
-        assert result.exit_code == 1
-        assert "preset not found" in result.stderr
-        assert "preset not found" not in result.stdout
-
     def test_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "bad"
         lang_dir.mkdir(parents=True)
@@ -1444,12 +1422,20 @@ class TestErrorPaths:
         assert "failed to parse" in result.output
 
     def test_preset_parse_error_writes_to_stderr(self, tmp_path: Path) -> None:
-        output = tmp_path / "out.yaml"
-        with patch(
-            "gpc_init.generator.load_language_preset",
-            side_effect=PresetParseError("bad yaml"),
-        ):
-            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        lang_dir = tmp_path / "lang" / "bad"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text(": bad: [", encoding="utf-8")
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "bad",
+                "--presets",
+                str(tmp_path),
+                "--output",
+                str(tmp_path / "out.yaml"),
+            ],
+        )
         assert result.exit_code == 1
         assert "failed to parse" in result.stderr
         assert "failed to parse" not in result.stdout
@@ -2290,58 +2276,35 @@ class TestDetect:
             )
         assert result.exit_code != 0
 
-    def test_detect_passes_custom_presets_supported_langs_to_detector(
-        self, tmp_path: Path, tmp_preset_dir: Path
+    def test_detect_only_reports_languages_of_the_custom_catalog(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """
-        _apply_detection calls detect_languages with get_supported_languages(base_dir).
+        """With --presets, detection is limited to that catalog's languages."""
+        catalog_dir = tmp_path / "catalog"
+        py_dir = catalog_dir / "lang" / "py"
+        py_dir.mkdir(parents=True)
+        (py_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+        (py_dir / "metadata.yaml").write_text("extensions: [.py]\n", encoding="utf-8")
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "main.py").touch()
+        (repo / "main.go").touch()
+        monkeypatch.chdir(repo)
 
-        When --detect and --presets are combined, the supported-language list
-        passed to detect_languages must come from the custom presets directory
-        (base_dir), not from the bundled catalog (None).
-
-        The fixture presets dir contains only 'js' and 'py'.  The bundled catalog
-        contains many more (go, docker, ts, …).  With the mutant
-        (get_supported_languages(None)), the bundled catalog is used and languages
-        like 'go' appear in the supported list.  With the original code,
-        get_supported_languages(base_dir) returns only ['js', 'py'] and 'go' is
-        absent from the supported list.
-
-        This test captures the supported list argument and asserts that it matches
-        the custom catalog's contents exactly, killing the mutant.
-        """
-        output = tmp_path / ".pre-commit-config.yaml"
-        captured_supported: list[list[str]] = []
-
-        def capturing_detect_languages(
-            _repo_dir: Path, supported: list[str], **_kwargs: object
-        ) -> list[str]:
-            captured_supported.append(list(supported))
-            return ["py"]
-
-        with (
-            patch(
-                "gpc_init.cli.detect_languages", side_effect=capturing_detect_languages
-            ),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
-        ):
-            result = runner.invoke(
-                app,
-                ["--detect", "--presets", str(tmp_preset_dir), "--output", str(output)],
-            )
+        result = runner.invoke(
+            app,
+            [
+                "--detect",
+                "--presets",
+                str(catalog_dir),
+                "--output",
+                str(tmp_path / "out.yaml"),
+            ],
+        )
 
         assert result.exit_code == 0, result.output
-        assert captured_supported, "detect_languages was never called"
-        supported_used = set(captured_supported[0])
-        # The fixture presets dir has only 'js' and 'py'; the bundled catalog has
-        # many more (e.g. 'go', 'docker', 'ts').  The mutant passes None and gets
-        # the full bundled list, so 'go' would be present.
-        assert "go" not in supported_used, (
-            f"'go' must not be in the supported langs (bundled catalog leaked in): "
-            f"{supported_used}"
-        )
-        assert "js" in supported_used
-        assert "py" in supported_used
+        assert "Detected languages: py" in result.output
+        assert "go" not in result.output.split("Detected languages:")[1].split("\n")[0]
 
     def test_detect_languages_uses_custom_base_dir_catalog(
         self,
@@ -2991,14 +2954,14 @@ class TestRecommendedDefaults:
             "generate",
             return_value=("repos: []\n", [], [], [], []),
         ) as mock_generate:
-            cli._run(["py"], [], target, None)
+            cli._run(["py"], [], target, Catalog.load())
         assert mock_generate.call_args.kwargs["recommended"] is False
 
     def test_dispatch_recommended_defaults_to_false(self, tmp_path: Path) -> None:
         """_dispatch must default recommended to False when not supplied."""
         target = tmp_path / ".pre-commit-config.yaml"
         with patch("gpc_init.cli._run") as mock_run:
-            _dispatch(["py"], [], target, None, force=False)
+            _dispatch(["py"], [], target, Catalog.load(), force=False)
         assert mock_run.call_args.kwargs["recommended"] is False
 
     def test_handle_existing_file_recommended_defaults_to_false(
@@ -3011,7 +2974,7 @@ class TestRecommendedDefaults:
             ["--lang", "go", "--framework", "react", "--output", str(output)],
         )
         with pytest.raises(typer.Exit) as exc_info:
-            _handle_existing_file(["go"], ["react"], output, None)
+            _handle_existing_file(["go"], ["react"], output, Catalog.load())
         assert exc_info.value.exit_code == 0
 
 
@@ -3033,3 +2996,50 @@ class TestFormatConflictAndDiff:
         result = runner.invoke(app, args)
         assert result.exit_code == 0
         assert "No changes" in result.output
+
+
+class TestCatalogErrors:
+    @staticmethod
+    def _catalog(root: Path, **metadata: str) -> Path:
+        for lang_id, text in metadata.items():
+            lang_dir = root / "lang" / lang_id
+            lang_dir.mkdir(parents=True)
+            (lang_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+            (lang_dir / "metadata.yaml").write_text(text, encoding="utf-8")
+        return root
+
+    @pytest.mark.parametrize("command", [["--lang", "a"], ["list"]])
+    def test_malformed_metadata_exits_cleanly(
+        self, tmp_path: Path, command: list[str]
+    ) -> None:
+        catalog = self._catalog(tmp_path, a="key: [unclosed bracket")
+        result = runner.invoke(
+            app,
+            [*command, "--presets", str(catalog), "--output", str(tmp_path / "o")]
+            if command[0] != "list"
+            else [*command, "--presets", str(catalog)],
+        )
+        assert result.exit_code == 1
+        assert "Failed to parse metadata YAML" in result.stderr
+        assert "preset YAML" not in result.stderr
+
+    @pytest.mark.parametrize("command", [["--lang", "a"], ["list"]])
+    def test_conflicting_metadata_exits_cleanly(
+        self, tmp_path: Path, command: list[str]
+    ) -> None:
+        catalog = self._catalog(tmp_path, a="aliases: [dup]\n", b="aliases: [dup]\n")
+        result = runner.invoke(
+            app,
+            [*command, "--presets", str(catalog), "--output", str(tmp_path / "o")]
+            if command[0] != "list"
+            else [*command, "--presets", str(catalog)],
+        )
+        assert result.exit_code == 1
+        assert "claimed by both" in result.stderr
+
+    def test_unreadable_metadata_exits_cleanly(self, tmp_path: Path) -> None:
+        catalog = self._catalog(tmp_path, a="fullname: A\n")
+        (catalog / "lang" / "a" / "metadata.yaml").write_bytes(b"\xff\xfe\x00bad")
+        result = runner.invoke(app, ["list", "--presets", str(catalog)])
+        assert result.exit_code == 1
+        assert "Failed to read metadata file" in result.stderr
