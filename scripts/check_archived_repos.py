@@ -13,14 +13,17 @@ framework/, queries the GitHub API once per unique repository and exits
 non-zero listing the offenders.
 
 Set GITHUB_TOKEN (or GH_TOKEN) to avoid the anonymous rate limit; CI does.
-Transient failures (429, 5xx, network errors) are retried with backoff. If a
-repository still cannot be checked the script exits 2 with a one-line reason,
-so an infrastructure problem is distinguishable from an offending preset (1).
+Transient failures (408, 429, 5xx, rate-limited 403s, network errors) are
+retried, waiting as long as the server asks (Retry-After / rate-limit reset,
+capped) and otherwise backing off. If a repository still cannot be checked the
+script exits 2 with a one-line reason, so an infrastructure problem is
+distinguishable from an offending preset (1).
 
 Usage:
     python scripts/check_archived_repos.py
 """
 
+import http.client
 import json
 import os
 import re
@@ -29,6 +32,7 @@ import time
 import urllib.error
 import urllib.request
 from collections import defaultdict
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
@@ -37,9 +41,10 @@ import yaml
 PROJECT_ROOT = Path(__file__).parent.parent
 PSEUDO_REPOS = frozenset({"local", "meta"})
 GITHUB_URL = re.compile(r"^https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$")
-RETRY_CODES = frozenset({429, 500, 502, 503, 504})
+RETRY_CODES = frozenset({408, 429})  # plus every 5xx
 MAX_ATTEMPTS = 3
 RETRY_DELAY = 2.0
+MAX_RETRY_WAIT = 60.0  # longer server-requested waits fail instead of stalling CI
 
 
 class RepoCheckError(Exception):
@@ -97,22 +102,63 @@ def _fetch_info(slug: str, token: str | None) -> dict[str, Any] | None:
         request.add_header("Authorization", f"Bearer {token}")
     try:
         with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
-            info: dict[str, Any] = json.load(response)
+            info = json.load(response)
     except urllib.error.HTTPError as err:
         if err.code in (404, 410):
             return None
         raise
+    except ValueError as exc:
+        msg = f"could not check {slug}: invalid response"
+        raise RepoCheckError(msg) from exc
+    if not isinstance(info, dict):
+        msg = f"could not check {slug}: invalid response"
+        raise RepoCheckError(msg)
     return info
 
 
-def _failure_reason(err: urllib.error.URLError | TimeoutError) -> tuple[str, bool]:
-    """Return a short reason and whether the failure is worth retrying."""
+def _server_wait(err: urllib.error.HTTPError) -> float | None:
+    """Return the seconds the server asks us to wait (Retry-After / reset), if any."""
+    retry_after = err.headers.get("Retry-After", "")
+    if retry_after.strip().isdigit():
+        return float(retry_after)
+    reset = err.headers.get("X-RateLimit-Reset", "")
+    if err.headers.get("X-RateLimit-Remaining") == "0" and reset.isdigit():
+        return max(0.0, float(reset) - time.time())
+    return None
+
+
+def _is_transient(err: urllib.error.HTTPError) -> bool:
+    """Whether an HTTP error is worth retrying (a 403 only if rate limited)."""
+    if err.code in RETRY_CODES or err.code >= HTTPStatus.INTERNAL_SERVER_ERROR:
+        return True
+    return err.code == HTTPStatus.FORBIDDEN and _server_wait(err) is not None
+
+
+def _failure(
+    err: OSError | http.client.HTTPException,
+) -> tuple[str, bool, float | None]:
+    """Return (reason, worth retrying, server-requested wait in seconds)."""
     if isinstance(err, urllib.error.HTTPError):
         reason = f"HTTP {err.code}"
         if err.code in (403, 429):
             reason += " (rate limited? set GITHUB_TOKEN)"
-        return reason, err.code in RETRY_CODES
-    return str(getattr(err, "reason", err) or type(err).__name__), True
+        return reason, _is_transient(err), _server_wait(err)
+    reason = str(getattr(err, "reason", None) or err) or type(err).__name__
+    return reason, True, None
+
+
+def _wait_or_fail(
+    slug: str, attempt: int, err: OSError | http.client.HTTPException
+) -> None:
+    """Sleep before the next attempt, or raise RepoCheckError if retrying is futile."""
+    reason, retryable, wait = _failure(err)
+    if retryable and wait is not None and wait > MAX_RETRY_WAIT:
+        msg = f"could not check {slug}: {reason}, retry after {wait:.0f}s"
+        raise RepoCheckError(msg) from err
+    if not retryable or attempt == MAX_ATTEMPTS:
+        msg = f"could not check {slug}: {reason}"
+        raise RepoCheckError(msg) from err
+    time.sleep(wait if wait is not None else RETRY_DELAY * 2 ** (attempt - 1))
 
 
 def repo_status(slug: str, token: str | None) -> str:
@@ -125,16 +171,12 @@ def repo_status(slug: str, token: str | None) -> str:
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             info = _fetch_info(slug, token)
-        except (urllib.error.URLError, TimeoutError) as err:
-            reason, retryable = _failure_reason(err)
-            if not retryable or attempt == MAX_ATTEMPTS:
-                msg = f"could not check {slug}: {reason}"
-                raise RepoCheckError(msg) from err
-            time.sleep(RETRY_DELAY * 2 ** (attempt - 1))
-        else:
-            if info is None:
-                return "missing"
-            return "archived" if info.get("archived") else "ok"
+        except (OSError, http.client.HTTPException) as err:
+            _wait_or_fail(slug, attempt, err)
+            continue
+        if info is None:
+            return "missing"
+        return "archived" if info.get("archived") else "ok"
     msg = f"could not check {slug}"  # pragma: no cover
     raise RepoCheckError(msg)  # pragma: no cover
 

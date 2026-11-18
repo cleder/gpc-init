@@ -1,5 +1,6 @@
 """Tests for scripts/check_archived_repos.py."""
 
+import http.client
 import importlib.util
 import json
 import urllib.error
@@ -64,8 +65,11 @@ def _fake_urlopen(payload: dict[str, Any]) -> _FakeUrlopen:
     return _FakeUrlopen(payload)
 
 
-def _http_error(code: int) -> urllib.error.HTTPError:
-    return urllib.error.HTTPError("url", code, "err", Message(), None)
+def _http_error(code: int, **headers: str) -> urllib.error.HTTPError:
+    message = Message()
+    for name, value in headers.items():
+        message[name.replace("_", "-")] = value
+    return urllib.error.HTTPError("url", code, "err", message, None)
 
 
 class TestGithubUrl:
@@ -362,3 +366,127 @@ class TestMainCheckFailure:
         assert exc.value.code == 2
         err = capsys.readouterr().err
         assert err == "Error: could not check a/b: HTTP 429\n"
+
+
+class _Raises:
+    """urlopen stand-in that raises each queued error, then answers ``ok``."""
+
+    def __init__(
+        self, *errors: Exception, payload: dict[str, Any] | None = None
+    ) -> None:
+        self.errors = list(errors)
+        self.payload = payload if payload is not None else {"archived": False}
+        self.calls = 0
+
+    def __call__(self, *_: object, **__: object) -> _Response:
+        self.calls += 1
+        if self.errors:
+            raise self.errors.pop(0)
+        return _Response(self.payload)
+
+
+@pytest.fixture
+def sleeps(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    recorded: list[float] = []
+    monkeypatch.setattr(car.time, "sleep", recorded.append)
+    return recorded
+
+
+class TestRepoStatusResilience:
+    @pytest.mark.parametrize("code", [408, 501, 505, 507])
+    def test_these_statuses_are_retried(
+        self, monkeypatch: pytest.MonkeyPatch, sleeps: list[float], code: int
+    ) -> None:
+        opener = _Raises(_http_error(code))
+        monkeypatch.setattr(car.urllib.request, "urlopen", opener)
+        assert car.repo_status("a/b", None) == "ok"
+        assert opener.calls == 2
+        assert sleeps == [car.RETRY_DELAY]
+
+    @pytest.mark.parametrize(
+        "body", [b"<html>bad gateway</html>", b"[1, 2]", b'"text"']
+    )
+    def test_malformed_response_is_a_check_error_not_a_traceback(
+        self, monkeypatch: pytest.MonkeyPatch, body: bytes
+    ) -> None:
+        response = _Response({})
+        response._data = body
+
+        def respond(*_: object, **__: object) -> _Response:
+            return response
+
+        monkeypatch.setattr(car.urllib.request, "urlopen", respond)
+        with pytest.raises(car.RepoCheckError, match="a/b: invalid response"):
+            car.repo_status("a/b", None)
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            http.client.IncompleteRead(b"par"),
+            ConnectionResetError("reset by peer"),
+        ],
+    )
+    @pytest.mark.usefixtures("sleeps")
+    def test_body_read_failures_are_retried(
+        self, monkeypatch: pytest.MonkeyPatch, error: Exception
+    ) -> None:
+        opener = _Raises(error)
+        monkeypatch.setattr(car.urllib.request, "urlopen", opener)
+        assert car.repo_status("a/b", None) == "ok"
+        assert opener.calls == 2
+
+    @pytest.mark.usefixtures("sleeps")
+    def test_body_read_failure_that_persists_is_a_check_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        opener = _Raises(*[ConnectionResetError("reset")] * car.MAX_ATTEMPTS)
+        monkeypatch.setattr(car.urllib.request, "urlopen", opener)
+        with pytest.raises(car.RepoCheckError, match="could not check a/b"):
+            car.repo_status("a/b", None)
+        assert opener.calls == car.MAX_ATTEMPTS
+
+    @pytest.mark.parametrize("code", [403, 429])
+    def test_retry_after_seconds_is_honoured(
+        self, monkeypatch: pytest.MonkeyPatch, sleeps: list[float], code: int
+    ) -> None:
+        opener = _Raises(_http_error(code, Retry_After="7"))
+        monkeypatch.setattr(car.urllib.request, "urlopen", opener)
+        assert car.repo_status("a/b", None) == "ok"
+        assert sleeps == [7]
+
+    def test_rate_limit_reset_time_is_honoured(
+        self, monkeypatch: pytest.MonkeyPatch, sleeps: list[float]
+    ) -> None:
+        monkeypatch.setattr(car.time, "time", lambda: 1000.0)
+        error = _http_error(403, X_RateLimit_Remaining="0", X_RateLimit_Reset="1012")
+        monkeypatch.setattr(car.urllib.request, "urlopen", _Raises(error))
+        assert car.repo_status("a/b", None) == "ok"
+        assert sleeps == [12]
+
+    def test_403_without_rate_limit_signal_fails_fast(
+        self, monkeypatch: pytest.MonkeyPatch, sleeps: list[float]
+    ) -> None:
+        opener = _Raises(_http_error(403), _http_error(403))
+        monkeypatch.setattr(car.urllib.request, "urlopen", opener)
+        with pytest.raises(car.RepoCheckError, match="HTTP 403"):
+            car.repo_status("a/b", None)
+        assert opener.calls == 1
+        assert sleeps == []
+
+    def test_wait_longer_than_the_cap_fails_without_sleeping(
+        self, monkeypatch: pytest.MonkeyPatch, sleeps: list[float]
+    ) -> None:
+        opener = _Raises(_http_error(429, Retry_After="3600"))
+        monkeypatch.setattr(car.urllib.request, "urlopen", opener)
+        with pytest.raises(car.RepoCheckError, match="retry after 3600s"):
+            car.repo_status("a/b", None)
+        assert opener.calls == 1
+        assert sleeps == []
+
+    def test_unparsable_retry_after_falls_back_to_backoff(
+        self, monkeypatch: pytest.MonkeyPatch, sleeps: list[float]
+    ) -> None:
+        opener = _Raises(_http_error(429, Retry_After="Wed, 21 Oct 2026 07:28:00 GMT"))
+        monkeypatch.setattr(car.urllib.request, "urlopen", opener)
+        assert car.repo_status("a/b", None) == "ok"
+        assert sleeps == [car.RETRY_DELAY]
