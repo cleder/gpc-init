@@ -259,3 +259,18 @@ class TestRenderToml:
     def test_default_filenames(self) -> None:
         assert OutputFormat.TOML.default_filename == "prek.toml"
         assert OutputFormat.YAML.default_filename == ".pre-commit-config.yaml"
+
+
+class TestRenderTomlNulls:
+    def test_none_values_are_omitted(self) -> None:
+        data = {
+            "repos": [
+                {
+                    "repo": "local",
+                    "hooks": [{"id": "x", "files": None, "args": ["a", None]}],
+                }
+            ]
+        }
+        assert tomllib.loads(render_toml(data)) == {
+            "repos": [{"repo": "local", "hooks": [{"id": "x", "args": ["a"]}]}]
+        }

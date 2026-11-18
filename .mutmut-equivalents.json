@@ -72,24 +72,6 @@
     "source_file": "gpc_init/renderer.py"
   },
   {
-    "equivalent_reason": "PyYAML's `yaml.dumper.Dumper.__init__` (and by inheritance `_PrecommitDumper`) already defaults `default_flow_style=False` (confirmed via `inspect.signature` on the installed PyYAML 6.0.3). Passing `default_flow_style=False` explicitly is therefore a no-op equivalent to omitting it entirely. Verified empirically: calling `yaml.dump` with and without the explicit argument on representative pre-commit-config-like data produces byte-for-byte identical output. No test, however constructed, can observe a behavioral difference, so this mutant is equivalent and cannot be killed by any assertion on `render_yaml`'s output.",
-    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
-    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_10",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "`_PrecommitDumper` registers `_semantic_dict_representer` as the representer for `dict`, and that function always builds its own explicitly ordered `list[(k, v), ...]` and passes it to `dumper.represent_mapping(...)`. PyYAML's `represent_mapping` only applies its internal `sort_keys` sorting when the passed mapping has an `.items()` attribute (`if hasattr(mapping, \"items\"): if self.sort_keys: mapping = sorted(mapping.items())`); since a plain list of tuples has no `.items()`, that branch never executes, so `self.sort_keys` is never consulted for any mapping produced through this custom representer \u2014 including the top-level dict and every nested dict (repo entries, hook entries), all of which are plain `dict` and thus routed through the same representer. I verified empirically that `yaml.dump(d, Dumper=_PrecommitDumper, ..., sort_keys=False, ...)` and the same call without `sort_keys` produce byte-identical output for a dict containing out-of-order/unsorted keys at both top level and nested hook level. Therefore `sort_keys=False` is dead configuration in this code path and no test (however crafted) can distinguish its presence from its absence \u2014 the mutant is behaviorally equivalent.",
-    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
-    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_11",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
-    "equivalent_reason": "`render_yaml` registers a custom representer (`_semantic_dict_representer`) for the `dict` type on `_PrecommitDumper`. This representer always computes its own explicit key ordering (priority-key list plus alphabetically-sorted remainder) and calls `dumper.represent_mapping(tag, [(k, data[k]) for k in ordered])`, passing a plain `list` of tuples rather than a dict. PyYAML's `BaseRepresenter.represent_mapping` only applies its internal `sort_keys`-driven sort when the passed `mapping` argument has an `.items()` method (i.e., is still a dict-like object); since a list of tuples has no `.items()`, that internal sort step is always skipped regardless of the `sort_keys` flag passed to `yaml.dump`. Every dict value in `merged_dict` (including nested ones) is a plain `dict`, so every mapping node in the document is produced via this custom representer. I verified empirically that `yaml.dump(d, Dumper=_PrecommitDumper, sort_keys=False, ...)` and the same call with `sort_keys=True` produce byte-identical output for representative nested dict structures (including keys not in the priority lists). Since `render_yaml`'s only callers (`gpc_init/generator.py` and the test suite) always pass plain `dict` instances, no input can make `sort_keys` observably affect the output, so the mutant is behaviorally equivalent to the original.",
-    "file_hash": "89709897238eb1d6fa94c4ea8059eef179791468",
-    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_16",
-    "source_file": "gpc_init/renderer.py"
-  },
-  {
     "equivalent_reason": "Python's codec lookup machinery (codecs.lookup) normalizes encoding names by lowercasing and treating '-'/'_' interchangeably, so \"utf-8\" and \"UTF-8\" resolve to the identical codec object (verified: codecs.lookup('utf-8') == codecs.lookup('UTF-8') is True). The file is opened with an encoding that behaves identically for every possible input, so no observable difference in behavior exists and no test can distinguish the mutant from the original.",
     "file_hash": "f1564a8bca9e4081fa32c06d9eebe775b48de82f",
     "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_6",
@@ -118,5 +100,23 @@
     "file_hash": "f1564a8bca9e4081fa32c06d9eebe775b48de82f",
     "mutant_name": "gpc_init.loader.x__load_yaml_file__mutmut_5",
     "source_file": "gpc_init/loader.py"
+  },
+  {
+    "equivalent_reason": "Since PyYAML 5.1, yaml.dump's default for default_flow_style is already False (installed PyYAML is 6.0.3). Removing the explicit argument therefore leaves the output byte-for-byte identical. The existing block-style test already passes with and without it. No test can tell the two apart unless PyYAML is downgraded below 5.1.",
+    "file_hash": "5dee2d31092fadae6de2ba4969998dcaa96408de",
+    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_10",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "_PrecommitDumper registers _semantic_dict_representer for dict. It passes a list of (key, value) tuples to represent_mapping. PyYAML's represent_mapping only sorts when the mapping has an .items attribute, and it checks self.sort_keys only inside that branch. A list has no .items, so sort_keys is never consulted and the key order is always the semantic order. Output is identical with or without the argument, so no test can tell the two apart.",
+    "file_hash": "5dee2d31092fadae6de2ba4969998dcaa96408de",
+    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_11",
+    "source_file": "gpc_init/renderer.py"
+  },
+  {
+    "equivalent_reason": "All dicts are dumped through _semantic_dict_representer, which calls represent_mapping with a list of (key, value) tuples in semantic order. PyYAML only applies sort_keys inside `if hasattr(mapping, 'items')`, and a list has no `.items`, so the flag is ignored. Output is identical with sort_keys True or False.",
+    "file_hash": "5dee2d31092fadae6de2ba4969998dcaa96408de",
+    "mutant_name": "gpc_init.renderer.x_render_yaml__mutmut_16",
+    "source_file": "gpc_init/renderer.py"
   }
 ]

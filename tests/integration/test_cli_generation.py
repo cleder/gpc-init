@@ -10,10 +10,12 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+import typer
 import yaml
 from typer.testing import CliRunner
 
-from gpc_init.cli import app, entry_point
+from gpc_init import cli
+from gpc_init.cli import _dispatch, _handle_existing_file, app, entry_point
 from gpc_init.exceptions import (
     PresetFetchError,
     PresetNotFoundError,
@@ -2978,3 +2980,56 @@ class TestFormatOption:
         result = runner.invoke(app, ["--help"])
         assert "prek" in result.output
         assert "pre-commit cannot read" in " ".join(result.output.split())
+
+
+class TestRecommendedDefaults:
+    def test_run_defaults_recommended_to_false(self, tmp_path: Path) -> None:
+        """_run must default recommended to False when the kwarg is omitted."""
+        target = tmp_path / ".pre-commit-config.yaml"
+        with patch.object(
+            cli,
+            "generate",
+            return_value=("repos: []\n", [], [], [], []),
+        ) as mock_generate:
+            cli._run(["py"], [], target, None)
+        assert mock_generate.call_args.kwargs["recommended"] is False
+
+    def test_dispatch_recommended_defaults_to_false(self, tmp_path: Path) -> None:
+        """_dispatch must default recommended to False when not supplied."""
+        target = tmp_path / ".pre-commit-config.yaml"
+        with patch("gpc_init.cli._run") as mock_run:
+            _dispatch(["py"], [], target, None, force=False)
+        assert mock_run.call_args.kwargs["recommended"] is False
+
+    def test_handle_existing_file_recommended_defaults_to_false(
+        self, tmp_path: Path
+    ) -> None:
+        """_handle_existing_file must default recommended to False."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(
+            app,
+            ["--lang", "go", "--framework", "react", "--output", str(output)],
+        )
+        with pytest.raises(typer.Exit) as exc_info:
+            _handle_existing_file(["go"], ["react"], output, None)
+        assert exc_info.value.exit_code == 0
+
+
+class TestFormatConflictAndDiff:
+    def test_conflict_message_names_format_in_uppercase_on_stderr(
+        self, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--format", "yaml", "--output", str(tmp_path / "a.toml")],
+        )
+        assert result.exit_code == 1
+        assert "looks like TOML" in result.stderr
+
+    def test_existing_toml_diffed_as_toml(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        args = ["--lang", "py", "--format", "toml", "--output", str(output)]
+        assert runner.invoke(app, args).exit_code == 0
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0
+        assert "No changes" in result.output

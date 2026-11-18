@@ -58,11 +58,20 @@ def _semantic_dict_representer(
 
 
 def _semantic_order(value: Any) -> Any:  # noqa: ANN401
-    """Recursively rebuild dicts so their keys follow the semantic order."""
+    """
+    Recursively order dict keys semantically and drop null values.
+
+    TOML has no null, and null means "unset" in pre-commit semantics, so None
+    dict values and list items are omitted.
+    """
     if isinstance(value, dict):
-        return {k: _semantic_order(value[k]) for k in _ordered_keys(value)}
+        return {
+            k: _semantic_order(value[k])
+            for k in _ordered_keys(value)
+            if value[k] is not None
+        }
     if isinstance(value, list):
-        return [_semantic_order(item) for item in value]
+        return [_semantic_order(item) for item in value if item is not None]
     return value
 
 
@@ -107,8 +116,10 @@ def render_toml(merged_dict: dict[str, Any]) -> str:
     """
     Render a merged configuration dict to a TOML string for prek.
 
-    The data and key order are identical to :func:`render_yaml`; repos and hooks
-    become ``[[repos]]`` / ``[[repos.hooks]]`` array-of-tables.
+    The data matches :func:`render_yaml` (null values are omitted) and keys follow
+    the same semantic order, except that TOML always writes scalar fields before
+    nested tables. Repos and hooks become ``[[repos]]`` / ``[[repos.hooks]]``
+    array-of-tables.
 
     Args:
         merged_dict: Merged configuration dictionary to render.
