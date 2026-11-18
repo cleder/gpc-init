@@ -28,16 +28,22 @@ PROJECT_ROOT = Path(__file__).parent.parent
 GITHUB_URL = re.compile(r"^https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$")
 
 
+def preset_slugs(preset: Path) -> list[str]:
+    """Return the GitHub ``owner/name`` slugs referenced by one preset file."""
+    data = yaml.safe_load(preset.read_text()) or {}
+    matches = (
+        GITHUB_URL.match(str(entry.get("repo", ""))) for entry in data.get("repos", [])
+    )
+    return [match.group(1) for match in matches if match]
+
+
 def collect_repos() -> dict[str, list[Path]]:
     """Map each GitHub ``owner/name`` to the preset files that reference it."""
     repos: dict[str, list[Path]] = defaultdict(list)
     for kind in ("lang", "framework"):
         for preset in sorted((PROJECT_ROOT / kind).glob("*/preset*.yaml")):
-            data = yaml.safe_load(preset.read_text()) or {}
-            for entry in data.get("repos", []):
-                match = GITHUB_URL.match(str(entry.get("repo", "")))
-                if match:
-                    repos[match.group(1)].append(preset.relative_to(PROJECT_ROOT))
+            for slug in preset_slugs(preset):
+                repos[slug].append(preset.relative_to(PROJECT_ROOT))
     return repos
 
 
