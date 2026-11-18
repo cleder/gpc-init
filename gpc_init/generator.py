@@ -1,4 +1,4 @@
-"""Orchestrate validation, loading, merging, and rendering into config YAML."""
+"""Orchestrate validation, loading, merging, and rendering into a config file."""
 
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -10,7 +10,7 @@ from gpc_init.loader import (
     load_language_preset,
 )
 from gpc_init.merger import DEFAULT_CATEGORY, filter_by_category, merge_presets
-from gpc_init.renderer import render_yaml
+from gpc_init.renderer import OutputFormat, render
 from gpc_init.resolver import (
     expand_recommendations,
     get_supported_frameworks,
@@ -24,11 +24,16 @@ from gpc_init.resolver import (
 class GeneratedConfig(NamedTuple):
     """Rendered config plus the final (post-expansion) langs/frameworks/presets."""
 
-    yaml_content: str
+    content: str
     langs: list[str]
     frameworks: list[str]
     lang_presets: list[dict[str, Any]]
     fw_presets: list[dict[str, Any]]
+
+    @property
+    def yaml_content(self) -> str:
+        """Alias for ``content``, kept for backward compatibility."""
+        return self.content
 
 
 def _load_all(
@@ -43,13 +48,14 @@ def _load_all(
     return lang_presets, fw_presets
 
 
-def generate(
+def generate(  # noqa: PLR0913
     langs: list[str],
     frameworks: list[str],
     base_dir: Path | None,
     *,
     recommended: bool = False,
     profiles: tuple[str, ...] = (),
+    fmt: OutputFormat = OutputFormat.YAML,
 ) -> GeneratedConfig:
     """
     Validate, load, merge, filter by profile, render.
@@ -58,6 +64,7 @@ def generate(
     recommendation from the selected presets before merging.
     profiles selects additional hook categories (legacy/experimental) to
     include on top of the always-on 'preset' baseline.
+    fmt selects the output format (YAML or prek TOML).
 
     Raises:
         PresetNotFoundError: If base_dir doesn't contain a 'lang' subdirectory,
@@ -93,5 +100,5 @@ def generate(
     merged = merge_presets(common, lang_presets, fw_presets)
     merged = filter_by_category(merged, frozenset({DEFAULT_CATEGORY, *profiles}))
     return GeneratedConfig(
-        render_yaml(merged), langs, frameworks, lang_presets, fw_presets
+        render(merged, fmt), langs, frameworks, lang_presets, fw_presets
     )

@@ -55,6 +55,7 @@ repos:
           - pytest>=8.0
           - pyyaml>=6.0
           - ruamel.yaml>=0.18.0
+          - tomli-w>=1.0
           - typer>=0.26.7
   - repo: https://github.com/rvben/rumdl-pre-commit
     rev: v0.3.4

@@ -2,6 +2,7 @@
 
 import importlib.metadata
 import shutil
+import tomllib
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -9,10 +10,12 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+import typer
 import yaml
 from typer.testing import CliRunner
 
-from gpc_init.cli import app, entry_point
+from gpc_init import cli
+from gpc_init.cli import _dispatch, _handle_existing_file, app, entry_point
 from gpc_init.exceptions import (
     PresetFetchError,
     PresetNotFoundError,
@@ -2906,3 +2909,127 @@ class TestProfileFlag:
         )
         assert result.exit_code == 1
         assert "mypy" in result.output
+
+
+class TestFormatOption:
+    def test_toml_to_explicit_output(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "toml", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "repos" in tomllib.loads(output.read_text())
+
+    def test_toml_default_filename_is_prek_toml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["--lang", "py", "--format", "toml"])
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "prek.toml").exists()
+        assert not (tmp_path / ".pre-commit-config.yaml").exists()
+
+    def test_yaml_default_filename_unchanged(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["--lang", "py"])
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / ".pre-commit-config.yaml").exists()
+
+    @pytest.mark.parametrize(
+        ("fmt", "name"),
+        [("toml", "out.yaml"), ("toml", "out.yml"), ("yaml", "out.toml")],
+    )
+    def test_conflicting_extension_errors(
+        self, tmp_path: Path, fmt: str, name: str
+    ) -> None:
+        output = tmp_path / name
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", fmt, "--output", str(output)]
+        )
+        assert result.exit_code == 1
+        assert "--format" in result.output
+        assert not output.exists()
+
+    @pytest.mark.parametrize("fmt", ["toml", "yaml"])
+    def test_unknown_extension_is_accepted(self, tmp_path: Path, fmt: str) -> None:
+        output = tmp_path / "ci-config"
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", fmt, "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_invalid_format_rejected(self, tmp_path: Path) -> None:
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "json", "--output", str(tmp_path / "x")]
+        )
+        assert result.exit_code != 0
+
+    def test_force_hint_includes_format(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        output.write_text("stale = true\n")
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "toml", "--output", str(output)]
+        )
+        assert result.exit_code == 1
+        assert "--format=toml" in result.output
+
+    def test_help_mentions_prek_only(self) -> None:
+        result = runner.invoke(app, ["--help"])
+        assert "prek" in result.output
+        assert "pre-commit cannot read" in " ".join(result.output.split())
+
+
+class TestRecommendedDefaults:
+    def test_run_defaults_recommended_to_false(self, tmp_path: Path) -> None:
+        """_run must default recommended to False when the kwarg is omitted."""
+        target = tmp_path / ".pre-commit-config.yaml"
+        with patch.object(
+            cli,
+            "generate",
+            return_value=("repos: []\n", [], [], [], []),
+        ) as mock_generate:
+            cli._run(["py"], [], target, None)
+        assert mock_generate.call_args.kwargs["recommended"] is False
+
+    def test_dispatch_recommended_defaults_to_false(self, tmp_path: Path) -> None:
+        """_dispatch must default recommended to False when not supplied."""
+        target = tmp_path / ".pre-commit-config.yaml"
+        with patch("gpc_init.cli._run") as mock_run:
+            _dispatch(["py"], [], target, None, force=False)
+        assert mock_run.call_args.kwargs["recommended"] is False
+
+    def test_handle_existing_file_recommended_defaults_to_false(
+        self, tmp_path: Path
+    ) -> None:
+        """_handle_existing_file must default recommended to False."""
+        output = tmp_path / ".pre-commit-config.yaml"
+        runner.invoke(
+            app,
+            ["--lang", "go", "--framework", "react", "--output", str(output)],
+        )
+        with pytest.raises(typer.Exit) as exc_info:
+            _handle_existing_file(["go"], ["react"], output, None)
+        assert exc_info.value.exit_code == 0
+
+
+class TestFormatConflictAndDiff:
+    def test_conflict_message_names_format_in_uppercase_on_stderr(
+        self, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--format", "yaml", "--output", str(tmp_path / "a.toml")],
+        )
+        assert result.exit_code == 1
+        assert "looks like TOML" in result.stderr
+
+    def test_existing_toml_diffed_as_toml(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        args = ["--lang", "py", "--format", "toml", "--output", str(output)]
+        assert runner.invoke(app, args).exit_code == 0
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0
+        assert "No changes" in result.output

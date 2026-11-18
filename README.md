@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml/badge.svg?branch=main)](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml) [![codecov](https://codecov.io/gh/cleder/gpc-init/graph/badge.svg?token=3enkN1Q8JM)](https://codecov.io/gh/cleder/gpc-init) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![pyrefly](https://img.shields.io/badge/type_checker-pyrefly-blue)](https://github.com/facebook/pyrefly) [![ty](https://img.shields.io/badge/type_checker-ty-blue)](https://github.com/astral-sh/ty) [![zuban](https://img.shields.io/badge/type_checker-zuban-blue)](https://github.com/zubanls/zubanls-python) [![GPLv3 License](https://img.shields.io/pypi/l/pc-init)](https://opensource.org/license/gpl-3-0/) [![Python Version](https://img.shields.io/pypi/pyversions/pc-init)](https://www.python.org/) [![PyPI - Version](https://img.shields.io/pypi/v/pc-init)](https://pypi.org/project/pc-init/) [![Status](https://img.shields.io/pypi/status/pc-init)](https://pypi.org/project/pc-init/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pc-init?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads%2Fmonth)](https://pepy.tech/projects/pc-init)
 
-Generate a [pre-commit](https://pre-commit.com/) or [prek](https://github.com/j178/prek/) `.pre-commit-config.yaml` for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
+Generate a [pre-commit](https://pre-commit.com/) or [prek](https://github.com/j178/prek/) `.pre-commit-config.yaml` (or a prek-only `prek.toml`) for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
 Works with [prek](https://github.com/j178/prek/) and [pre-commit](https://pre-commit.com/)
 
 ## Motivation
@@ -67,8 +67,7 @@ Options:
                      (repeatable, or comma-delimited: --framework=react,django).
                      Run `pc-init list` to see supported values from the
                      active catalog.
-  --force            Overwrite existing .pre-commit-config.yaml without
-                     prompting.
+  --force            Overwrite an existing output file without prompting.
   --detect           Auto-detect languages and frameworks from the current
                      directory and merge them with any explicitly supplied
                      --lang/--framework values.
@@ -76,7 +75,13 @@ Options:
                      baseline (repeatable, or comma-delimited:
                      --profile=legacy,experimental). preset hooks are always
                      included. Supported: legacy, experimental.
-  --output     TEXT  Output file path.  [default: .pre-commit-config.yaml]
+  --output     TEXT  Output file path. Defaults to .pre-commit-config.yaml,
+                     or prek.toml with --format toml. A .toml/.yaml/.yml
+                     extension that contradicts --format is an error.
+  --format     [yaml|toml]
+                     Output format: yaml (.pre-commit-config.yaml) or toml
+                     (prek.toml). The toml format is read by prek only; plain
+                     pre-commit cannot read it.  [default: yaml]
   --presets    TEXT  Preset catalog to use. Accepts a local directory path or
                      a git repository URL (https://, git@, git://, ssh://).
                      The directory / repo root must contain lang/ and
