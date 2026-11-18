@@ -3113,3 +3113,114 @@ class TestForceHintReproducesTheRun:
         result = runner.invoke(app, ["--lang", "py"])
         assert result.exit_code == 1
         assert "Try: pc-init --lang=py --force\n" in result.stderr + "\n"
+
+
+class TestForceHintQuotingAndSecrets:
+    @pytest.fixture(autouse=True)
+    def isolated_cwd(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+        workdir = tmp_path / "cwd"
+        workdir.mkdir()
+        monkeypatch.chdir(workdir)
+        return workdir
+
+    @staticmethod
+    def _rerun_with_stale_output(tmp_path: Path, args: list[str]) -> str:
+        output = tmp_path / "out.yaml"
+        output.write_text("# stale\n", encoding="utf-8")
+        result = runner.invoke(app, [*args, "--output", str(output)])
+        assert result.exit_code == 1, result.output
+        return result.stderr
+
+    @pytest.mark.parametrize(
+        ("url", "shown"),
+        [
+            (
+                "https://user:ghp_SECRET@example.com/org/p.git",
+                "https://***@example.com/org/p.git",
+            ),
+            (
+                "https://ghp_SECRET@example.com/org/p.git",
+                "https://***@example.com/org/p.git",
+            ),
+            (
+                "ssh://user:ghp_SECRET@example.com/org/p.git",
+                "ssh://***@example.com/org/p.git",
+            ),
+            (
+                "http://ghp_SECRET@example.com/org/p.git",
+                "http://***@example.com/org/p.git",
+            ),
+            (
+                "https://user:p@ssSECRET@example.com/org/p.git",
+                "https://***@example.com/org/p.git",
+            ),
+            ("https://example.com/org/p.git", "https://example.com/org/p.git"),
+            ("git@example.com:org/p.git", "git@example.com:org/p.git"),
+            ("ssh://git@example.com/org/p.git", "ssh://git@example.com/org/p.git"),
+        ],
+    )
+    def test_presets_url_credentials_are_redacted(
+        self, tmp_path: Path, tmp_preset_dir: Path, url: str, shown: str
+    ) -> None:
+        @contextmanager
+        def fake_fetch(_url: str) -> Generator[Path]:
+            yield tmp_preset_dir
+
+        with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
+            stderr = self._rerun_with_stale_output(
+                tmp_path, ["--lang", "py", "--presets", url]
+            )
+
+        assert "SECRET" not in stderr
+        assert f"--presets={shown}" in _hint_args(stderr)
+
+    def test_values_that_need_quoting_survive_a_round_trip(
+        self, tmp_path: Path
+    ) -> None:
+        catalog = tmp_path / "my catalog"
+        lang_dir = catalog / "lang" / "my lang"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+        output = tmp_path / "out dir" / "cfg.yaml"
+        output.parent.mkdir()
+        output.write_text("# stale\n", encoding="utf-8")
+        args = ["--lang", "my lang", "--presets", str(catalog), "--output", str(output)]
+
+        first = runner.invoke(app, args)
+        assert first.exit_code == 1, first.output
+        hint = _hint_args(first.stderr)
+        assert "--lang=my lang" in hint
+        second = runner.invoke(app, hint)
+
+        assert second.exit_code == 0, second.output
+        assert "# stale" not in output.read_text(encoding="utf-8")
+
+    def test_hint_lists_each_option_once_in_a_stable_order(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        output = tmp_path / "out dir" / "prek.toml"
+        output.parent.mkdir()
+        output.write_text("# stale\n", encoding="utf-8")
+        first = runner.invoke(
+            app,
+            [
+                "--lang", "py",
+                "--framework", "react",
+                "--profile", "legacy",
+                "--format", "toml",
+                "--recommended",
+                "--presets", str(tmp_preset_dir),
+                "--output", str(output),
+            ],
+        )  # fmt: skip
+        assert first.exit_code == 1, first.output
+        assert _hint_args(first.stderr) == [
+            "--lang=py",
+            "--framework=react",
+            "--profile=legacy",
+            "--format=toml",
+            "--recommended",
+            f"--presets={tmp_preset_dir}",
+            f"--output={output}",
+            "--force",
+        ]

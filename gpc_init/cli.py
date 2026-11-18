@@ -7,6 +7,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated, NoReturn
+from urllib.parse import urlsplit, urlunsplit
 
 import typer
 
@@ -90,6 +91,24 @@ def _write_config(
     typer.echo(msg)
 
 
+def _redact_url_credentials(value: str) -> str:
+    """
+    Hide the credentials in a URL so they are not echoed into logs.
+
+    An http(s) URL's user info is a token or password and is replaced by ``***``;
+    so is any user info that carries a password. A bare ``git@`` user (scp-style
+    or ssh://) is public and kept, and values that are not URLs are unchanged.
+    """
+    url = urlsplit(value)
+    secret = url.password is not None or (
+        url.scheme in ("http", "https") and url.username is not None
+    )
+    if not secret:
+        return value
+    host = url.netloc.rpartition("@")[2]
+    return urlunsplit(url._replace(netloc=f"***@{host}"))
+
+
 def _build_force_command(
     request: GenerationRequest, *, output: str | None, presets: str | None
 ) -> str:
@@ -111,11 +130,11 @@ def _build_force_command(
     if request.recommended:
         parts.append("--recommended")
     if presets:
-        parts.append(shlex.quote(f"--presets={presets}"))
+        parts.append(f"--presets={_redact_url_credentials(presets)}")
     if output:
-        parts.append(shlex.quote(f"--output={output}"))
+        parts.append(f"--output={output}")
     parts.append("--force")
-    return " ".join(parts)
+    return shlex.join(parts)
 
 
 def _show_diff_and_exit(
