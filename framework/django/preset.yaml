@@ -17,30 +17,30 @@ repos:
         args: ["--add-location", "file"]
         description: "Changes location format for .po files"
   - repo: https://github.com/AliSayyah/django-urlconfchecks
-    rev: v0.13.2
+    rev: v0.17.0
     hooks:
       - id: django-urlconfchecks
         description: "a pre-commit for type checking the urls and associated views"
   - repo: https://github.com/browniebroke/django-codemod
-    rev: v2.5.1
+    rev: v3.0.0
     hooks:
       - id: djcodemod
         description: "A tool to automatically fix Django deprecations."
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: 1.32.0
+    rev: 1.33.0
     hooks:
       - id: django-upgrade
         args: ["run", "--deprecated-in", "3.0"]
         description: "Automatically upgrade your Django project code."
   - repo: https://github.com/djlint/djLint
-    rev: v1.46.1
+    rev: v1.49.10
     hooks:
       - id: djlint-reformat-django
         description: "djLint formatting for Django"
       - id: djlint-django
         description: "djLint linting for Django"
   - repo: https://github.com/croc100/pytest-mrt
-    rev: v1.7.0
+    rev: v1.9.1
     hooks:
       - id: mrt-check
         args: [myapp/migrations/]

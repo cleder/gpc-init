@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/pocc/pre-commit-hooks
-    rev: v1.4.0
+    rev: v1.5.0
     hooks:
       - id: clang-format
         description: "Formats C, C++, Objective-C, and Java code"
@@ -14,7 +14,7 @@ repos:
       - id: include-what-you-use
         description: "Runs Include-What-You-Use (iwyu) in C/CPP code"
   - repo: https://github.com/cpp-linter/cpp-linter-hooks
-    rev: v1.6.0  # Use the tag or commit you want
+    rev: v1.9.0  # Use the tag or commit you want
     hooks:
       - id: clang-format
         args: [--style=Google]  # Other coding style: LLVM, GNU, Chromium, Microsoft, Mozilla, WebKit.

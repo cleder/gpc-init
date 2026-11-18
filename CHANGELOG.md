@@ -140,17 +140,13 @@ Preset updates and generate_awesome_list improvements.
 
 ### Enhancements
 
-- Add `uv-audit` hook to the Python preset (runs on changes to `uv.lock` or
-  `pyproject.toml`).
-- Add `deptry` hook to the Python preset for detecting unused, missing, or
-  transitive dependency issues.
+- Add `uv-audit` hook to the Python preset (runs on changes to `uv.lock` or `pyproject.toml`).
+- Add `deptry` hook to the Python preset for detecting unused, missing, or transitive dependency issues.
 - Add `primary_languages` (`docker`, `tf`) to the Kubernetes framework preset.
 - Remove `checkov_diff` from the Kubernetes preset.
-- Bump bundled hook revisions: `ruff` → v0.15.20, `ty` → v0.0.54,
-  `rumdl` → v0.2.23, `django-upgrade` → 1.31.1.
+- Bump bundled hook revisions: `ruff` → v0.15.20, `ty` → v0.0.54, `rumdl` → v0.2.23, `django-upgrade` → 1.31.1.
 - Filter `meta` repos from the generated AWESOME.md output.
-- Remove the "Applied to every generated configuration" note from the Common
-  section of AWESOME.md.
+- Remove the "Applied to every generated configuration" note from the Common section of AWESOME.md.
 - Improve type annotations in `generate_awesome_list.py`.
 
 ## [0.3.0]
@@ -159,18 +155,14 @@ Expanded preset catalog, framework/language UX improvements, and CI refinements.
 
 ### New Features
 
-- Add actionable language suggestion on framework mismatch: when none of the selected
-  languages satisfy a framework's `primary_languages`, emit a consolidated `Try:` command
-  that preserves existing `--lang` values so it is safe to re-run with `--force`.
+- Add actionable language suggestion on framework mismatch: when none of the selected languages satisfy a framework's `primary_languages`, emit a consolidated `Try:` command that preserves existing `--lang` values so it is safe to re-run with `--force`.
 
 ### Enhancements
 
-- Modernise `js` preset to complement `ts`: replace local prettier + typos with
-  biome-check and mirrors-prettier scoped to JS/JSX/JSON/CSS/Markdown types.
+- Modernise `js` preset to complement `ts`: replace local prettier + typos with biome-check and mirrors-prettier scoped to JS/JSX/JSON/CSS/Markdown types.
 - Add `ts` as a primary language for the `react` preset alongside `js`.
 - Remove `biome-check` from the `react` preset — it is now inherited from the `js` preset.
-- Consolidate `typos` hook into the `common` preset, removing redundant copies from
-  individual language presets (`js`, `md`, `ru`).
+- Consolidate `typos` hook into the `common` preset, removing redundant copies from individual language presets (`js`, `md`, `ru`).
 - Add `codespell` hook to the `common` preset.
 - Add R language preset with pre-commit hooks for the statistical programming language.
 - Expand Python preset: add `numpydoc`, `nbstripout`, and `nbQA` hooks and autoupdate pins.
@@ -180,8 +172,7 @@ Expanded preset catalog, framework/language UX improvements, and CI refinements.
 
 ### CI
 
-- Restrict the "fail if hook revisions are outdated" step to tag pushes and the main
-  branch, so it does not block work-in-progress feature branches.
+- Restrict the "fail if hook revisions are outdated" step to tag pushes and the main branch, so it does not block work-in-progress feature branches.
 
 ## [0.2.0]
 
