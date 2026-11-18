@@ -56,6 +56,10 @@ class _FakeUrlopen:
         return _Response(self.payload)
 
 
+def _no_sleep(_seconds: float) -> None:
+    return None
+
+
 def _fake_urlopen(payload: dict[str, Any]) -> _FakeUrlopen:
     return _FakeUrlopen(payload)
 
@@ -182,13 +186,73 @@ class TestRepoStatus:
         monkeypatch.setattr(car.urllib.request, "urlopen", raiser)
         assert car.repo_status("a/b", None) == "missing"
 
-    def test_other_http_errors_propagate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_non_retryable_http_error_fails_fast(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        calls: list[int] = []
+
         def raiser(*_: object, **__: object) -> None:
+            calls.append(1)
             raise _http_error(403)
 
         monkeypatch.setattr(car.urllib.request, "urlopen", raiser)
-        with pytest.raises(urllib.error.HTTPError):
+        with pytest.raises(car.RepoCheckError, match=r"a/b: HTTP 403.*GITHUB_TOKEN"):
             car.repo_status("a/b", None)
+        assert len(calls) == 1
+
+    @pytest.mark.parametrize("code", [429, 500, 502, 503, 504])
+    def test_retryable_http_error_retries_then_fails(
+        self, monkeypatch: pytest.MonkeyPatch, code: int
+    ) -> None:
+        calls: list[int] = []
+        sleeps: list[float] = []
+
+        def raiser(*_: object, **__: object) -> None:
+            calls.append(1)
+            raise _http_error(code)
+
+        monkeypatch.setattr(car.urllib.request, "urlopen", raiser)
+        monkeypatch.setattr(car.time, "sleep", sleeps.append)
+        with pytest.raises(car.RepoCheckError, match=f"a/b: HTTP {code}"):
+            car.repo_status("a/b", None)
+        assert len(calls) == car.MAX_ATTEMPTS
+        assert sleeps == [car.RETRY_DELAY, car.RETRY_DELAY * 2]
+
+    def test_transient_error_then_success(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        attempts: list[int] = []
+        ok = _fake_urlopen({"archived": True})
+
+        def flaky(request: urllib.request.Request, timeout: int) -> _Response:
+            attempts.append(1)
+            if len(attempts) < 2:
+                raise _http_error(503)
+            return ok(request, timeout)
+
+        monkeypatch.setattr(car.urllib.request, "urlopen", flaky)
+        monkeypatch.setattr(car.time, "sleep", _no_sleep)
+        assert car.repo_status("a/b", None) == "archived"
+        assert len(attempts) == 2
+
+    @pytest.mark.parametrize(
+        "error",
+        [urllib.error.URLError("Name or service not known"), TimeoutError("timed out")],
+    )
+    def test_network_errors_retry_then_fail(
+        self, monkeypatch: pytest.MonkeyPatch, error: Exception
+    ) -> None:
+        calls: list[int] = []
+
+        def raiser(*_: object, **__: object) -> None:
+            calls.append(1)
+            raise error
+
+        monkeypatch.setattr(car.urllib.request, "urlopen", raiser)
+        monkeypatch.setattr(car.time, "sleep", _no_sleep)
+        with pytest.raises(car.RepoCheckError, match="could not check a/b: "):
+            car.repo_status("a/b", None)
+        assert len(calls) == car.MAX_ATTEMPTS
 
     def test_token_sets_authorization_header(
         self, monkeypatch: pytest.MonkeyPatch
@@ -277,3 +341,24 @@ def test_real_presets_reference_github_repos() -> None:
     repos = car.collect_repos()
     assert len(repos) > 50
     assert all("/" in slug for slug in repos)
+
+
+class TestMainCheckFailure:
+    def test_check_failure_exits_2_with_message(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        monkeypatch.setattr(
+            car, "collect_repos", lambda: {"a/b": [Path("lang/x/preset.yaml")]}
+        )
+        monkeypatch.setattr(car, "collect_insecure", list)
+
+        def boom(slug: str, _token: str | None) -> str:
+            msg = f"could not check {slug}: HTTP 429"
+            raise car.RepoCheckError(msg)
+
+        monkeypatch.setattr(car, "repo_status", boom)
+        with pytest.raises(SystemExit) as exc:
+            car.main()
+        assert exc.value.code == 2
+        err = capsys.readouterr().err
+        assert err == "Error: could not check a/b: HTTP 429\n"
