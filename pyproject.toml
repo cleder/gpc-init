@@ -70,8 +70,11 @@ Repository = "https://github.com/cleder/gpc-init"
 
 [tool.mutmut]
 also_copy = [
+    "framework",
     "gpc_init/framework",
     "gpc_init/lang",
+    "lang",
+    "scripts",
 ]
 do_not_mutate_patterns = [
     "logger\\.\\w+",
@@ -84,10 +87,10 @@ source_paths = [
     "gpc_init/",
 ]
 type_check_command = [
+    "pyrefly",
+    "check",
     "--output-format=json",
     "--use-ignore-files=false",
-    "check",
-    "pyrefly",
 ]
 
 [tool.pyrefly]
@@ -176,6 +179,15 @@ gpc_init = [
 include = [
     "gpc_init*",
 ]
+
+[tool.tomlsort]
+all = true
+spaces_indent_inline_array = 4
+trailing_comma_inline_array = true
+
+# Argument order matters here, so this array must not be sorted.
+[tool.tomlsort.overrides."tool.mutmut.type_check_command"]
+inline_arrays = false
 
 [tool.ty.analysis]
 strict-literal-narrowing = true
