@@ -10,13 +10,10 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
-import typer
 import yaml
 from typer.testing import CliRunner
 
-from gpc_init import cli
-from gpc_init.catalog import Catalog
-from gpc_init.cli import _dispatch, _handle_existing_file, app, entry_point
+from gpc_init.cli import app, entry_point
 from gpc_init.exceptions import (
     PresetFetchError,
 )
@@ -2945,37 +2942,34 @@ class TestFormatOption:
         assert "pre-commit cannot read" in " ".join(result.output.split())
 
 
-class TestRecommendedDefaults:
-    def test_run_defaults_recommended_to_false(self, tmp_path: Path) -> None:
-        """_run must default recommended to False when the kwarg is omitted."""
-        target = tmp_path / ".pre-commit-config.yaml"
-        with patch.object(
-            cli,
-            "generate",
-            return_value=("repos: []\n", [], [], [], []),
-        ) as mock_generate:
-            cli._run(["py"], [], target, Catalog.load())
-        assert mock_generate.call_args.kwargs["recommended"] is False
+class TestRecommendationAdvice:
+    def test_advice_is_not_printed_with_recommended(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "go",
+                "--framework",
+                "react",
+                "--recommended",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "recommends adding" not in result.output
 
-    def test_dispatch_recommended_defaults_to_false(self, tmp_path: Path) -> None:
-        """_dispatch must default recommended to False when not supplied."""
-        target = tmp_path / ".pre-commit-config.yaml"
-        with patch("gpc_init.cli._run") as mock_run:
-            _dispatch(["py"], [], target, Catalog.load(), force=False)
-        assert mock_run.call_args.kwargs["recommended"] is False
-
-    def test_handle_existing_file_recommended_defaults_to_false(
+    def test_rerun_with_the_same_selection_reports_no_changes(
         self, tmp_path: Path
     ) -> None:
-        """_handle_existing_file must default recommended to False."""
-        output = tmp_path / ".pre-commit-config.yaml"
-        runner.invoke(
-            app,
-            ["--lang", "go", "--framework", "react", "--output", str(output)],
-        )
-        with pytest.raises(typer.Exit) as exc_info:
-            _handle_existing_file(["go"], ["react"], output, Catalog.load())
-        assert exc_info.value.exit_code == 0
+        output = tmp_path / "out.yaml"
+        args = ["--lang", "go", "--framework", "react", "--output", str(output)]
+        assert runner.invoke(app, args).exit_code == 0
+        second = runner.invoke(app, args)
+        assert second.exit_code == 0
+        assert "No changes" in second.output
+        assert "recommends adding" not in second.output
 
 
 class TestFormatConflictAndDiff:
