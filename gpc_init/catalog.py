@@ -100,9 +100,10 @@ class Catalog:
         selection.
 
         Raises:
+            PresetNotFoundError: root has no lang/ subdirectory.
             MetadataConflictError: two langs claim the same extension, filename,
                 or alias.
-            PresetParseError: a metadata.yaml file is malformed.
+            PresetParseError: a metadata.yaml file is malformed or unreadable.
 
         """
         base = root if root is not None else _DEFAULT_PRESETS_BASE
@@ -149,6 +150,9 @@ def _read_yaml_mapping(path: Path, *, kind: str) -> dict[str, Any]:
             data = yaml.safe_load(fh)
     except yaml.YAMLError as exc:
         msg = f"Failed to parse {kind} YAML '{path}': {exc}"
+        raise PresetParseError(msg) from exc
+    except (OSError, UnicodeDecodeError) as exc:
+        msg = f"Failed to read {kind} file '{path}': {exc}"
         raise PresetParseError(msg) from exc
     if data is None:
         return {}

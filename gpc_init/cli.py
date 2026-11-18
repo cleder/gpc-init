@@ -208,11 +208,8 @@ def _open_catalog(presets: str | None) -> Generator[Catalog]:
     with _preset_root(presets) as root:
         try:
             yield Catalog.load(root)
-        except (PresetNotFoundError, MetadataConflictError) as exc:
+        except (PresetNotFoundError, MetadataConflictError, PresetParseError) as exc:
             typer.echo(f"Error: {exc}", err=True)
-            raise typer.Exit(code=1) from exc
-        except PresetParseError as exc:
-            typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
             raise typer.Exit(code=1) from exc
 
 

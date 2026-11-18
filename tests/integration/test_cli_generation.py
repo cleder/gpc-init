@@ -3020,7 +3020,8 @@ class TestCatalogErrors:
             else [*command, "--presets", str(catalog)],
         )
         assert result.exit_code == 1
-        assert "failed to parse preset YAML" in result.stderr
+        assert "Failed to parse metadata YAML" in result.stderr
+        assert "preset YAML" not in result.stderr
 
     @pytest.mark.parametrize("command", [["--lang", "a"], ["list"]])
     def test_conflicting_metadata_exits_cleanly(
@@ -3035,3 +3036,10 @@ class TestCatalogErrors:
         )
         assert result.exit_code == 1
         assert "claimed by both" in result.stderr
+
+    def test_unreadable_metadata_exits_cleanly(self, tmp_path: Path) -> None:
+        catalog = self._catalog(tmp_path, a="fullname: A\n")
+        (catalog / "lang" / "a" / "metadata.yaml").write_bytes(b"\xff\xfe\x00bad")
+        result = runner.invoke(app, ["list", "--presets", str(catalog)])
+        assert result.exit_code == 1
+        assert "Failed to read metadata file" in result.stderr

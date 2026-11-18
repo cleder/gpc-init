@@ -1,5 +1,6 @@
 """Unit tests for gpc_init/catalog.py."""
 
+import os
 from collections import Counter
 from pathlib import Path
 from typing import IO, Any
@@ -125,6 +126,31 @@ class TestCatalogFileReads:
         catalog.lang_preset("py")
         assert list(opened) == [("preset.yaml", "utf-8")]
         assert opened[("preset.yaml", "utf-8")] == 1
+
+
+class TestUnreadableFiles:
+    def test_invalid_utf8_metadata_is_a_parse_error(self, tmp_path: Path) -> None:
+        _write_preset(tmp_path, "lang", "a", "repos: []\n")
+        (tmp_path / "lang" / "a" / "metadata.yaml").write_bytes(b"\xff\xfe\x00bad")
+        with pytest.raises(PresetParseError, match="Failed to read metadata file"):
+            Catalog.load(tmp_path)
+
+    def test_invalid_utf8_preset_is_a_parse_error(self, tmp_path: Path) -> None:
+        _write_preset(tmp_path, "lang", "a", "repos: []\n")
+        (tmp_path / "lang" / "a" / "preset.yaml").write_bytes(b"\xff\xfe\x00bad")
+        with pytest.raises(PresetParseError, match="Failed to read preset file"):
+            Catalog.load(tmp_path).lang_preset("a")
+
+    @pytest.mark.skipif(os.geteuid() == 0, reason="root ignores file permissions")
+    def test_permission_denied_is_a_parse_error(self, tmp_path: Path) -> None:
+        _write_preset(tmp_path, "lang", "a", "repos: []\n")
+        preset = tmp_path / "lang" / "a" / "preset.yaml"
+        preset.chmod(0)
+        try:
+            with pytest.raises(PresetParseError, match="Failed to read preset file"):
+                Catalog.load(tmp_path).lang_preset("a")
+        finally:
+            preset.chmod(0o644)
 
 
 class TestBundledCatalog:

@@ -128,10 +128,8 @@ class TestDetectLanguages:
     def test_skips_git_dir(self, tmp_path: Path) -> None:
         git = tmp_path / ".git"
         git.mkdir()
-        (git / "COMMIT_EDITMSG").write_text("message")
-        # No lang file there, but confirm dir is skipped (no crash, empty result)
-        result = detect_languages(tmp_path, CATALOG)
-        assert isinstance(result, list)
+        (git / "hook.py").touch()
+        assert "py" not in detect_languages(tmp_path, CATALOG)
 
     def test_skips_pycache(self, tmp_path: Path) -> None:
         cache = tmp_path / "__pycache__"
@@ -147,13 +145,11 @@ class TestDetectLanguages:
 
     def test_only_returns_supported_langs(self, tmp_path: Path) -> None:
         (tmp_path / "main.py").touch()
-        (tmp_path / "index.ts").touch()
-        only_py = _catalog_of(
-            tmp_path / "cat", "lang", {"py": "extensions:\n  - .py\n  - .ts\n"}
-        )
-        result = detect_languages(tmp_path, only_py)
-        assert result == ["py"]
-        assert "js" not in result
+        # A dotenv file is recognised as "env", which this catalog does not have.
+        (tmp_path / ".env").touch()
+        only_py = _catalog_of(tmp_path / "cat", "lang", {"py": "extensions: [.py]\n"})
+        assert detect_languages(tmp_path, only_py) == ["py"]
+        assert "env" in detect_languages(tmp_path, CATALOG)
 
     def test_deduplicates_results(self, tmp_path: Path) -> None:
         (tmp_path / "a.py").touch()
