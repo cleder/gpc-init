@@ -5,7 +5,7 @@ import importlib.metadata
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NoReturn
 
 import typer
 
@@ -21,131 +21,79 @@ from gpc_init.exceptions import (
     UnsupportedLanguageError,
     UnsupportedProfileError,
 )
-from gpc_init.generator import generate
-from gpc_init.renderer import OutputFormat
+from gpc_init.generator import (
+    GeneratedConfig,
+    GenerationRequest,
+    OutputFormat,
+    generate,
+)
 from gpc_init.resolver import (
     SELECTABLE_PROFILES,
-    get_recommendations_info,
     normalize_framework,
     normalize_lang,
 )
 from gpc_init.util import deduplicate_preserving_order
 
 
-def _run(
-    langs: list[str],
-    frameworks: list[str],
-    target: Path,
-    catalog: Catalog,
-    *,
-    recommended: bool = False,
-    profiles: tuple[str, ...] = (),
-    fmt: OutputFormat = OutputFormat.YAML,
-) -> None:
-    """Generate and write the preset config to target."""
-    content, langs, frameworks, lang_presets, fw_presets = generate(
-        langs,
-        frameworks,
-        catalog,
-        recommended=recommended,
-        profiles=profiles,
-        fmt=fmt,
-    )
+def _generate_or_exit(request: GenerationRequest) -> GeneratedConfig:
+    """Run generate, turning expected preset errors into a clean exit 1."""
+    try:
+        return generate(request)
+    except (
+        UnsupportedLanguageError,
+        UnsupportedFrameworkError,
+        UnsupportedProfileError,
+        PresetNotFoundError,
+    ) as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except PresetParseError as exc:
+        typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
+
+def _write_config(
+    target: Path, request: GenerationRequest, result: GeneratedConfig
+) -> None:
+    """Write the generated config to target and report what was done."""
     overwritten = target.exists()
     try:
-        target.write_text(content, encoding="utf-8")
+        target.write_text(result.content, encoding="utf-8")
     except (PermissionError, OSError) as exc:
         typer.echo(f"Error: cannot write to '{target}': {exc}", err=True)
         raise typer.Exit(code=1) from exc
 
-    if not recommended:
-        info = get_recommendations_info(langs, frameworks, lang_presets, fw_presets)
-        if info:
-            typer.echo(info)
+    if result.advice:
+        typer.echo(result.advice)
 
-    lang_str = ", ".join(langs)
-    fw_str = (", ".join(frameworks)) if frameworks else "none"
+    lang_str = ", ".join(result.langs)
+    fw_str = (", ".join(result.frameworks)) if result.frameworks else "none"
     action = "Overwrote" if overwritten else "Generated"
     msg = f"{action} {target} with languages: {lang_str} and frameworks: {fw_str}"
-    if profiles:
-        msg += f" and profiles: {', '.join(profiles)}"
+    if request.profiles:
+        msg += f" and profiles: {', '.join(request.profiles)}"
     typer.echo(msg)
 
 
-def _dispatch(
-    langs: list[str],
-    frameworks: list[str],
-    target: Path,
-    catalog: Catalog,
-    *,
-    force: bool,
-    recommended: bool = False,
-    profiles: tuple[str, ...] = (),
-    fmt: OutputFormat = OutputFormat.YAML,
-) -> None:
-    """Route to diff display or write depending on whether target exists."""
-    if target.exists() and not force:
-        _handle_existing_file(
-            langs,
-            frameworks,
-            target,
-            catalog,
-            recommended=recommended,
-            profiles=profiles,
-            fmt=fmt,
-        )
-    else:
-        _run(
-            langs,
-            frameworks,
-            target,
-            catalog,
-            recommended=recommended,
-            profiles=profiles,
-            fmt=fmt,
-        )
-
-
-def _build_force_command(
-    langs: list[str],
-    frameworks: list[str],
-    profiles: tuple[str, ...] = (),
-    fmt: OutputFormat = OutputFormat.YAML,
-) -> str:
+def _build_force_command(request: GenerationRequest) -> str:
     """Return a ready-to-run pc-init command string that includes --force."""
     parts = ["pc-init"]
-    if langs:
-        parts.append(f"--lang={','.join(langs)}")
-    if frameworks:
-        parts.append(f"--framework={','.join(frameworks)}")
-    if profiles:
-        parts.append(f"--profile={','.join(profiles)}")
-    if fmt is not OutputFormat.YAML:
-        parts.append(f"--format={fmt.value}")
+    if request.langs:
+        parts.append(f"--lang={','.join(request.langs)}")
+    if request.frameworks:
+        parts.append(f"--framework={','.join(request.frameworks)}")
+    if request.profiles:
+        parts.append(f"--profile={','.join(request.profiles)}")
+    if request.fmt is not OutputFormat.YAML:
+        parts.append(f"--format={request.fmt.value}")
     parts.append("--force")
     return " ".join(parts)
 
 
-def _handle_existing_file(
-    langs: list[str],
-    frameworks: list[str],
-    target: Path,
-    catalog: Catalog,
-    *,
-    recommended: bool = False,
-    profiles: tuple[str, ...] = (),
-    fmt: OutputFormat = OutputFormat.YAML,
-) -> None:
-    """Show unified diff vs existing file. Always raises typer.Exit."""
-    content, *_ = generate(
-        langs,
-        frameworks,
-        catalog,
-        recommended=recommended,
-        profiles=profiles,
-        fmt=fmt,
-    )
+def _show_diff_and_exit(
+    target: Path, request: GenerationRequest, result: GeneratedConfig
+) -> NoReturn:
+    """Show a unified diff of target vs the generated config. Always exits."""
     try:
         existing = target.read_text(encoding="utf-8")
     except (PermissionError, OSError) as exc:
@@ -154,14 +102,14 @@ def _handle_existing_file(
     diff_lines = list(
         difflib.unified_diff(
             existing.splitlines(keepends=True),
-            content.splitlines(keepends=True),
+            result.content.splitlines(keepends=True),
             fromfile=str(target),
             tofile="<generated>",
         )
     )
     if diff_lines:
         typer.echo("".join(diff_lines))
-        cmd = _build_force_command(langs, frameworks, profiles, fmt)
+        cmd = _build_force_command(request)
         typer.echo(
             f"\nRun with --force to overwrite '{target}'.\n  Try: {cmd}", err=True
         )
@@ -412,42 +360,6 @@ _VersionOption = Annotated[
 ]
 
 
-def _dispatch_or_exit(
-    langs: list[str],
-    frameworks: list[str],
-    target: Path,
-    catalog: Catalog,
-    *,
-    force: bool,
-    recommended: bool,
-    profiles: tuple[str, ...],
-    fmt: OutputFormat,
-) -> None:
-    """Run _dispatch, turning expected preset errors into a clean exit 1."""
-    try:
-        _dispatch(
-            langs,
-            frameworks,
-            target,
-            catalog,
-            force=force,
-            recommended=recommended,
-            profiles=profiles,
-            fmt=fmt,
-        )
-    except (
-        UnsupportedLanguageError,
-        UnsupportedFrameworkError,
-        UnsupportedProfileError,
-        PresetNotFoundError,
-    ) as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-    except PresetParseError as exc:
-        typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-
 @app.callback(invoke_without_command=True)
 def main(  # noqa: PLR0917
     ctx: typer.Context,
@@ -482,16 +394,19 @@ def main(  # noqa: PLR0917
 
         _require_lang_or_exit(lang, framework, recommended=recommended, detect=detect)
 
-        _dispatch_or_exit(
-            _normalize_langs(lang, catalog),
-            _normalize_frameworks(framework),
-            _resolve_target(output, fmt),
-            catalog,
-            force=force,
-            recommended=recommended,
+        request = GenerationRequest(
+            langs=tuple(_normalize_langs(lang, catalog)),
+            frameworks=tuple(_normalize_frameworks(framework)),
+            catalog=catalog,
             profiles=tuple(_normalize_profiles(profile)),
             fmt=fmt,
+            recommended=recommended,
         )
+        target = _resolve_target(output, fmt)
+        result = _generate_or_exit(request)
+        if target.exists() and not force:
+            _show_diff_and_exit(target, request, result)
+        _write_config(target, request, result)
 
 
 @app.command("list")
