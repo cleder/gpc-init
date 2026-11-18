@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from gpc_init.catalog import Catalog
 from gpc_init.exceptions import (
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
@@ -12,8 +13,6 @@ from gpc_init.exceptions import (
 from gpc_init.resolver import (
     expand_recommendations,
     get_recommendations_info,
-    get_supported_frameworks,
-    get_supported_languages,
     normalize_framework,
     normalize_lang,
     validate_frameworks,
@@ -24,56 +23,52 @@ from gpc_init.resolver import (
 
 class TestNormalizeLang:
     def test_lowercase(self) -> None:
-        assert normalize_lang("PY") == "py"
+        assert normalize_lang("PY", Catalog.load()) == "py"
 
     def test_alias_python(self) -> None:
-        assert normalize_lang("python") == "py"
+        assert normalize_lang("python", Catalog.load()) == "py"
 
     def test_alias_javascript(self) -> None:
-        assert normalize_lang("javascript") == "js"
+        assert normalize_lang("javascript", Catalog.load()) == "js"
 
     def test_alias_rust(self) -> None:
-        assert normalize_lang("rust") == "rs"
+        assert normalize_lang("rust", Catalog.load()) == "rs"
 
     def test_alias_ruby(self) -> None:
-        assert normalize_lang("ruby") == "rb"
+        assert normalize_lang("ruby", Catalog.load()) == "rb"
 
     def test_alias_cplusplus(self) -> None:
-        assert normalize_lang("c++") == "cpp"
+        assert normalize_lang("c++", Catalog.load()) == "cpp"
 
     def test_alias_c(self) -> None:
-        assert normalize_lang("c") == "cpp"
+        assert normalize_lang("c", Catalog.load()) == "cpp"
 
     def test_alias_kotlin(self) -> None:
-        assert normalize_lang("kotlin") == "kt"
+        assert normalize_lang("kotlin", Catalog.load()) == "kt"
 
     def test_alias_golang(self) -> None:
-        assert normalize_lang("golang") == "go"
+        assert normalize_lang("golang", Catalog.load()) == "go"
 
     def test_alias_makefile(self) -> None:
-        assert normalize_lang("makefile") == "make"
+        assert normalize_lang("makefile", Catalog.load()) == "make"
 
     def test_strips_whitespace(self) -> None:
-        assert normalize_lang("  py  ") == "py"
+        assert normalize_lang("  py  ", Catalog.load()) == "py"
 
     def test_unknown_lang_passthrough(self) -> None:
-        assert normalize_lang("go") == "go"
+        assert normalize_lang("go", Catalog.load()) == "go"
 
     def test_mixed_case_alias(self) -> None:
-        assert normalize_lang("Python") == "py"
+        assert normalize_lang("Python", Catalog.load()) == "py"
 
-    def test_base_dir_is_forwarded_to_alias_lookup(self, tmp_path: Path) -> None:
+    def test_aliases_come_from_the_given_catalog(self, tmp_path: Path) -> None:
         # Create a custom lang with an alias that only exists in this catalog.
         lang_dir = tmp_path / "lang" / "xtest"
         lang_dir.mkdir(parents=True)
         (lang_dir / "preset.yaml").write_text("repos: []\n")
         (lang_dir / "metadata.yaml").write_text("aliases:\n  - xalias\n")
 
-        # With the correct base_dir the custom alias resolves to "xtest".
-        # If base_dir were ignored (mutant: None), the real install's catalog
-        # would be used instead, which has no "xalias" alias, so the value
-        # would pass through unchanged.
-        assert normalize_lang("xalias", base_dir=tmp_path) == "xtest"
+        assert normalize_lang("xalias", Catalog.load(tmp_path)) == "xtest"
 
 
 class TestNormalizeFramework:
@@ -84,86 +79,34 @@ class TestNormalizeFramework:
         assert normalize_framework("  django  ") == "django"
 
 
-class TestGetSupportedLanguages:
-    def test_returns_list_of_ids(self, tmp_preset_dir: Path) -> None:
-        supported = get_supported_languages(base_dir=tmp_preset_dir)
-        assert "py" in supported
-        assert "js" in supported
-        assert "common" not in supported
-
-    def test_returns_sorted_list(self, tmp_preset_dir: Path) -> None:
-        supported = get_supported_languages(base_dir=tmp_preset_dir)
-        assert supported == sorted(supported)
-
-    def test_empty_lang_dir(self, tmp_path: Path) -> None:
-        # No lang dir at all
-        supported = get_supported_languages(base_dir=tmp_path)
-        assert supported == []
-
-
-class TestGetSupportedFrameworks:
-    def test_returns_list_of_ids(self, tmp_preset_dir: Path) -> None:
-        supported = get_supported_frameworks(base_dir=tmp_preset_dir)
-        assert "react" in supported
-
-    def test_returns_sorted_list(self, tmp_preset_dir: Path) -> None:
-        supported = get_supported_frameworks(base_dir=tmp_preset_dir)
-        assert supported == sorted(supported)
-
-    def test_empty_framework_dir(self, tmp_path: Path) -> None:
-        supported = get_supported_frameworks(base_dir=tmp_path)
-        assert supported == []
-
-    def test_excludes_framework_dir_without_preset_yaml(
-        self, tmp_preset_dir: Path
-    ) -> None:
-        # Create a framework directory that has no preset.yaml — it must not appear.
-        (tmp_preset_dir / "framework" / "incomplete").mkdir()
-        supported = get_supported_frameworks(base_dir=tmp_preset_dir)
-        assert "incomplete" not in supported
-        assert "react" in supported
-
-
 class TestValidateLangs:
     def test_valid_lang_passes(self, tmp_preset_dir: Path) -> None:
-        validate_langs(["py"], base_dir=tmp_preset_dir)  # no error
+        validate_langs(["py"], Catalog.load(tmp_preset_dir))  # no error
 
     def test_invalid_lang_raises(self, tmp_preset_dir: Path) -> None:
         with pytest.raises(UnsupportedLanguageError) as exc_info:
-            validate_langs(["cobol"], base_dir=tmp_preset_dir)
+            validate_langs(["cobol"], Catalog.load(tmp_preset_dir))
         assert "cobol" in str(exc_info.value)
         assert "Supported:" in str(exc_info.value)
 
     def test_error_lists_supported(self, tmp_preset_dir: Path) -> None:
         with pytest.raises(UnsupportedLanguageError) as exc_info:
-            validate_langs(["nope"], base_dir=tmp_preset_dir)
+            validate_langs(["nope"], Catalog.load(tmp_preset_dir))
         assert len(exc_info.value.supported) > 0
 
 
 class TestValidateFrameworks:
     def test_valid_framework_passes(self, tmp_preset_dir: Path) -> None:
-        validate_frameworks(["react"], base_dir=tmp_preset_dir)  # no error
+        validate_frameworks(["react"], Catalog.load(tmp_preset_dir))  # no error
 
     def test_invalid_framework_raises(self, tmp_preset_dir: Path) -> None:
         with pytest.raises(UnsupportedFrameworkError) as exc_info:
-            validate_frameworks(["angular"], base_dir=tmp_preset_dir)
+            validate_frameworks(["angular"], Catalog.load(tmp_preset_dir))
         assert "angular" in str(exc_info.value)
         assert "Supported:" in str(exc_info.value)
 
     def test_empty_frameworks_passes(self, tmp_preset_dir: Path) -> None:
-        validate_frameworks([], base_dir=tmp_preset_dir)  # no error
-
-    def test_base_dir_is_forwarded_to_discovery(self, tmp_path: Path) -> None:
-        # Create a framework that cannot exist in the real package install.
-        fw_dir = tmp_path / "framework" / "xtest-only-fw"
-        fw_dir.mkdir(parents=True)
-        (fw_dir / "preset.yaml").write_text("repos: []\n")
-
-        # With the correct base_dir the synthetic framework is visible — no error.
-        validate_frameworks(["xtest-only-fw"], base_dir=tmp_path)
-
-        # If base_dir were ignored (mutant: None), the real install would be used
-        # and "xtest-only-fw" would be absent, raising UnsupportedFrameworkError.
+        validate_frameworks([], Catalog.load(tmp_preset_dir))  # no error
 
 
 class TestValidateProfiles:

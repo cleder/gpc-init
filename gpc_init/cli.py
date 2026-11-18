@@ -10,8 +10,10 @@ from typing import Annotated
 import typer
 
 from gpc_init import fetcher
+from gpc_init.catalog import Catalog
 from gpc_init.detector import detect_frameworks, detect_languages
 from gpc_init.exceptions import (
+    MetadataConflictError,
     PresetFetchError,
     PresetNotFoundError,
     PresetParseError,
@@ -24,8 +26,6 @@ from gpc_init.renderer import OutputFormat
 from gpc_init.resolver import (
     SELECTABLE_PROFILES,
     get_recommendations_info,
-    get_supported_frameworks,
-    get_supported_languages,
     normalize_framework,
     normalize_lang,
 )
@@ -36,7 +36,7 @@ def _run(
     langs: list[str],
     frameworks: list[str],
     target: Path,
-    base_dir: Path | None,
+    catalog: Catalog,
     *,
     recommended: bool = False,
     profiles: tuple[str, ...] = (),
@@ -46,7 +46,7 @@ def _run(
     content, langs, frameworks, lang_presets, fw_presets = generate(
         langs,
         frameworks,
-        base_dir,
+        catalog,
         recommended=recommended,
         profiles=profiles,
         fmt=fmt,
@@ -77,7 +77,7 @@ def _dispatch(
     langs: list[str],
     frameworks: list[str],
     target: Path,
-    base_dir: Path | None,
+    catalog: Catalog,
     *,
     force: bool,
     recommended: bool = False,
@@ -90,7 +90,7 @@ def _dispatch(
             langs,
             frameworks,
             target,
-            base_dir,
+            catalog,
             recommended=recommended,
             profiles=profiles,
             fmt=fmt,
@@ -100,7 +100,7 @@ def _dispatch(
             langs,
             frameworks,
             target,
-            base_dir,
+            catalog,
             recommended=recommended,
             profiles=profiles,
             fmt=fmt,
@@ -131,7 +131,7 @@ def _handle_existing_file(
     langs: list[str],
     frameworks: list[str],
     target: Path,
-    base_dir: Path | None,
+    catalog: Catalog,
     *,
     recommended: bool = False,
     profiles: tuple[str, ...] = (),
@@ -141,7 +141,7 @@ def _handle_existing_file(
     content, *_ = generate(
         langs,
         frameworks,
-        base_dir,
+        catalog,
         recommended=recommended,
         profiles=profiles,
         fmt=fmt,
@@ -181,7 +181,7 @@ def _version_callback(value: bool) -> None:
 
 
 @contextmanager
-def _resolved_preset_base(
+def _preset_root(
     presets: str | None,
 ) -> Generator[Path | None]:
     """Resolve --presets to a local Path, yielding None for the bundled catalog."""
@@ -202,6 +202,20 @@ def _resolved_preset_base(
             raise typer.Exit(code=1) from exc
 
 
+@contextmanager
+def _open_catalog(presets: str | None) -> Generator[Catalog]:
+    """Resolve --presets and load the catalog rooted there, exiting 1 on errors."""
+    with _preset_root(presets) as root:
+        try:
+            yield Catalog.load(root)
+        except (PresetNotFoundError, MetadataConflictError) as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+        except PresetParseError as exc:
+            typer.echo(f"Error: failed to parse preset YAML: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
+
+
 app = typer.Typer(
     name="pc-init",
     help="Generate a .pre-commit-config.yaml for your project.",
@@ -212,16 +226,12 @@ app = typer.Typer(
 def _apply_detection(
     lang: list[str] | None,
     framework: list[str] | None,
-    base_dir: Path | None,
+    catalog: Catalog,
 ) -> tuple[list[str], list[str]]:
     """Run auto-detection, print results, and merge with explicit flags."""
     repo_dir = Path.cwd()
-    detected_langs = detect_languages(
-        repo_dir, get_supported_languages(base_dir), base_dir=base_dir
-    )
-    detected_frameworks = detect_frameworks(
-        repo_dir, get_supported_frameworks(base_dir), base_dir=base_dir
-    )
+    detected_langs = detect_languages(repo_dir, catalog)
+    detected_frameworks = detect_frameworks(repo_dir, catalog)
     if detected_langs:
         typer.echo(f"Detected languages: {', '.join(detected_langs)}")
     if detected_frameworks:
@@ -261,15 +271,10 @@ def _expand_comma_separated(raw: list[str] | None) -> list[str]:
     ]
 
 
-def _normalize_langs(
-    raw_langs: list[str] | None, base_dir: Path | None = None
-) -> list[str]:
+def _normalize_langs(raw_langs: list[str] | None, catalog: Catalog) -> list[str]:
     """Lowercase, resolve aliases, and deduplicate language values."""
     return deduplicate_preserving_order(
-        [
-            normalize_lang(v, base_dir=base_dir)
-            for v in _expand_comma_separated(raw_langs)
-        ]
+        [normalize_lang(v, catalog) for v in _expand_comma_separated(raw_langs)]
     )
 
 
@@ -414,7 +419,7 @@ def _dispatch_or_exit(
     langs: list[str],
     frameworks: list[str],
     target: Path,
-    base_dir: Path | None,
+    catalog: Catalog,
     *,
     force: bool,
     recommended: bool,
@@ -427,7 +432,7 @@ def _dispatch_or_exit(
             langs,
             frameworks,
             target,
-            base_dir,
+            catalog,
             force=force,
             recommended=recommended,
             profiles=profiles,
@@ -474,17 +479,17 @@ def main(  # noqa: PLR0917
     if ctx.invoked_subcommand is not None:
         return
 
-    with _resolved_preset_base(presets) as base_dir:
+    with _open_catalog(presets) as catalog:
         if detect:
-            lang, framework = _apply_detection(lang, framework, base_dir)
+            lang, framework = _apply_detection(lang, framework, catalog)
 
         _require_lang_or_exit(lang, framework, recommended=recommended, detect=detect)
 
         _dispatch_or_exit(
-            _normalize_langs(lang, base_dir=base_dir),
+            _normalize_langs(lang, catalog),
             _normalize_frameworks(framework),
             _resolve_target(output, fmt),
-            base_dir,
+            catalog,
             force=force,
             recommended=recommended,
             profiles=tuple(_normalize_profiles(profile)),
@@ -500,9 +505,9 @@ def list_presets(
     ] = None,
 ) -> None:
     """List available language and framework presets in the active catalog."""
-    with _resolved_preset_base(presets) as base_dir:
-        langs = get_supported_languages(base_dir)
-        frameworks = get_supported_frameworks(base_dir)
+    with _open_catalog(presets) as catalog:
+        langs = catalog.lang_ids
+        frameworks = catalog.framework_ids
 
     typer.echo("Languages:")
     typer.echo("  " + ", ".join(langs))
