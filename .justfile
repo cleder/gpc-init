@@ -36,6 +36,6 @@ test:
     uv run pyrefly check gpc_init tests
     uv run ty check gpc_init tests
 
-# Fail if any hook repo referenced by a preset is archived or gone.
+# Fail if a preset references a non-https, archived or missing hook repo.
 check-archived:
     GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null)}" uv run scripts/check_archived_repos.py

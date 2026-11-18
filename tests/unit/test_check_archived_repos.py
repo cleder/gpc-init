@@ -108,6 +108,36 @@ class TestPresetSlugs:
         assert car.preset_slugs(recommended) == []
 
 
+class TestInsecureUrls:
+    def test_flags_non_https(self) -> None:
+        urls = [
+            "https://github.com/a/b",
+            "local",
+            "meta",
+            "git@github.com:a/b.git",
+            "http://github.com/a/b",
+            "git://github.com/a/b",
+            "ssh://git@github.com/a/b",
+            "",
+        ]
+        assert car.insecure_urls(urls) == urls[3:]
+
+    def test_collect_insecure_reports_preset(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        path = tmp_path / "lang/py/preset.yaml"
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            "repos:\n  - repo: git@github.com:a/b.git\n  - repo: local\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(car, "PROJECT_ROOT", tmp_path)
+        assert car.collect_insecure() == ["lang/py/preset.yaml: git@github.com:a/b.git"]
+
+    def test_real_catalog_is_https_only(self) -> None:
+        assert car.collect_insecure() == []
+
+
 class TestCollectRepos:
     def test_groups_presets_by_repo(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -185,6 +215,7 @@ class TestMain:
     def _setup(monkeypatch: pytest.MonkeyPatch, statuses: dict[str, str]) -> None:
         repos = {slug: [Path(f"lang/{slug}/preset.yaml")] for slug in statuses}
         monkeypatch.setattr(car, "collect_repos", lambda: repos)
+        monkeypatch.setattr(car, "collect_insecure", list)
 
         def fake_status(slug: str, _token: str | None) -> str:
             return statuses[slug]
@@ -197,6 +228,18 @@ class TestMain:
         self._setup(monkeypatch, {"a/b": "ok", "c/d": "ok"})
         car.main()
         assert "Checked 2 hook repositories." in capsys.readouterr().out
+
+    def test_insecure_url_fails(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        self._setup(monkeypatch, {"a/b": "ok"})
+        monkeypatch.setattr(
+            car, "collect_insecure", lambda: ["lang/x/preset.yaml: ssh"]
+        )
+        with pytest.raises(SystemExit) as exc:
+            car.main()
+        assert exc.value.code == 1
+        assert "NOT HTTPS lang/x/preset.yaml: ssh" in capsys.readouterr().out
 
     def test_problems_exit_1_and_are_listed(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
