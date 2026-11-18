@@ -189,3 +189,9 @@ class TestGenerateFormat:
             langs, frameworks, base_dir=tmp_preset_dir, fmt=OutputFormat.TOML
         )
         assert tomllib.loads(as_toml.content) == yaml.safe_load(as_yaml.content)
+
+
+class TestGeneratedConfigCompat:
+    def test_yaml_content_aliases_content(self, tmp_preset_dir: Path) -> None:
+        result = generate(["py"], [], base_dir=tmp_preset_dir)
+        assert result.yaml_content == result.content

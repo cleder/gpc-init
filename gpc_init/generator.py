@@ -30,6 +30,11 @@ class GeneratedConfig(NamedTuple):
     lang_presets: list[dict[str, Any]]
     fw_presets: list[dict[str, Any]]
 
+    @property
+    def yaml_content(self) -> str:
+        """Alias for ``content``, kept for backward compatibility."""
+        return self.content
+
 
 def _load_all(
     langs: list[str], frameworks: list[str], base_dir: Path | None
