@@ -2,6 +2,7 @@
 
 import difflib
 import importlib.metadata
+import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -89,8 +90,15 @@ def _write_config(
     typer.echo(msg)
 
 
-def _build_force_command(request: GenerationRequest) -> str:
-    """Return a ready-to-run pc-init command string that includes --force."""
+def _build_force_command(
+    request: GenerationRequest, *, output: str | None, presets: str | None
+) -> str:
+    """
+    Return a ready-to-run pc-init command that repeats the run, plus --force.
+
+    output and presets are the raw option values: without them the command would
+    write to the default file or use the bundled catalog instead.
+    """
     parts = ["pc-init"]
     if request.langs:
         parts.append(f"--lang={','.join(request.langs)}")
@@ -100,12 +108,18 @@ def _build_force_command(request: GenerationRequest) -> str:
         parts.append(f"--profile={','.join(request.profiles)}")
     if request.fmt is not OutputFormat.YAML:
         parts.append(f"--format={request.fmt.value}")
+    if request.recommended:
+        parts.append("--recommended")
+    if presets:
+        parts.append(shlex.quote(f"--presets={presets}"))
+    if output:
+        parts.append(shlex.quote(f"--output={output}"))
     parts.append("--force")
     return " ".join(parts)
 
 
 def _show_diff_and_exit(
-    target: Path, request: GenerationRequest, result: GeneratedConfig
+    target: Path, result: GeneratedConfig, force_command: str
 ) -> NoReturn:
     """Show a unified diff of target vs the generated config. Always exits."""
     diff_lines = list(
@@ -118,9 +132,9 @@ def _show_diff_and_exit(
     )
     if diff_lines:
         typer.echo("".join(diff_lines))
-        cmd = _build_force_command(request)
         typer.echo(
-            f"\nRun with --force to overwrite '{target}'.\n  Try: {cmd}", err=True
+            f"\nRun with --force to overwrite '{target}'.\n  Try: {force_command}",
+            err=True,
         )
         raise typer.Exit(code=1)
     typer.echo(f"No changes: '{target}' already matches the generated config.")
@@ -414,7 +428,10 @@ def main(  # noqa: PLR0917
         target = _resolve_target(output, fmt)
         result = _generate_or_exit(request)
         if target.exists() and not force:
-            _show_diff_and_exit(target, request, result)
+            force_command = _build_force_command(
+                request, output=output, presets=presets
+            )
+            _show_diff_and_exit(target, result, force_command)
         _write_config(target, request, result)
 
 
