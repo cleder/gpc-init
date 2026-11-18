@@ -1,0 +1,7 @@
+repos:
+  - repo: https://github.com/hermes-labs-ai/csv-quality-gate
+    rev: v0.3.1
+    hooks:
+      - id: csv-quality-gate
+        category: experimental
+        description: "Check staged CSV files for shape and quality issues before ingestion."

@@ -99,7 +99,7 @@ pc-init list
 
 ```text
 Languages:
-  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, pyx, r, rb, rs, rst, sh, sql, swift, tex, tf, toml, ts, yaml
+  cpp, css, csv, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, pyx, r, rb, rs, rst, sh, sql, swift, tex, tf, toml, ts, yaml
 
 Frameworks:
   ansible, behave, django, git, k8s, nika, react, skill, sphinx
@@ -132,6 +132,7 @@ pc-init list --presets https://github.com/org/my-presets
 | `img` | Images |
 | `docker` | Docker |
 | `sql` | SQL |
+| `csv` | CSV |
 | `tf` | Terraform |
 | `toml` | TOML |
 | `yaml` | YAML |
@@ -210,6 +211,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.css`, `.scss`, `.sass` | `css` |
 | `.sh`, `.bash` | `sh` |
 | `.sql` | `sql` |
+| `.csv` | `csv` |
 | `.tf`, `.tfvars` | `tf` |
 | `.md`, `.markdown` | `md` |
 | `.ipynb` | `nb` |

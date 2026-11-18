@@ -13,6 +13,7 @@ from gpc_init.detector import detect_frameworks, detect_languages
 ALL_LANGS = [
     "cpp",
     "css",
+    "csv",
     "docker",
     "env",
     "go",
