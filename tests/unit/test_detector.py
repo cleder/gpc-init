@@ -35,7 +35,6 @@ ALL_LANGS = [
     "swift",
     "tf",
     "toml",
-    "ts",
     "yaml",
 ]
 ALL_FRAMEWORKS = [
@@ -61,7 +60,7 @@ class TestDetectLanguages:
         (tmp_path / "main.go").touch()
         result = detect_languages(tmp_path, ALL_LANGS)
         assert "py" in result
-        assert "ts" in result
+        assert "js" in result
         assert "go" in result
 
     def test_detects_dockerfile_by_filename(self, tmp_path: Path) -> None:
@@ -175,7 +174,7 @@ class TestDetectLanguages:
         (tmp_path / "index.ts").touch()
         result = detect_languages(tmp_path, ["py"])
         assert result == ["py"]
-        assert "ts" not in result
+        assert "js" not in result
 
     def test_deduplicates_results(self, tmp_path: Path) -> None:
         (tmp_path / "a.py").touch()
@@ -196,9 +195,9 @@ class TestDetectLanguages:
         (tmp_path / "Component.jsx").touch()
         assert "js" in detect_languages(tmp_path, ALL_LANGS)
 
-    def test_tsx_maps_to_ts(self, tmp_path: Path) -> None:
+    def test_tsx_maps_to_js(self, tmp_path: Path) -> None:
         (tmp_path / "Component.tsx").touch()
-        assert "ts" in detect_languages(tmp_path, ALL_LANGS)
+        assert "js" in detect_languages(tmp_path, ALL_LANGS)
 
     def test_bash_extension_maps_to_sh(self, tmp_path: Path) -> None:
         (tmp_path / "deploy.bash").touch()

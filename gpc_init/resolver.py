@@ -262,10 +262,10 @@ def get_recommendations_info(
     - ``--framework`` does the same for frameworks.
 
     Example output for ``--lang=go --framework=react`` where react recommends
-    ``lang: [js, ts]``::
+    ``lang: [js, css]``::
 
-        Note: preset 'react' recommends adding: --lang=js,ts
-              Try: pc-init --lang=go,js,ts --framework=react
+        Note: preset 'react' recommends adding: --lang=js,css
+              Try: pc-init --lang=go,js,css --framework=react
 
     Returns ``None`` when every preset either has no ``recommended`` section or all
     recommended items are already selected.

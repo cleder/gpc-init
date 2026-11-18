@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""
+Fail if a preset references an insecure, archived or missing hook repository.
+
+Every ``repo:`` in a preset must be an ``https://`` URL (the pre-commit
+pseudo-repositories ``local`` and ``meta`` are exempt); ssh, ``git://`` and
+``http://`` URLs are rejected, which also stops them slipping past the
+archived check below.
+
+Archived repositories no longer receive fixes or revision bumps, so presets
+must not point at them. Scans every ``preset*.yaml`` under lang/ and
+framework/, queries the GitHub API once per unique repository and exits
+non-zero listing the offenders.
+
+Set GITHUB_TOKEN (or GH_TOKEN) to avoid the anonymous rate limit; CI does.
+
+Usage:
+    python scripts/check_archived_repos.py
+"""
+
+import json
+import os
+import re
+import sys
+import urllib.error
+import urllib.request
+from collections import defaultdict
+from pathlib import Path
+
+import yaml
+
+PROJECT_ROOT = Path(__file__).parent.parent
+PSEUDO_REPOS = frozenset({"local", "meta"})
+GITHUB_URL = re.compile(r"^https://github\.com/([^/]+/[^/]+?)(?:\.git)?/?$")
+
+
+def preset_urls(preset: Path) -> list[str]:
+    """Return every ``repo:`` value of one preset file."""
+    data = yaml.safe_load(preset.read_text()) or {}
+    return [str(entry.get("repo", "")) for entry in data.get("repos", [])]
+
+
+def insecure_urls(urls: list[str]) -> list[str]:
+    """Return the repo URLs that are neither a pseudo-repo nor ``https://``."""
+    return [
+        url
+        for url in urls
+        if url not in PSEUDO_REPOS and not url.startswith("https://")
+    ]
+
+
+def preset_slugs(preset: Path) -> list[str]:
+    """Return the GitHub ``owner/name`` slugs referenced by one preset file."""
+    matches = (GITHUB_URL.match(url) for url in preset_urls(preset))
+    return [match.group(1) for match in matches if match]
+
+
+def collect_insecure() -> list[str]:
+    """List ``preset: url`` for every non-https hook repository in the catalog."""
+    found: list[str] = []
+    for kind in ("lang", "framework"):
+        for preset in sorted((PROJECT_ROOT / kind).glob("*/preset*.yaml")):
+            rel = preset.relative_to(PROJECT_ROOT)
+            found.extend(f"{rel}: {url}" for url in insecure_urls(preset_urls(preset)))
+    return found
+
+
+def collect_repos() -> dict[str, list[Path]]:
+    """Map each GitHub ``owner/name`` to the preset files that reference it."""
+    repos: dict[str, list[Path]] = defaultdict(list)
+    for kind in ("lang", "framework"):
+        for preset in sorted((PROJECT_ROOT / kind).glob("*/preset*.yaml")):
+            for slug in preset_slugs(preset):
+                repos[slug].append(preset.relative_to(PROJECT_ROOT))
+    return repos
+
+
+def repo_status(slug: str, token: str | None) -> str:
+    """Return ``ok``, ``archived``, or ``missing`` (or raise on other errors)."""
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{slug}",
+        headers={"Accept": "application/vnd.github+json"},
+    )
+    if token:
+        request.add_header("Authorization", f"Bearer {token}")
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+            info = json.load(response)
+    except urllib.error.HTTPError as err:
+        if err.code in (404, 410):
+            return "missing"
+        raise
+    return "archived" if info.get("archived") else "ok"
+
+
+def main() -> None:
+    """Exit 1 if any referenced hook repository is archived or missing."""
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    repos = collect_repos()
+    problems = [f"NOT HTTPS {entry}" for entry in collect_insecure()]
+    for slug in sorted(repos):
+        status = repo_status(slug, token)
+        if status != "ok":
+            files = ", ".join(str(p) for p in repos[slug])
+            problems.append(f"{status.upper():8} {slug}  ({files})")
+    print(f"Checked {len(repos)} hook repositories.")  # noqa: T201
+    if problems:
+        print("\n".join(problems))  # noqa: T201
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
