@@ -2,6 +2,7 @@
 
 import importlib.metadata
 import shutil
+import tomllib
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -2906,3 +2907,74 @@ class TestProfileFlag:
         )
         assert result.exit_code == 1
         assert "mypy" in result.output
+
+
+class TestFormatOption:
+    def test_toml_to_explicit_output(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "toml", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "repos" in tomllib.loads(output.read_text())
+
+    def test_toml_default_filename_is_prek_toml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["--lang", "py", "--format", "toml"])
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "prek.toml").exists()
+        assert not (tmp_path / ".pre-commit-config.yaml").exists()
+
+    def test_yaml_default_filename_unchanged(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["--lang", "py"])
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / ".pre-commit-config.yaml").exists()
+
+    @pytest.mark.parametrize(
+        ("fmt", "name"),
+        [("toml", "out.yaml"), ("toml", "out.yml"), ("yaml", "out.toml")],
+    )
+    def test_conflicting_extension_errors(
+        self, tmp_path: Path, fmt: str, name: str
+    ) -> None:
+        output = tmp_path / name
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", fmt, "--output", str(output)]
+        )
+        assert result.exit_code == 1
+        assert "--format" in result.output
+        assert not output.exists()
+
+    @pytest.mark.parametrize("fmt", ["toml", "yaml"])
+    def test_unknown_extension_is_accepted(self, tmp_path: Path, fmt: str) -> None:
+        output = tmp_path / "ci-config"
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", fmt, "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_invalid_format_rejected(self, tmp_path: Path) -> None:
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "json", "--output", str(tmp_path / "x")]
+        )
+        assert result.exit_code != 0
+
+    def test_force_hint_includes_format(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        output.write_text("stale = true\n")
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "toml", "--output", str(output)]
+        )
+        assert result.exit_code == 1
+        assert "--format=toml" in result.output
+
+    def test_help_mentions_prek_only(self) -> None:
+        result = runner.invoke(app, ["--help"])
+        assert "prek" in result.output
+        assert "pre-commit cannot read" in " ".join(result.output.split())

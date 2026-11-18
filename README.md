@@ -67,8 +67,7 @@ Options:
                      (repeatable, or comma-delimited: --framework=react,django).
                      Run `pc-init list` to see supported values from the
                      active catalog.
-  --force            Overwrite existing .pre-commit-config.yaml without
-                     prompting.
+  --force            Overwrite an existing output file without prompting.
   --detect           Auto-detect languages and frameworks from the current
                      directory and merge them with any explicitly supplied
                      --lang/--framework values.
@@ -76,7 +75,13 @@ Options:
                      baseline (repeatable, or comma-delimited:
                      --profile=legacy,experimental). preset hooks are always
                      included. Supported: legacy, experimental.
-  --output     TEXT  Output file path.  [default: .pre-commit-config.yaml]
+  --output     TEXT  Output file path. Defaults to .pre-commit-config.yaml,
+                     or prek.toml with --format toml. A .toml/.yaml/.yml
+                     extension that contradicts --format is an error.
+  --format     [yaml|toml]
+                     Output format: yaml (.pre-commit-config.yaml) or toml
+                     (prek.toml). The toml format is read by prek only; plain
+                     pre-commit cannot read it.  [default: yaml]
   --presets    TEXT  Preset catalog to use. Accepts a local directory path or
                      a git repository URL (https://, git@, git://, ssh://).
                      The directory / repo root must contain lang/ and

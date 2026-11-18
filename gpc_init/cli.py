@@ -1,4 +1,4 @@
-"""pc-init CLI: Generate .pre-commit-config.yaml from language and framework presets."""
+"""pc-init CLI: Generate .pre-commit-config.yaml or prek.toml from presets."""
 
 import difflib
 import importlib.metadata
@@ -20,6 +20,7 @@ from gpc_init.exceptions import (
     UnsupportedProfileError,
 )
 from gpc_init.generator import generate
+from gpc_init.renderer import OutputFormat
 from gpc_init.resolver import (
     SELECTABLE_PROFILES,
     get_recommendations_info,
@@ -39,10 +40,16 @@ def _run(
     *,
     recommended: bool = False,
     profiles: tuple[str, ...] = (),
+    fmt: OutputFormat = OutputFormat.YAML,
 ) -> None:
     """Generate and write the preset config to target."""
     content, langs, frameworks, lang_presets, fw_presets = generate(
-        langs, frameworks, base_dir, recommended=recommended, profiles=profiles
+        langs,
+        frameworks,
+        base_dir,
+        recommended=recommended,
+        profiles=profiles,
+        fmt=fmt,
     )
 
     overwritten = target.exists()
@@ -75,6 +82,7 @@ def _dispatch(
     force: bool,
     recommended: bool = False,
     profiles: tuple[str, ...] = (),
+    fmt: OutputFormat = OutputFormat.YAML,
 ) -> None:
     """Route to diff display or write depending on whether target exists."""
     if target.exists() and not force:
@@ -85,6 +93,7 @@ def _dispatch(
             base_dir,
             recommended=recommended,
             profiles=profiles,
+            fmt=fmt,
         )
     else:
         _run(
@@ -94,11 +103,15 @@ def _dispatch(
             base_dir,
             recommended=recommended,
             profiles=profiles,
+            fmt=fmt,
         )
 
 
 def _build_force_command(
-    langs: list[str], frameworks: list[str], profiles: tuple[str, ...] = ()
+    langs: list[str],
+    frameworks: list[str],
+    profiles: tuple[str, ...] = (),
+    fmt: OutputFormat = OutputFormat.YAML,
 ) -> str:
     """Return a ready-to-run pc-init command string that includes --force."""
     parts = ["pc-init"]
@@ -108,6 +121,8 @@ def _build_force_command(
         parts.append(f"--framework={','.join(frameworks)}")
     if profiles:
         parts.append(f"--profile={','.join(profiles)}")
+    if fmt is not OutputFormat.YAML:
+        parts.append(f"--format={fmt.value}")
     parts.append("--force")
     return " ".join(parts)
 
@@ -120,10 +135,16 @@ def _handle_existing_file(
     *,
     recommended: bool = False,
     profiles: tuple[str, ...] = (),
+    fmt: OutputFormat = OutputFormat.YAML,
 ) -> None:
     """Show unified diff vs existing file. Always raises typer.Exit."""
     content, *_ = generate(
-        langs, frameworks, base_dir, recommended=recommended, profiles=profiles
+        langs,
+        frameworks,
+        base_dir,
+        recommended=recommended,
+        profiles=profiles,
+        fmt=fmt,
     )
     try:
         existing = target.read_text(encoding="utf-8")
@@ -140,7 +161,7 @@ def _handle_existing_file(
     )
     if diff_lines:
         typer.echo("".join(diff_lines))
-        cmd = _build_force_command(langs, frameworks, profiles)
+        cmd = _build_force_command(langs, frameworks, profiles, fmt)
         typer.echo(
             f"\nRun with --force to overwrite '{target}'.\n  Try: {cmd}", err=True
         )
@@ -266,6 +287,29 @@ def _normalize_profiles(raw_profiles: list[str] | None) -> list[str]:
     )
 
 
+_FORMAT_EXTENSIONS: dict[str, OutputFormat] = {
+    ".toml": OutputFormat.TOML,
+    ".yaml": OutputFormat.YAML,
+    ".yml": OutputFormat.YAML,
+}
+
+
+def _resolve_target(output: str | None, fmt: OutputFormat) -> Path:
+    """Return the output path, defaulting by format and rejecting conflicts."""
+    if output is None:
+        return Path(fmt.default_filename)
+    target = Path(output)
+    implied = _FORMAT_EXTENSIONS.get(target.suffix.lower())
+    if implied is not None and implied is not fmt:
+        typer.echo(
+            f"Error: --output '{output}' looks like {implied.value.upper()} "
+            f"but --format is {fmt.value}.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    return target
+
+
 _PRESETS_HELP = (
     "Preset catalog to use. Accepts a local directory path or a git "
     "repository URL (https://, git@, git://, ssh://). The directory / "
@@ -310,16 +354,31 @@ def main(  # noqa: PLR0917
         bool,
         typer.Option(
             "--force",
-            help="Overwrite existing .pre-commit-config.yaml without prompting.",
+            help="Overwrite an existing output file without prompting.",
         ),
     ] = False,
     output: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--output",
-            help="Output file path. Defaults to .pre-commit-config.yaml.",
+            help=(
+                "Output file path. Defaults to .pre-commit-config.yaml, or "
+                "prek.toml with --format toml. A .toml/.yaml/.yml extension "
+                "that contradicts --format is an error."
+            ),
         ),
-    ] = ".pre-commit-config.yaml",
+    ] = None,
+    fmt: Annotated[
+        OutputFormat,
+        typer.Option(
+            "--format",
+            help=(
+                "Output format: yaml (.pre-commit-config.yaml) or toml "
+                "(prek.toml). The toml format is read by prek only; plain "
+                "pre-commit cannot read it."
+            ),
+        ),
+    ] = OutputFormat.YAML,
     recommended: Annotated[
         bool,
         typer.Option(
@@ -361,6 +420,9 @@ def main(  # noqa: PLR0917
     """
     Generate a .pre-commit-config.yaml from language and optional framework presets.
 
+    Use --format toml to write a prek.toml instead (prek only; pre-commit cannot
+    read it).
+
     At least one --lang value is required (or use --detect).
     --framework values are optional. Use --force to overwrite an existing config file.
     Use --profile to include legacy or experimental hooks on top of the default
@@ -379,7 +441,7 @@ def main(  # noqa: PLR0917
         frameworks = _normalize_frameworks(framework)
         profiles = tuple(_normalize_profiles(profile))
 
-        target = Path(output)
+        target = _resolve_target(output, fmt)
 
         try:
             _dispatch(
@@ -390,6 +452,7 @@ def main(  # noqa: PLR0917
                 force=force,
                 recommended=recommended,
                 profiles=profiles,
+                fmt=fmt,
             )
         except (
             UnsupportedLanguageError,

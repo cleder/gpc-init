@@ -1,8 +1,10 @@
 """Unit tests for gpc_init/generator.py."""
 
+import tomllib
 from pathlib import Path
 
 import pytest
+import yaml
 
 from gpc_init.exceptions import (
     PresetNotFoundError,
@@ -12,6 +14,7 @@ from gpc_init.exceptions import (
     UnsupportedProfileError,
 )
 from gpc_init.generator import generate
+from gpc_init.renderer import OutputFormat
 
 
 class TestGenerateHappyPath:
@@ -19,20 +22,20 @@ class TestGenerateHappyPath:
         result = generate(["py"], [], base_dir=tmp_preset_dir)
         assert result.langs == ["py"]
         assert result.frameworks == []
-        assert "ruff-check" in result.yaml_content
-        assert "trailing-whitespace" in result.yaml_content
+        assert "ruff-check" in result.content
+        assert "trailing-whitespace" in result.content
 
     def test_merges_language_and_framework(self, tmp_preset_dir: Path) -> None:
         result = generate(["js"], ["react"], base_dir=tmp_preset_dir)
-        assert "prettier" in result.yaml_content
-        assert "eslint-react" in result.yaml_content
+        assert "prettier" in result.content
+        assert "eslint-react" in result.content
 
     def test_framework_preset_loaded_from_base_dir(self, tmp_preset_dir: Path) -> None:
         # The fixture react preset pins eslint-plugin-react@7.0.0, distinct from
         # the real default preset's version, so this fails if the framework
         # preset is loaded from the default base_dir instead of tmp_preset_dir.
         result = generate(["js"], ["react"], base_dir=tmp_preset_dir)
-        assert "eslint-plugin-react@7.0.0" in result.yaml_content
+        assert "eslint-plugin-react@7.0.0" in result.content
 
     def test_common_preset_loaded_from_base_dir(self, tmp_preset_dir: Path) -> None:
         # The fixture common preset only has trailing-whitespace/end-of-file
@@ -40,7 +43,7 @@ class TestGenerateHappyPath:
         # fails if the common preset is loaded from the default base_dir
         # instead of tmp_preset_dir.
         result = generate(["py"], [], base_dir=tmp_preset_dir)
-        assert "gitleaks" not in result.yaml_content
+        assert "gitleaks" not in result.content
 
 
 class TestGenerateRecommended:
@@ -48,7 +51,7 @@ class TestGenerateRecommended:
         # framework/react/preset.yaml recommends lang: [js]
         result = generate([], ["react"], base_dir=tmp_preset_dir, recommended=True)
         assert result.langs == ["js"]
-        assert "prettier" in result.yaml_content
+        assert "prettier" in result.content
 
     def test_no_expansion_when_not_recommended(self, tmp_preset_dir: Path) -> None:
         result = generate([], ["react"], base_dir=tmp_preset_dir, recommended=False)
@@ -110,7 +113,7 @@ class TestGenerateRecommended:
         # from the real default preset's version, so this fails if that
         # reload uses the default base_dir instead of tmp_preset_dir.
         result = generate([], ["react"], base_dir=tmp_preset_dir, recommended=True)
-        assert "eslint-plugin-react@7.0.0" in result.yaml_content
+        assert "eslint-plugin-react@7.0.0" in result.content
 
 
 class TestGenerateValidationErrors:
@@ -171,3 +174,18 @@ class TestGeneratePresetErrors:
         (bad_lang_dir / "preset.yaml").write_text(": bad: [", encoding="utf-8")
         with pytest.raises(PresetParseError):
             generate(["bad"], [], base_dir=tmp_preset_dir)
+
+
+class TestGenerateFormat:
+    @pytest.mark.parametrize(
+        ("langs", "frameworks"),
+        [(["py"], []), (["js"], ["react"])],
+    )
+    def test_toml_matches_yaml_data(
+        self, tmp_preset_dir: Path, langs: list[str], frameworks: list[str]
+    ) -> None:
+        as_yaml = generate(langs, frameworks, base_dir=tmp_preset_dir)
+        as_toml = generate(
+            langs, frameworks, base_dir=tmp_preset_dir, fmt=OutputFormat.TOML
+        )
+        assert tomllib.loads(as_toml.content) == yaml.safe_load(as_yaml.content)
