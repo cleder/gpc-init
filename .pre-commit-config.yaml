@@ -25,10 +25,6 @@ repos:
       - id: pretty-format-json
         args: ['--autofix']
       - id: trailing-whitespace
-  - repo: https://github.com/MarcoGorelli/absolufy-imports
-    rev: v0.3.1
-    hooks:
-      - id: absolufy-imports
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.5
     hooks:

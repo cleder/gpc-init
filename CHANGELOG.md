@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Enhancements
+
+- Add `scripts/check_archived_repos.py`, `just check-archived` and a CI step that fail when a preset references an archived or deleted GitHub hook repository.
+
+### Removed
+
+- Merge the `ts` language into `js` (`.ts`/`.tsx` detection, `ts` and `typescript` aliases) and delete the `ts` preset, whose only distinct hook was an unconfigured eslint; `oxlint` and `biome-check` already cover TypeScript.
+- Drop the archived `absolufy-imports` hook from the `py` preset and the archived `mirrors-prettier` hook from the `js` and `ts` presets.
+
 ## [0.8.1]
 
 ### New Features

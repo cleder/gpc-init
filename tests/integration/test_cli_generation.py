@@ -150,13 +150,13 @@ class TestFrameworkGeneration:
             ["--lang", "js", "--framework", "react", "--output", str(output)],
         )
         parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
-        # js has prettier - it should still be there
+        # js has biome-check - it should still be there
         all_hook_ids = [
             hook["id"]
             for repo in parsed.get("repos", [])
             for hook in repo.get("hooks", [])
         ]
-        assert "prettier" in all_hook_ids
+        assert "biome-check" in all_hook_ids
 
     def test_framework_with_non_primary_lang_succeeds(self, tmp_path: Path) -> None:
         """React framework should work with Go language (no validation error)."""
@@ -1257,7 +1257,7 @@ class TestPresetsOption:
         The fixture react preset recommends lang=js.  When --recommended is set and
         --presets points at tmp_preset_dir, the js preset loaded after expansion must
         come from the fixture (prettier@3.0.0 as a local dep), not from the bundled
-        catalog (which uses a mirrors-prettier repo).  The mutant drops base_dir from
+        catalog (which no longer ships prettier).  The mutant drops base_dir from
         the load_language_preset call inside the recommended block, so it would load
         the bundled js preset instead.
         """
@@ -1277,7 +1277,7 @@ class TestPresetsOption:
         assert result.exit_code == 0, result.output
         content = output.read_text(encoding="utf-8")
         # The fixture lang/js/preset.yaml pins prettier@3.0.0 as a local dep.
-        # The bundled lang/js/preset.yaml uses a remote mirrors-prettier repo instead.
+        # The bundled lang/js/preset.yaml does not pin prettier at all.
         # If base_dir is not forwarded, the bundled preset is used and
         # this assertion fails.
         assert "prettier@3.0.0" in content

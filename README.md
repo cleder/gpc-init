@@ -99,7 +99,7 @@ pc-init list
 
 ```text
 Languages:
-  cpp, css, csv, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, pyx, r, rb, rs, rst, sh, sql, swift, tex, tf, toml, ts, yaml
+  cpp, css, csv, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, pyx, r, rb, rs, rst, sh, sql, swift, tex, tf, toml, yaml
 
 Frameworks:
   ansible, behave, django, git, k8s, nika, react, skill, sphinx
@@ -122,11 +122,10 @@ pc-init list --presets https://github.com/org/my-presets
 | ID | Language |
 |----|----------|
 | `py` | Python |
-| `js` | JavaScript |
+| `js` | JavaScript / TypeScript |
 | `go` | Go |
 | `rs` | Rust |
 | `sh` | Shell / Bash |
-| `ts` | TypeScript |
 | `nb` | Jupyter Notebooks |
 | `md` | Markdown |
 | `img` | Images |
@@ -151,7 +150,7 @@ pc-init list --presets https://github.com/org/my-presets
 | `rst` | reStructuredText |
 | `tex` | LaTeX |
 
-Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, `kotlin`, and `cython` are also accepted.
+Language aliases `python`, `javascript`, `typescript`, `ts`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, `kotlin`, and `cython` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -199,8 +198,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | Extension(s) | Language |
 |---|---|
 | `.py`, `.pyi` | `py` |
-| `.js`, `.mjs`, `.cjs`, `.jsx` | `js` |
-| `.ts`, `.tsx` | `ts` |
+| `.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.tsx` | `js` |
 | `.go` | `go` |
 | `.rs` | `rs` |
 | `.rb` | `rb` |
@@ -248,8 +246,8 @@ Some framework presets declare the languages they are typically used with.
 If none of your `--lang` selections match, `pc-init` prints an informational note and a ready-to-run command that adds the missing languages:
 
 ```text
-Note: preset 'react' recommends adding: --lang=js,ts
-      Try: pc-init --lang=go,js,ts --framework=react
+Note: preset 'react' recommends adding: --lang=js,css
+      Try: pc-init --lang=go,js,css --framework=react
 ```
 
 The suggested command preserves your existing `--lang` values so it is safe to run with `--force` — no hooks you already selected will be removed.
