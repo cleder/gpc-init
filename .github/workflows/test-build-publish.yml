@@ -69,7 +69,7 @@ jobs:
           uv run ryl .github/workflows/
       - name: Validate prek TOML output
         run: |
-          uv run pc-init --lang py,js --format toml --output "$RUNNER_TEMP/prek.toml"
+          uv run python main.py --lang py,js --format toml --output "$RUNNER_TEMP/prek.toml"
           uv run prek validate-config "$RUNNER_TEMP/prek.toml"
       - name: Check complexity
         run: |
