@@ -10,6 +10,7 @@ import pytest
 from gpc_init import detector as _detector
 from gpc_init.catalog import Catalog
 from gpc_init.detector import detect_frameworks, detect_languages
+from gpc_init.resolver import normalize_lang
 
 CATALOG = Catalog.load()
 
@@ -173,6 +174,16 @@ class TestDetectLanguages:
     def test_tsx_maps_to_js(self, tmp_path: Path) -> None:
         (tmp_path / "Component.tsx").touch()
         assert "js" in detect_languages(tmp_path, CATALOG)
+
+    def test_ts_maps_to_js(self, tmp_path: Path) -> None:
+        (tmp_path / "index.ts").touch()
+        langs = detect_languages(tmp_path, CATALOG)
+        assert "js" in langs
+        assert "ts" not in langs
+
+    def test_detects_csv_by_extension(self, tmp_path: Path) -> None:
+        (tmp_path / "data.csv").touch()
+        assert "csv" in detect_languages(tmp_path, CATALOG)
 
     def test_bash_extension_maps_to_sh(self, tmp_path: Path) -> None:
         (tmp_path / "deploy.bash").touch()
@@ -701,3 +712,9 @@ class TestEvaluateDetectRule:
         rule = {"dir_exists": "features/steps"}
         assert _detector._evaluate_detect_rule(tmp_path, rule)
         assert not _detector._evaluate_detect_rule(tmp_path, {"dir_exists": "nope"})
+
+
+class TestNormalizeLangAliases:
+    @pytest.mark.parametrize("alias", ["ts", "typescript", "javascript", "js"])
+    def test_typescript_and_javascript_aliases_resolve_to_js(self, alias: str) -> None:
+        assert normalize_lang(alias, CATALOG) == "js"
