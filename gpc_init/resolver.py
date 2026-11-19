@@ -1,5 +1,6 @@
 """Resolve and validate generation requests against the preset catalog."""
 
+from dataclasses import dataclass
 from typing import Any
 
 from gpc_init.catalog import Catalog
@@ -11,6 +12,15 @@ from gpc_init.exceptions import (
 
 # Selectable hook profiles (categories) on top of the always-on "preset" baseline.
 SELECTABLE_PROFILES = frozenset({"legacy", "experimental"})
+
+
+@dataclass(frozen=True)
+class Recommendations:
+    """Recommended languages/frameworks the selection is missing."""
+
+    notes: tuple[str, ...]
+    missing_langs: tuple[str, ...]
+    missing_frameworks: tuple[str, ...]
 
 
 def _validate(
@@ -153,33 +163,22 @@ def _extend_unique(target: list[str], items: list[str]) -> None:
             target.append(item)
 
 
-def get_recommendations_info(
+def get_recommendations(
     langs: list[str],
     frameworks: list[str],
     lang_presets: list[dict[str, Any]],
     fw_presets: list[dict[str, Any]],
-) -> str | None:
+) -> Recommendations | None:
     """
-    Return an informational message when selected presets have unmet recommendations.
+    Return the unmet recommendations of the selected presets, or None.
 
     Each preset (lang or framework) may declare a ``recommended`` section listing
-    languages and frameworks it is typically used with. When any recommended item is
-    absent from the current selection, a per-preset note is emitted together with a
-    single consolidated ``Try:`` suggestion.
+    languages and frameworks it is typically used with. When any recommended item
+    is absent from the current selection, the result carries one note per preset
+    and the consolidated, de-duplicated missing languages and frameworks.
 
-    The suggestion is constructed to be safe to re-run with ``--force``:
-    - ``--lang`` starts with all currently-selected languages so no existing hooks
-      are lost, then appends only the missing recommended languages.
-    - ``--framework`` does the same for frameworks.
-
-    Example output for ``--lang=go --framework=react`` where react recommends
-    ``lang: [js, css]``::
-
-        Note: preset 'react' recommends adding: --lang=js,css
-              Try: pc-init --lang=go,js,css --framework=react
-
-    Returns ``None`` when every preset either has no ``recommended`` section or all
-    recommended items are already selected.
+    It does not build a command: only the caller knows the whole invocation
+    (--profile, --format, --output, --presets, ...) a suggestion has to repeat.
 
     Args:
         langs: Normalized selected language ids.
@@ -212,8 +211,8 @@ def get_recommendations_info(
 
     if not notes:
         return None
-
-    lang_flag = ",".join([*langs, *extra_langs])
-    fw_flag = ",".join([*frameworks, *extra_fws])
-    suggestion = f"      Try: pc-init --lang={lang_flag} --framework={fw_flag}"
-    return "\n".join([*notes, suggestion])
+    return Recommendations(
+        notes=tuple(notes),
+        missing_langs=tuple(extra_langs),
+        missing_frameworks=tuple(extra_fws),
+    )
