@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from typing import Any
 
-from gpc_init.catalog import Catalog
-from gpc_init.exceptions import (
+from pc_init.catalog import Catalog
+from pc_init.exceptions import (
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
     UnsupportedProfileError,

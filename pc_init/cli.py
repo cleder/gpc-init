@@ -12,10 +12,10 @@ from urllib.parse import urlsplit, urlunsplit
 
 import typer
 
-from gpc_init import fetcher
-from gpc_init.catalog import Catalog
-from gpc_init.detector import detect_frameworks, detect_languages
-from gpc_init.exceptions import (
+from pc_init import fetcher
+from pc_init.catalog import Catalog
+from pc_init.detector import detect_frameworks, detect_languages
+from pc_init.exceptions import (
     MetadataConflictError,
     PresetFetchError,
     PresetNotFoundError,
@@ -24,18 +24,18 @@ from gpc_init.exceptions import (
     UnsupportedLanguageError,
     UnsupportedProfileError,
 )
-from gpc_init.generator import (
+from pc_init.generator import (
     GeneratedConfig,
     GenerationRequest,
     OutputFormat,
     generate,
 )
-from gpc_init.resolver import (
+from pc_init.resolver import (
     SELECTABLE_PROFILES,
     normalize_framework,
     normalize_lang,
 )
-from gpc_init.util import deduplicate_preserving_order
+from pc_init.util import deduplicate_preserving_order
 
 
 def _generate_or_exit(request: GenerationRequest) -> GeneratedConfig:

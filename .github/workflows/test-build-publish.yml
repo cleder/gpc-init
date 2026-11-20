@@ -33,7 +33,7 @@ jobs:
           uv sync
       - name: Test with pytest
         run: |
-          uv run pytest tests --cov=tests --cov=gpc_init --cov-report=xml
+          uv run pytest tests --cov=tests --cov=pc_init --cov-report=xml
       - name: "Upload coverage to Codecov"
         if: ${{ matrix.python-version == '3.13' }}
         uses: codecov/codecov-action@v4
@@ -59,13 +59,13 @@ jobs:
           uv sync --all-extras
       - name: Typecheck
         run: |
-          uv run pyrefly check gpc_init tests
-          uv run ty check gpc_init tests
-          uv run zuban check gpc_init tests
+          uv run pyrefly check pc_init tests
+          uv run ty check pc_init tests
+          uv run zuban check pc_init tests
       - name: Linting
         run: |
-          uv run ruff check --no-fix gpc_init tests
-          uv run ruff format --check gpc_init tests
+          uv run ruff check --no-fix pc_init tests
+          uv run ruff format --check pc_init tests
           uv run ryl .github/workflows/
       - name: Validate prek TOML output
         run: |
@@ -82,10 +82,10 @@ jobs:
           ! uv lock --upgrade --dry-run 2>&1 | grep -E '^(Update|Add|Remove) '
       - name: Check complexity
         run: |
-          uv run radon cc --min B gpc_init
-          uv run radon mi --min B gpc_init
-          uv run lizard -l python -w gpc_init
-          uv run complexipy gpc_init
+          uv run radon cc --min B pc_init
+          uv run radon mi --min B pc_init
+          uv run lizard -l python -w pc_init
+          uv run complexipy pc_init
 
   build-and-check-package:
     name: Build & inspect our package.

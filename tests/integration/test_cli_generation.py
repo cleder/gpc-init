@@ -14,8 +14,8 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from gpc_init.cli import app, entry_point
-from gpc_init.exceptions import (
+from pc_init.cli import app, entry_point
+from pc_init.exceptions import (
     PresetFetchError,
 )
 
@@ -886,7 +886,7 @@ class TestPresetsOption:
         def fake_fetch(_url: str) -> Generator[Path]:
             yield tmp_preset_dir
 
-        with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
+        with patch("pc_init.fetcher.fetch_preset_repo", fake_fetch):
             result = runner.invoke(
                 app,
                 [
@@ -904,7 +904,7 @@ class TestPresetsOption:
     def test_git_url_fetch_error(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
-            "gpc_init.fetcher.fetch_preset_repo",
+            "pc_init.fetcher.fetch_preset_repo",
             side_effect=PresetFetchError("https://x", "connection refused"),
         ):
             result = runner.invoke(
@@ -2121,31 +2121,31 @@ class TestDiffOnExistingFile:
 
 class TestVersion:
     def test_version_exits_zero(self) -> None:
-        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+        with patch("pc_init.cli.importlib.metadata.version", return_value="9.9.9"):
             result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
 
     def test_version_prints_version_string(self) -> None:
-        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+        with patch("pc_init.cli.importlib.metadata.version", return_value="9.9.9"):
             result = runner.invoke(app, ["--version"])
         assert result.output.strip() == "9.9.9"
 
     def test_version_is_eager_no_lang_required(self) -> None:
-        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+        with patch("pc_init.cli.importlib.metadata.version", return_value="9.9.9"):
             result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
         assert "Missing" not in result.output
 
     def test_version_queries_correct_package_name(self) -> None:
         with patch(
-            "gpc_init.cli.importlib.metadata.version", return_value="1.2.3"
+            "pc_init.cli.importlib.metadata.version", return_value="1.2.3"
         ) as mock_ver:
             runner.invoke(app, ["--version"])
         mock_ver.assert_called_once_with("pc-init")
 
     def test_version_prints_unknown_when_package_not_found(self) -> None:
         with patch(
-            "gpc_init.cli.importlib.metadata.version",
+            "pc_init.cli.importlib.metadata.version",
             side_effect=importlib.metadata.PackageNotFoundError("pc-init"),
         ):
             result = runner.invoke(app, ["--version"])
@@ -2154,7 +2154,7 @@ class TestVersion:
 
     def test_version_package_not_found_prints_unknown(self) -> None:
         with patch(
-            "gpc_init.cli.importlib.metadata.version",
+            "pc_init.cli.importlib.metadata.version",
             side_effect=importlib.metadata.PackageNotFoundError("pc-init"),
         ):
             result = runner.invoke(app, ["--version"])
@@ -2164,7 +2164,7 @@ class TestVersion:
 
 class TestEntryPoint:
     def test_entry_point_calls_app(self) -> None:
-        with patch("gpc_init.cli.app") as mock_app:
+        with patch("pc_init.cli.app") as mock_app:
             entry_point()
         mock_app.assert_called_once_with()
 
@@ -2173,8 +2173,8 @@ class TestDetect:
     def test_detect_flag_generates_valid_config(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2186,8 +2186,8 @@ class TestDetect:
     def test_detect_flag_prints_detected_langs(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2197,8 +2197,8 @@ class TestDetect:
     def test_detect_flag_prints_detected_frameworks(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=["django"]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=["django"]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2209,8 +2209,8 @@ class TestDetect:
         """Detected languages and explicitly passed --lang are both included."""
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(
                 app, ["--detect", "--lang", "md", "--output", str(output)]
@@ -2223,8 +2223,8 @@ class TestDetect:
         """When detect returns a lang also passed via --lang, it appears once."""
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(
                 app, ["--detect", "--lang", "py", "--output", str(output)]
@@ -2237,8 +2237,8 @@ class TestDetect:
         """--detect with nothing detected and no --lang must exit non-zero."""
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=[]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=[]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code != 0
@@ -2246,8 +2246,8 @@ class TestDetect:
     def test_detect_no_files_error_message(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=[]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=[]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert (
@@ -2267,8 +2267,8 @@ class TestDetect:
         """--detect + --framework but no lang detected and no --recommended → error."""
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=[]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=[]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(
                 app, ["--detect", "--framework", "django", "--output", str(output)]
@@ -2333,7 +2333,7 @@ class TestDetect:
         # directory changed.
         monkeypatch.setattr(Path, "cwd", staticmethod(lambda: repo_dir))
 
-        with patch("gpc_init.cli.detect_frameworks", return_value=[]):
+        with patch("pc_init.cli.detect_frameworks", return_value=[]):
             result = runner.invoke(
                 app,
                 [
@@ -2604,8 +2604,8 @@ class TestDetect:
         """
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py", "js"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py", "js"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2625,8 +2625,8 @@ class TestDetect:
         """
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=["django", "react"]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=["django", "react"]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2647,8 +2647,8 @@ class TestDetect:
         """
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(
                 app, ["--detect", "--framework", "react", "--output", str(output)]
@@ -2673,9 +2673,9 @@ class TestDetect:
             return ["py"]
 
         with (
-            patch("gpc_init.cli.Path") as mock_path_cls,
-            patch("gpc_init.cli.detect_languages", side_effect=fake_detect_langs),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.Path") as mock_path_cls,
+            patch("pc_init.cli.detect_languages", side_effect=fake_detect_langs),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             mock_path_cls.cwd.return_value = cwd
             mock_path_cls.return_value = Path(str(output))
@@ -3105,7 +3105,7 @@ class TestRecommendationAdvice:
         def fake_fetch(_url: str) -> Generator[Path]:
             yield catalog
 
-        with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
+        with patch("pc_init.fetcher.fetch_preset_repo", fake_fetch):
             result = runner.invoke(
                 app,
                 ["--lang", "x", "--presets", url, "--output", str(tmp_path / "o.yaml")],
@@ -3352,7 +3352,7 @@ class TestForceHintQuotingAndSecrets:
         def fake_fetch(_url: str) -> Generator[Path]:
             yield tmp_preset_dir
 
-        with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
+        with patch("pc_init.fetcher.fetch_preset_repo", fake_fetch):
             stderr = self._rerun_with_stale_output(
                 tmp_path, ["--lang", "py", "--presets", url]
             )

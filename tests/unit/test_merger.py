@@ -1,8 +1,8 @@
-"""Unit tests for gpc_init/merger.py."""
+"""Unit tests for pc_init/merger.py."""
 
 from typing import Any
 
-from gpc_init.merger import (
+from pc_init.merger import (
     DEFAULT_CATEGORY,
     _deep_merge_top_level,
     _merge_hooks_list,

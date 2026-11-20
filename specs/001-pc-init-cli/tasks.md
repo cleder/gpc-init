@@ -17,7 +17,7 @@ For every behavior change, tests MUST be written first and fail before implement
 
 ## Path Conventions
 
-- Single project structure: `gpc_init/` for modules, `tests/` for test suite
+- Single project structure: `pc_init/` for modules, `tests/` for test suite
 - Presets: `lang/` and `framework/` directories at repository root
 
 ---
@@ -26,7 +26,7 @@ For every behavior change, tests MUST be written first and fail before implement
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create `gpc_init/` package with `__init__.py` and type stubs
+- [ ] T001 Create `pc_init/` package with `__init__.py` and type stubs
 - [ ] T002 Create `tests/` directory structure with `unit/` and `integration/` subdirectories
 - [ ] T003 Create `tests/conftest.py` with pytest fixtures for preset loading and temp directories
 - [ ] T004 Create `tests/fixtures/` directory with minimal YAML preset samples for testing
@@ -41,31 +41,31 @@ For every behavior change, tests MUST be written first and fail before implement
 
 ### Profile Loading and Type Definitions
 
-- [ ] T007 Define `gpc_init/profiles.py` data classes: `LanguageProfile`, `FrameworkProfile`, `RepoConfig`, `HookConfig`, `GenerationRequest`, `GenerationResult` with type annotations
+- [ ] T007 Define `pc_init/profiles.py` data classes: `LanguageProfile`, `FrameworkProfile`, `RepoConfig`, `HookConfig`, `GenerationRequest`, `GenerationResult` with type annotations
 - [ ] T008 Create `tests/unit/test_profiles.py` with unit tests for profile entity validation (missing repos, invalid hook ids, etc.)
-- [ ] T009 Implement `gpc_init/profiles.py` data classes with field validation and immutability guards
+- [ ] T009 Implement `pc_init/profiles.py` data classes with field validation and immutability guards
 
 ### Preset Loader
 
 - [ ] T010 [P] Write `tests/unit/test_loader.py` with tests for: discovering `lang/<lang>/baseline.yaml`, `framework/<fw>/preset.yaml`, `lang/common/default.yaml`; handling missing presets; parsing invalid YAML
 - [ ] T011 [P] Write `tests/unit/test_loader.py` additional tests for: loading preset as Python dict, preserving hook order, detecting repos key
-- [ ] T012 Implement `gpc_init/loader.py` with `load_language_preset(lang_id)`, `load_framework_preset(framework_id)`, `load_common_preset()` functions; return raw dicts with validation
-- [ ] T013 Implement `gpc_init/loader.py` error handling: raise `PresetNotFoundError` for missing files, `PresetParseError` for invalid YAML
+- [ ] T012 Implement `pc_init/loader.py` with `load_language_preset(lang_id)`, `load_framework_preset(framework_id)`, `load_common_preset()` functions; return raw dicts with validation
+- [ ] T013 Implement `pc_init/loader.py` error handling: raise `PresetNotFoundError` for missing files, `PresetParseError` for invalid YAML
 
 ### Preset Merger
 
 - [ ] T014 [P] Write `tests/unit/test_merger.py` with tests for: merging common + single language preset; preserving repo order and hook order
 - [ ] T015 [P] Write `tests/unit/test_merger.py` tests for: merging multiple languages in CLI order; merging frameworks on top of languages; handling duplicate (repo, rev) pairs with hook merging by id
 - [ ] T016 [P] Write `tests/unit/test_merger.py` tests for: replacing hook fields when id matches in higher layer; appending new hook ids; deep-merging top-level keys like `default_language_version`; deterministic output
-- [ ] T017 Implement `gpc_init/merger.py` with `merge_presets(common, langs, frameworks)` function; enforce exact merge order and semantics per plan.md
-- [ ] T018 Implement `gpc_init/merger.py` hook merging logic: `_merge_repos_list(lower, higher)` and `_merge_hook(lower, higher)` internal functions with stable ordering
+- [ ] T017 Implement `pc_init/merger.py` with `merge_presets(common, langs, frameworks)` function; enforce exact merge order and semantics per plan.md
+- [ ] T018 Implement `pc_init/merger.py` hook merging logic: `_merge_repos_list(lower, higher)` and `_merge_hook(lower, higher)` internal functions with stable ordering
 
 ### YAML Renderer
 
 - [ ] T019 [P] Write `tests/unit/test_renderer.py` with tests for: rendering merged dict to valid YAML string; preserving key order for determinism; rendering repos, hooks, args arrays correctly
 - [ ] T020 [P] Write `tests/unit/test_renderer.py` tests for: rendering `None` values properly; handling special YAML characters in args/ids; two identical inputs yield identical YAML strings
-- [ ] T021 Implement `gpc_init/renderer.py` with `render_yaml(merged_dict, sort_keys=True)` function; use `yaml.dump()` with deterministic settings (default_flow_style=False, sort_keys=True, width=large)
-- [ ] T022 Implement `gpc_init/renderer.py` to ensure YAML parsing round-trip produces semantically identical dict (test with `yaml.safe_load()`)
+- [ ] T021 Implement `pc_init/renderer.py` with `render_yaml(merged_dict, sort_keys=True)` function; use `yaml.dump()` with deterministic settings (default_flow_style=False, sort_keys=True, width=large)
+- [ ] T022 Implement `pc_init/renderer.py` to ensure YAML parsing round-trip produces semantically identical dict (test with `yaml.safe_load()`)
 
 ---
 
@@ -78,22 +78,22 @@ For every behavior change, tests MUST be written first and fail before implement
 - [ ] T023 [P] Write `tests/integration/test_cli_generation.py` with tests for: `pc-init --lang=py` in clean directory creates `.pre-commit-config.yaml`; exit code is 0; file is valid YAML
 - [ ] T024 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --lang=js` merges both baselines in correct order; exit code is 0
 - [ ] T025 [P] Write `tests/integration/test_cli_generation.py` tests for: help text shows `--lang` as required, repeatable; shows `--framework` as optional; shows `--force` as optional flag
-- [ ] T026 Implement `gpc_init/cli.py` as typer app with `@typer.command()` on `main()` function accepting `lang: list[str]` (required), `framework: list[str] = None`, `force: bool = False`, `target_path: str = ".pre-commit-config.yaml"`
-- [ ] T027 [P] [US1] Implement `gpc_init/cli.py` argument normalization: lowercase all lang/framework values; deduplicate preserving first-occurrence order; validate non-empty langs after dedup
-- [ ] T028 [P] [US1] Implement `gpc_init/cli.py` to output success message format: `"Generated .pre-commit-config.yaml with languages: <lang1, lang2> and frameworks: <fw1, fw2>"` or similar
+- [ ] T026 Implement `pc_init/cli.py` as typer app with `@typer.command()` on `main()` function accepting `lang: list[str]` (required), `framework: list[str] = None`, `force: bool = False`, `target_path: str = ".pre-commit-config.yaml"`
+- [ ] T027 [P] [US1] Implement `pc_init/cli.py` argument normalization: lowercase all lang/framework values; deduplicate preserving first-occurrence order; validate non-empty langs after dedup
+- [ ] T028 [P] [US1] Implement `pc_init/cli.py` to output success message format: `"Generated .pre-commit-config.yaml with languages: <lang1, lang2> and frameworks: <fw1, fw2>"` or similar
 
 ### Request Resolver
 
 - [ ] T029 [P] Write `tests/unit/test_resolver.py` with tests for: validating lang exists in `lang/*/baseline.yaml` catalog; validating framework exists in `framework/*/preset.yaml` catalog; raising `UnsupportedLanguageError` with list of supported options
 - [ ] T030 [P] Write `tests/unit/test_resolver.py` tests for: raising `UnsupportedFrameworkError` with list of supported options
-- [ ] T031 [P] Implement `gpc_init/resolver.py` with `validate_and_resolve(request)` function: discover supported languages from `lang/` directory; discover supported frameworks from `framework/` directory; validate request against catalogs
-- [ ] T032 [P] Implement `gpc_init/resolver.py` catalog discovery to scan `lang/<lang>/baseline.yaml` and `framework/<fw>/preset.yaml` files at startup; cache catalogs; expose `get_supported_languages()` and `get_supported_frameworks()`
+- [ ] T031 [P] Implement `pc_init/resolver.py` with `validate_and_resolve(request)` function: discover supported languages from `lang/` directory; discover supported frameworks from `framework/` directory; validate request against catalogs
+- [ ] T032 [P] Implement `pc_init/resolver.py` catalog discovery to scan `lang/<lang>/baseline.yaml` and `framework/<fw>/preset.yaml` files at startup; cache catalogs; expose `get_supported_languages()` and `get_supported_frameworks()`
 
 ### Generation Flow Integration
 
 - [ ] T033 Write `tests/integration/test_cli_generation.py` end-to-end test: `pc-init --lang=py` in temp dir → produces file → is valid pre-commit YAML → contains Python hooks
-- [ ] T034 [P] [US1] Implement `gpc_init/cli.py` main function to: parse args → validate with resolver → load common + lang presets → merge → render → write to file → report success
-- [ ] T035 [P] [US1] Implement `gpc_init/cli.py` to invoke loader, merger, resolver, renderer in sequence with error propagation; catch exceptions and output actionable error messages to stderr
+- [ ] T034 [P] [US1] Implement `pc_init/cli.py` main function to: parse args → validate with resolver → load common + lang presets → merge → render → write to file → report success
+- [ ] T035 [P] [US1] Implement `pc_init/cli.py` to invoke loader, merger, resolver, renderer in sequence with error propagation; catch exceptions and output actionable error messages to stderr
 
 ---
 
@@ -109,11 +109,11 @@ For every behavior change, tests MUST be written first and fail before implement
 - [ ] T039 Write `tests/integration/test_cli_generation.py` test for Scenario B2 from quickstart: `pc-init --lang=py --lang=js --framework=django --framework=react` produces valid config with all four contributions
 - [ ] T040 [P] [US2] Populate `framework/react/preset.yaml` with React-specific hooks and `primary_languages: [js]` metadata (informational only)
 - [ ] T041 [P] [US2] Populate `framework/bevy/preset.yaml` with Bevy-specific hooks and `primary_languages: [rs]` metadata (informational only)
-- [ ] T042 [P] [US2] Implement framework merging in `gpc_init/merger.py` to handle optional frameworks; framework presets are purely additive
+- [ ] T042 [P] [US2] Implement framework merging in `pc_init/merger.py` to handle optional frameworks; framework presets are purely additive
 
 ### Framework Validation (Informational Only)
 
-- [ ] T043 [P] [US2] Implement `gpc_init/resolver.py` to note but not enforce `primary_languages` from framework presets; output informational message if user-selected languages don't match any framework's primary languages (non-blocking, informational only)
+- [ ] T043 [P] [US2] Implement `pc_init/resolver.py` to note but not enforce `primary_languages` from framework presets; output informational message if user-selected languages don't match any framework's primary languages (non-blocking, informational only)
 - [ ] T044 [P] [US2] Write `tests/integration/test_cli_generation.py` test for: `pc-init --lang=go --framework=react` succeeds (no validation error); produces config with Go baseline + React additions (even though Go not in React's primary_languages)
 
 ---
@@ -126,26 +126,26 @@ For every behavior change, tests MUST be written first and fail before implement
 
 - [ ] T045 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=unsupported-lang` fails with exit code non-zero; stderr includes list of supported languages
 - [ ] T046 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --framework=unsupported-fw` fails with exit code non-zero; stderr includes list of supported frameworks
-- [ ] T047 [P] Implement `gpc_init/cli.py` error handling to catch `UnsupportedLanguageError` and `UnsupportedFrameworkError`; format as `"Error: unsupported language 'xxx'. Supported: py, js, go, rs"` and similar for frameworks
-- [ ] T048 [P] Implement `gpc_init/cli.py` error handling for YAML parse errors; output `"Error: failed to parse preset YAML: <detail>"`
+- [ ] T047 [P] Implement `pc_init/cli.py` error handling to catch `UnsupportedLanguageError` and `UnsupportedFrameworkError`; format as `"Error: unsupported language 'xxx'. Supported: py, js, go, rs"` and similar for frameworks
+- [ ] T048 [P] Implement `pc_init/cli.py` error handling for YAML parse errors; output `"Error: failed to parse preset YAML: <detail>"`
 
 ### Overwrite Behavior
 
 - [ ] T049 [P] Write `tests/integration/test_cli_generation.py` tests for: file exists, `pc-init --lang=py` (no force) exits non-zero; file unchanged; stderr tells user to use `--force`
 - [ ] T050 [P] Write `tests/integration/test_cli_generation.py` tests for: file exists, `pc-init --lang=py --force` exits 0; file overwritten; stdout confirms overwrite
-- [ ] T051 [P] Implement `gpc_init/cli.py` to check file existence before write; if exists and not `force`, raise `FileExistsError` with guidance; if `force`, proceed with write
-- [ ] T052 [P] Implement `gpc_init/cli.py` to track and report `overwritten: True` in success message when `--force` used and file existed
+- [ ] T051 [P] Implement `pc_init/cli.py` to check file existence before write; if exists and not `force`, raise `FileExistsError` with guidance; if `force`, proceed with write
+- [ ] T052 [P] Implement `pc_init/cli.py` to track and report `overwritten: True` in success message when `--force` used and file existed
 
 ### Argument Normalization
 
 - [ ] T053 [P] Write `tests/integration/test_cli_generation.py` tests for: `pc-init --lang=py --lang=python` normalizes alias and deduplicates to a single `py`; `pc-init --lang=py --lang=py` single result
 - [ ] T054 [P] Write `tests/integration/test_cli_generation.py` tests for: mixed case `--lang=Python` normalized to canonical `py`
-- [ ] T055 [P] [US3] Implement `gpc_init/cli.py` argument normalization in resolver: deduplicate `--lang` and `--framework` values preserving first occurrence; convert to lowercase; resolve aliases to canonical ids; validate after normalization
+- [ ] T055 [P] [US3] Implement `pc_init/cli.py` argument normalization in resolver: deduplicate `--lang` and `--framework` values preserving first occurrence; convert to lowercase; resolve aliases to canonical ids; validate after normalization
 
 ### File Permission Handling
 
 - [ ] T056 [P] Write `tests/integration/test_cli_generation.py` tests for: target directory not writable → exit non-zero; stderr includes path and permission error detail
-- [ ] T057 [P] [US3] Implement `gpc_init/cli.py` try-catch around file write; catch `PermissionError`, `OSError`; output `"Error: cannot write to <path>: <detail>"`
+- [ ] T057 [P] [US3] Implement `pc_init/cli.py` try-catch around file write; catch `PermissionError`, `OSError`; output `"Error: cannot write to <path>: <detail>"`
 
 ---
 
@@ -155,29 +155,29 @@ For every behavior change, tests MUST be written first and fail before implement
 
 ### Type Safety & Code Quality
 
-- [ ] T058 Implement complete type annotations across all modules: `gpc_init/profiles.py`, `gpc_init/loader.py`, `gpc_init/merger.py`, `gpc_init/renderer.py`, `gpc_init/resolver.py`, `gpc_init/cli.py`
+- [ ] T058 Implement complete type annotations across all modules: `pc_init/profiles.py`, `pc_init/loader.py`, `pc_init/merger.py`, `pc_init/renderer.py`, `pc_init/resolver.py`, `pc_init/cli.py`
 - [ ] T059 Run `uv run pyrefly --strict` on all modules; resolve all type errors and warnings; ensure strict mode passes with no exceptions
 - [ ] T060 [P] [US1] [US2] [US3] Add docstrings to all public functions and classes explaining purpose, arguments, return values, exceptions
-- [ ] T061 [P] Implement custom exceptions: `PresetNotFoundError`, `PresetParseError`, `UnsupportedLanguageError`, `UnsupportedFrameworkError`, `FileExistsError` in `gpc_init/exceptions.py`
+- [ ] T061 [P] Implement custom exceptions: `PresetNotFoundError`, `PresetParseError`, `UnsupportedLanguageError`, `UnsupportedFrameworkError`, `FileExistsError` in `pc_init/exceptions.py`
 
 ### Comprehensive Testing
 
 - [ ] T062 Write `tests/integration/test_cli_scenarios.py` covering all quickstart scenarios: A (baseline), B (framework), B2 (polyglot), D (existing file), E (force), with fixture setup
 - [ ] T063 [P] Write `tests/integration/test_determinism.py` to verify: same input twice produces identical output file; different language orders produce different but valid outputs; framework order matters for output order
 - [ ] T064 [P] Add edge case tests to `tests/integration/`: empty framework list, single language, three+ languages, three+ frameworks, all combinations
-- [ ] T065 Verify full test coverage with `pytest --cov=gpc_init --cov-report=term-missing`; aim for >= 90% coverage
+- [ ] T065 Verify full test coverage with `pytest --cov=pc_init --cov-report=term-missing`; aim for >= 90% coverage
 
 ### Build & Deployment
 
-- [ ] T066 Update `main.py` or add entry point to `pyproject.toml` to invoke `gpc_init.cli.main()` when running `pc-init` command
+- [ ] T066 Update `main.py` or add entry point to `pyproject.toml` to invoke `pc_init.cli.main()` when running `pc-init` command
 - [ ] T067 Test `uv run pc-init --help` displays typer help with all flags and examples
 - [ ] T068 Update `README.md` with usage examples: `pc-init --lang=py`, `pc-init --lang=js --framework=react`, error case explanations
 - [ ] T069 Add quickstart validation script or CI check to run all Scenario A-E tests from `specs/001-pc-init-cli/quickstart.md`
 
 ### Code Review & Documentation
 
-- [ ] T070 Review `gpc_init/merger.py` merge order implementation against plan.md Merge Semantics section; verify all hook replacement and append logic is correct
-- [ ] T071 Review `gpc_init/resolver.py` catalog discovery to ensure it is efficient and deterministic (filesystem order neutral)
+- [ ] T070 Review `pc_init/merger.py` merge order implementation against plan.md Merge Semantics section; verify all hook replacement and append logic is correct
+- [ ] T071 Review `pc_init/resolver.py` catalog discovery to ensure it is efficient and deterministic (filesystem order neutral)
 - [ ] T072 Document preset structure and extension patterns in `PRESET_DEVELOPMENT.md` for future language/framework additions
 
 ---
@@ -247,14 +247,14 @@ For every behavior change, tests MUST be written first and fail before implement
 
 ### Created
 
-- `gpc_init/__init__.py`
-- `gpc_init/profiles.py`
-- `gpc_init/loader.py`
-- `gpc_init/merger.py`
-- `gpc_init/renderer.py`
-- `gpc_init/resolver.py`
-- `gpc_init/cli.py`
-- `gpc_init/exceptions.py`
+- `pc_init/__init__.py`
+- `pc_init/profiles.py`
+- `pc_init/loader.py`
+- `pc_init/merger.py`
+- `pc_init/renderer.py`
+- `pc_init/resolver.py`
+- `pc_init/cli.py`
+- `pc_init/exceptions.py`
 - `tests/__init__.py`
 - `tests/conftest.py`
 - `tests/fixtures/` (preset samples)

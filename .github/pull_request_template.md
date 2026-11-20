@@ -19,11 +19,11 @@ Run the following commands against the preset file and confirm each passes.
 
 ### Code contributions
 
-The following checks apply only when `gpc_init/` or `tests/` are changed.
+The following checks apply only when `pc_init/` or `tests/` are changed.
 
-- [ ] `uv run pytest tests --cov=gpc_init` passes
-- [ ] `uv run ruff check gpc_init tests` passes
-- [ ] `uv run ruff format gpc_init tests` passes
-- [ ] `uv run pyrefly check gpc_init tests` passes
-- [ ] `uv run ty check gpc_init tests` passes
-- [ ] `uv run complexipy gpc_init` passes
+- [ ] `uv run pytest tests --cov=pc_init` passes
+- [ ] `uv run ruff check pc_init tests` passes
+- [ ] `uv run ruff format pc_init tests` passes
+- [ ] `uv run pyrefly check pc_init tests` passes
+- [ ] `uv run ty check pc_init tests` passes
+- [ ] `uv run complexipy pc_init` passes

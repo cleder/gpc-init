@@ -11,7 +11,7 @@ Discussion on the issue added a third category, "legacy", for hooks superseded b
 
 The maintainer's final proposal in the thread settled on three named profiles: `preset` ⭐ (default), `legacy` 🕰️, `experimental` ⚗️ — dropping the separate `exhaustive` category.
 
-Before this change, `gpc-init` had no notion of hook categories at all: every hook in a `lang/<id>/preset.yaml` or `framework/<id>/preset.yaml` was included unconditionally once its language/framework was selected.
+Before this change, `pc-init` had no notion of hook categories at all: every hook in a `lang/<id>/preset.yaml` or `framework/<id>/preset.yaml` was included unconditionally once its language/framework was selected.
 
 ## Decision
 
@@ -24,12 +24,12 @@ Before this change, `gpc-init` had no notion of hook categories at all: every ho
   Verified this is safe: `pre_commit`'s own `cfgv`-based config schema (`CONFIG_HOOK_DICT` in `pre_commit/clientlib.py`) has no "no additional keys" check at the hook level, so this custom field doesn't break `pre-commit validate-config`/`prek validate-config`.
 - The CLI flag is `--profile` (matching the issue title and the maintainer's own wording), repeatable/comma-delimited exactly like `--lang`/`--framework`.
   It is typed as a plain string list (not a Typer/Click `Enum`) so comma-delimited parsing keeps working the same way it does for `--lang`/`--framework`; validation of the parsed values happens via a dedicated `validate_profiles`/`UnsupportedProfileError` pair, mirroring the existing `validate_langs`/`UnsupportedLanguageError` pattern.
-- Filtering by category happens **after** `merge_presets()`, on the fully merged `repos`/`hooks` structure, immediately before `render_yaml()` (`gpc_init/merger.py:filter_by_category`).
+- Filtering by category happens **after** `merge_presets()`, on the fully merged `repos`/`hooks` structure, immediately before `render_yaml()` (`pc_init/merger.py:filter_by_category`).
   This mirrors how `recommended`/`primary_languages` preset-metadata keys are already stripped post-merge, and correctly reflects whichever preset layer's `category` field wins after cross-preset field overrides.
   A repo entry left with zero hooks after filtering is removed entirely, not rendered as `hooks: []`.
 - `CONTEXT.md`'s "Preset" glossary entry previously listed "profile" as a term to avoid (to prevent it becoming a confusing synonym for "preset").
   That avoidance is removed and a new "Hook category / profile" glossary term is added, since `--profile` now has its own, distinct meaning.
-- The existing, unused `gpc_init/profiles.py` dataclass module (unrelated `HookConfig`/`RepoConfig`/`GenerationRequest`/`GenerationResult`, dead code) is left untouched — different concept, same word, low real collision risk since it isn't wired into the CLI.
+- The existing, unused `pc_init/profiles.py` dataclass module (unrelated `HookConfig`/`RepoConfig`/`GenerationRequest`/`GenerationResult`, dead code) is left untouched — different concept, same word, low real collision risk since it isn't wired into the CLI.
 - `mypy` in `lang/py/preset.yaml` is reclassified as `category: legacy`, since `ty` (already present in the same preset) supersedes it — the concrete example raised in the issue thread.
 - Real `legacy` and `experimental` content was added to `lang/py/preset.yaml` (verified against each repo's actual `.pre-commit-hooks.yaml` manifest and tags, not just plausible-looking values): `flake8`, `isort`, and `black` (via the maintainer-recommended `psf/black-pre-commit-mirror`, not the slower `psf/black`) as `legacy` — superseded by `ruff-check`/`ruff-format` — and `pyright` (via `RobertCraigie/pyright-python`, the actual community pre-commit wrapper) as `experimental`, an alternate type checker alongside `ty`/`pyrefly-check`.
 - `pc-init list` now prints a `Profiles:` section listing the selectable categories, for discoverability alongside `Languages:`/`Frameworks:`.
@@ -37,7 +37,7 @@ Before this change, `gpc-init` had no notion of hook categories at all: every ho
 
 ## Update (2026-07-31)
 
-An architecture review confirmed `gpc_init/profiles.py` has zero callers anywhere in the generation pipeline — not just low collision risk with `--profile`, as assumed above, but genuinely dead code (its only reference was its own unit test).
+An architecture review confirmed `pc_init/profiles.py` has zero callers anywhere in the generation pipeline — not just low collision risk with `--profile`, as assumed above, but genuinely dead code (its only reference was its own unit test).
 The module and its test (`tests/unit/test_profiles.py`) were deleted; the "different concept, same word" collision this ADR anticipated never materializes, since there is no longer a second concept to collide with.
 
 ## Consequences

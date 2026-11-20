@@ -60,7 +60,7 @@ requires-python = ">=3.13"
 version = "0.8.1"
 
 [project.scripts]
-pc-init = "gpc_init.cli:entry_point"
+pc-init = "pc_init.cli:entry_point"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/cleder/gpc-init/issues"
@@ -71,9 +71,9 @@ Repository = "https://github.com/cleder/gpc-init"
 [tool.mutmut]
 also_copy = [
     "framework",
-    "gpc_init/framework",
-    "gpc_init/lang",
     "lang",
+    "pc_init/framework",
+    "pc_init/lang",
     "scripts",
 ]
 do_not_mutate_patterns = [
@@ -84,7 +84,7 @@ pytest_add_cli_args_test_selection = [
     "tests/",
 ]
 source_paths = [
-    "gpc_init/",
+    "pc_init/",
 ]
 type_check_command = [
     "pyrefly",
@@ -127,7 +127,7 @@ select = [
 ]
 
 [tool.ruff.lint.extend-per-file-ignores]
-"gpc_init/cli.py" = [
+"pc_init/cli.py" = [
     "ARG001",
     "FBT001",
     "FBT002",
@@ -170,14 +170,14 @@ reflow = true
 reflow-mode = "sentence-per-line"
 
 [tool.setuptools.package-data]
-gpc_init = [
+pc_init = [
     "framework/**/*.yaml",
     "lang/**/*.yaml",
 ]
 
 [tool.setuptools.packages.find]
 include = [
-    "gpc_init*",
+    "pc_init*",
 ]
 
 [tool.tomlsort]

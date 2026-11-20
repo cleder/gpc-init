@@ -5,8 +5,8 @@ import json
 from collections.abc import Callable, Generator
 from pathlib import Path
 
-from gpc_init.catalog import Catalog
-from gpc_init.util import deduplicate_preserving_order
+from pc_init.catalog import Catalog
+from pc_init.util import deduplicate_preserving_order
 
 _SKIP_DIRS: frozenset[str] = frozenset(
     {
@@ -122,7 +122,7 @@ def _has_github_workflows(repo_dir: Path) -> bool:
 # Fixed allowlist for the `python:<name>` escape hatch in framework metadata.yaml
 # `detect` rules. Deliberately NOT a dotted import path: a custom --presets
 # catalog (which may point at an arbitrary git URL) must only be able to
-# reference gpc-init's own built-in detectors, never inject new code.
+# reference pc-init's own built-in detectors, never inject new code.
 _DETECTOR_REGISTRY: dict[str, Callable[[Path], bool]] = {
     "_has_sphinx_conf": _has_sphinx_conf,
     "_has_kubernetes_files": _has_kubernetes_files,

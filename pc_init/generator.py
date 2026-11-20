@@ -3,10 +3,10 @@
 from dataclasses import dataclass
 from typing import Any
 
-from gpc_init.catalog import Catalog
-from gpc_init.merger import DEFAULT_CATEGORY, filter_by_category, merge_presets
-from gpc_init.renderer import OutputFormat, render
-from gpc_init.resolver import (
+from pc_init.catalog import Catalog
+from pc_init.merger import DEFAULT_CATEGORY, filter_by_category, merge_presets
+from pc_init.renderer import OutputFormat, render
+from pc_init.resolver import (
     Recommendations,
     expand_recommendations,
     get_recommendations,

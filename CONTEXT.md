@@ -1,6 +1,6 @@
-# gpc-init
+# pc-init
 
-`gpc-init` generates a `.pre-commit-config.yaml` from curated language and framework presets, so a repo gets the right linters, formatters, and quality tools wired up with one command.
+`pc-init` generates a `.pre-commit-config.yaml` from curated language and framework presets, so a repo gets the right linters, formatters, and quality tools wired up with one command.
 
 ## Language
 

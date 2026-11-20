@@ -131,7 +131,7 @@ lang/
 framework/
 └── <framework>/
     └── preset YAML file(s)
-gpc_init/
+pc_init/
 ├── __init__.py
 ├── cli.py
 ├── profiles.py
@@ -148,7 +148,7 @@ tests/
     └── test_cli_generation.py
 ```
 
-**Structure Decision**: Use a single Python CLI package (`gpc_init/`) with filesystem-backed preset catalogs from `lang/` and `framework/`, plus separated request resolution and rendering concerns to keep determinism and testability explicit.
+**Structure Decision**: Use a single Python CLI package (`pc_init/`) with filesystem-backed preset catalogs from `lang/` and `framework/`, plus separated request resolution and rendering concerns to keep determinism and testability explicit.
 
 ## Complexity Tracking
 

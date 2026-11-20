@@ -29,12 +29,12 @@ awesome:
 
 # Run python tests and linters
 test:
-    uv run pytest tests --cov=gpc_init tests
-    uv run complexipy --failed gpc_init
-    uv run ruff check gpc_init tests
-    uv run ruff format gpc_init tests
-    uv run pyrefly check gpc_init tests
-    uv run ty check gpc_init tests
+    uv run pytest tests --cov=pc_init tests
+    uv run complexipy --failed pc_init
+    uv run ruff check pc_init tests
+    uv run ruff format pc_init tests
+    uv run pyrefly check pc_init tests
+    uv run ty check pc_init tests
 
 # Fail if a preset references a non-https, archived or missing hook repo.
 check-archived:

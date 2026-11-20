@@ -20,12 +20,12 @@ from typing import Any
 import yaml
 
 PROJECT_ROOT = Path(__file__).parent.parent
-# gpc-init isn't installed into the dev venv (not packaged for editable install),
+# pc-init isn't installed into the dev venv (not packaged for editable install),
 # so make the repo root importable when this script is run standalone.
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from gpc_init.catalog import Catalog  # noqa: E402
-from gpc_init.merger import DEFAULT_CATEGORY  # noqa: E402
+from pc_init.catalog import Catalog  # noqa: E402
+from pc_init.merger import DEFAULT_CATEGORY  # noqa: E402
 
 LANG_DIR = PROJECT_ROOT / "lang"
 FRAMEWORK_DIR = PROJECT_ROOT / "framework"

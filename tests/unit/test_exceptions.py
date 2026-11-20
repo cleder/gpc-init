@@ -1,6 +1,6 @@
-"""Unit tests for gpc_init/exceptions.py."""
+"""Unit tests for pc_init/exceptions.py."""
 
-from gpc_init.exceptions import (
+from pc_init.exceptions import (
     PresetFetchError,
     TargetFileExistsError,
     UnsupportedFrameworkError,

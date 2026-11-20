@@ -1,4 +1,4 @@
-"""Unit tests for gpc_init/generator.py."""
+"""Unit tests for pc_init/generator.py."""
 
 import tomllib
 from dataclasses import replace
@@ -8,15 +8,15 @@ from typing import Any
 import pytest
 import yaml
 
-from gpc_init.catalog import Catalog
-from gpc_init.exceptions import (
+from pc_init.catalog import Catalog
+from pc_init.exceptions import (
     PresetParseError,
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
     UnsupportedProfileError,
 )
-from gpc_init.generator import GeneratedConfig, GenerationRequest, generate
-from gpc_init.renderer import OutputFormat
+from pc_init.generator import GeneratedConfig, GenerationRequest, generate
+from pc_init.renderer import OutputFormat
 
 
 def _generate(

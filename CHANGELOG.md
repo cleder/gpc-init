@@ -9,6 +9,11 @@ All notable changes to this project will be documented in this file.
 - Add `auto-walrus` (experimental) to the `py` preset, by @MarcoGorelli.
 - Add `scripts/check_archived_repos.py`, `just check-archived` and a CI step that fail when a preset references an archived or deleted GitHub hook repository, or any hook repository that is not an `https://` URL (`local` and `meta` are exempt).
 
+### Changed
+
+- Rename the Python package `gpc_init` to `pc_init` so it matches the `pc-init` PyPI name and CLI command.
+  The CLI and PyPI package are unchanged; only code importing `gpc_init` directly needs updating.
+
 ### Bug Fixes
 
 - The recommendations `Try:` command repeats the whole run (`--profile`, `--format`, `--output`, `--presets`, `--recommended`) and no longer ends in an empty `--framework=`; it is built by the same code as the `--force` hint (#74).

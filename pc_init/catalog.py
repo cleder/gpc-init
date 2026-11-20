@@ -6,14 +6,14 @@ from typing import Any
 
 import yaml
 
-from gpc_init.exceptions import (
+from pc_init.exceptions import (
     MetadataConflictError,
     PresetNotFoundError,
     PresetParseError,
 )
 
 # Base directory containing lang/ and framework/ preset folders.
-# In development the symlinks gpc_init/lang -> ../lang resolve here; when installed
+# In development the symlinks pc_init/lang -> ../lang resolve here; when installed
 # from a wheel the real copies are present at the same location.
 _DEFAULT_PRESETS_BASE = Path(__file__).parent
 

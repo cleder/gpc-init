@@ -1,4 +1,4 @@
-# gpc-init
+# pc-init
 
 ## Agent skills
 

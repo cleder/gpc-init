@@ -1,4 +1,4 @@
-"""Unit tests for gpc_init/catalog.py."""
+"""Unit tests for pc_init/catalog.py."""
 
 import os
 from collections import Counter
@@ -7,8 +7,8 @@ from typing import IO, Any
 
 import pytest
 
-from gpc_init.catalog import Catalog
-from gpc_init.exceptions import (
+from pc_init.catalog import Catalog
+from pc_init.exceptions import (
     MetadataConflictError,
     PresetNotFoundError,
     PresetParseError,
@@ -188,7 +188,7 @@ class TestBundledCatalog:
         assert "common" not in catalog.langs
 
     def test_common_lang_dir_is_excluded_despite_having_preset(self) -> None:
-        # gpc_init/lang/common has a preset.yaml but is passed via exclude=
+        # pc_init/lang/common has a preset.yaml but is passed via exclude=
         # in load_catalog, so it must never surface as a language.
         catalog = Catalog.load()
         assert "common" not in catalog.langs

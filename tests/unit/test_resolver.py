@@ -1,17 +1,17 @@
-"""Unit tests for gpc_init/resolver.py."""
+"""Unit tests for pc_init/resolver.py."""
 
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from gpc_init.catalog import Catalog
-from gpc_init.exceptions import (
+from pc_init.catalog import Catalog
+from pc_init.exceptions import (
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
     UnsupportedProfileError,
 )
-from gpc_init.resolver import (
+from pc_init.resolver import (
     Recommendations,
     expand_recommendations,
     get_recommendations,

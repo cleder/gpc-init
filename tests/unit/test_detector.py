@@ -1,4 +1,4 @@
-"""Unit tests for gpc_init/detector.py."""
+"""Unit tests for pc_init/detector.py."""
 
 import json
 from pathlib import Path
@@ -7,9 +7,9 @@ from unittest.mock import patch
 
 import pytest
 
-from gpc_init import detector as _detector
-from gpc_init.catalog import Catalog
-from gpc_init.detector import detect_frameworks, detect_languages
+from pc_init import detector as _detector
+from pc_init.catalog import Catalog
+from pc_init.detector import detect_frameworks, detect_languages
 
 CATALOG = Catalog.load()
 

@@ -1,11 +1,11 @@
-"""Unit tests for gpc_init/renderer.py."""
+"""Unit tests for pc_init/renderer.py."""
 
 import tomllib
 from typing import Any, ClassVar
 
 import yaml
 
-from gpc_init.renderer import OutputFormat, render, render_toml, render_yaml
+from pc_init.renderer import OutputFormat, render, render_toml, render_yaml
 
 
 class TestRenderYaml:

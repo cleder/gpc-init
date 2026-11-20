@@ -1,4 +1,4 @@
-"""Unit tests for gpc_init/fetcher.py."""
+"""Unit tests for pc_init/fetcher.py."""
 
 import subprocess
 from pathlib import Path
@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from gpc_init.exceptions import PresetFetchError
-from gpc_init.fetcher import fetch_preset_repo, is_git_url
+from pc_init.exceptions import PresetFetchError
+from pc_init.fetcher import fetch_preset_repo, is_git_url
 
 
 class TestIsGitUrl:
@@ -44,7 +44,7 @@ class TestIsGitUrl:
 class TestFetchPresetRepo:
     def test_git_not_installed_raises(self) -> None:
         with (
-            patch("gpc_init.fetcher.shutil.which", return_value=None),
+            patch("pc_init.fetcher.shutil.which", return_value=None),
             pytest.raises(PresetFetchError, match="git is not installed"),
             fetch_preset_repo("https://example.com/repo"),
         ):
@@ -52,9 +52,9 @@ class TestFetchPresetRepo:
 
     def test_clone_failure_raises(self) -> None:
         with (
-            patch("gpc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
+            patch("pc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
             patch(
-                "gpc_init.fetcher.subprocess.run",
+                "pc_init.fetcher.subprocess.run",
                 side_effect=subprocess.CalledProcessError(
                     1, "git", stderr="repository not found"
                 ),
@@ -66,9 +66,9 @@ class TestFetchPresetRepo:
 
     def test_clone_failure_uses_stdout_when_stderr_empty(self) -> None:
         with (
-            patch("gpc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
+            patch("pc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
             patch(
-                "gpc_init.fetcher.subprocess.run",
+                "pc_init.fetcher.subprocess.run",
                 side_effect=subprocess.CalledProcessError(
                     1, "git", output="fatal: something", stderr=""
                 ),
@@ -80,9 +80,9 @@ class TestFetchPresetRepo:
 
     def test_successful_clone_yields_path(self) -> None:
         with (
-            patch("gpc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
+            patch("pc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
             patch(
-                "gpc_init.fetcher.subprocess.run",
+                "pc_init.fetcher.subprocess.run",
                 return_value=MagicMock(returncode=0),
             ),
             fetch_preset_repo("https://example.com/repo") as path,
@@ -92,9 +92,9 @@ class TestFetchPresetRepo:
 
     def test_os_error_raises_preset_fetch_error(self) -> None:
         with (
-            patch("gpc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
+            patch("pc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
             patch(
-                "gpc_init.fetcher.subprocess.run",
+                "pc_init.fetcher.subprocess.run",
                 side_effect=OSError("permission denied"),
             ),
             pytest.raises(PresetFetchError, match="permission denied"),
@@ -105,9 +105,9 @@ class TestFetchPresetRepo:
     def test_temp_dir_cleaned_up_after_context(self) -> None:
         captured: list[Path] = []
         with (
-            patch("gpc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
+            patch("pc_init.fetcher.shutil.which", return_value="/usr/bin/git"),
             patch(
-                "gpc_init.fetcher.subprocess.run",
+                "pc_init.fetcher.subprocess.run",
                 return_value=MagicMock(returncode=0),
             ),
             fetch_preset_repo("https://example.com/repo") as path,

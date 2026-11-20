@@ -4,7 +4,7 @@ Validate the bundled lang/framework metadata catalog.
 
 Checks that every lang/<id>/ and framework/<id>/ directory in this repo's
 bundled catalog has a metadata.yaml file (required for the bundled catalog,
-even though gpc_init.catalog.Catalog.load tolerates a missing one for
+even though pc_init.catalog.Catalog.load tolerates a missing one for
 third-party --presets catalogs), and that the catalog as a whole loads
 without conflicting extensions/filenames/aliases.
 
@@ -16,12 +16,12 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-# gpc-init isn't installed into the dev venv (not packaged for editable install),
+# pc-init isn't installed into the dev venv (not packaged for editable install),
 # so make the repo root importable when this script is run standalone.
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from gpc_init.catalog import Catalog  # noqa: E402
-from gpc_init.exceptions import MetadataConflictError, PresetParseError  # noqa: E402
+from pc_init.catalog import Catalog  # noqa: E402
+from pc_init.exceptions import MetadataConflictError, PresetParseError  # noqa: E402
 
 
 def _dirs_with_preset(

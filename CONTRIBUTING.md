@@ -17,7 +17,7 @@ prek install
 ```text
 lang/<id>/preset.yaml        # language presets  (--lang)
 framework/<id>/preset.yaml   # framework presets (--framework)
-gpc_init/                    # Python package source
+pc_init/                    # Python package source
 tests/                       # pytest test suite
 ```
 
@@ -113,7 +113,7 @@ Supported declarative rules (each list entry is OR'd — any match detects the f
 - `glob: "<pattern>"` — any file in the repo tree matches the filename pattern (e.g. `"*.nika.yaml"`)
 - `package_json_dep: <name>` — `package.json` lists `<name>` as a dependency or devDependency
 
-If detection genuinely needs to read file *content* or apply logic that doesn't reduce to one of the rules above (see `sphinx`/`k8s`/`git` for examples), add a Python function to `gpc_init/detector.py` and register it in `_DETECTOR_REGISTRY`, then reference it as `detect: "python:<function_name>"`.
+If detection genuinely needs to read file *content* or apply logic that doesn't reduce to one of the rules above (see `sphinx`/`k8s`/`git` for examples), add a Python function to `pc_init/detector.py` and register it in `_DETECTOR_REGISTRY`, then reference it as `detect: "python:<function_name>"`.
 This escape hatch is intentionally a fixed allowlist, not an arbitrary import path — a custom `--presets` catalog must not be able to smuggle in code.
 
 **Extensions, filenames, and aliases must be globally unique** across every language — the catalog loader hard-fails at load time if two languages claim the same one.
@@ -235,12 +235,12 @@ just test
 which will run:
 
 ```bash
-uv run pytest tests --cov=gpc_init tests
-uv run complexipy --failed gpc_init
-uv run ruff check gpc_init tests
-uv run ruff format gpc_init tests
-uv run pyrefly check gpc_init tests
-uv run ty check gpc_init tests
+uv run pytest tests --cov=pc_init tests
+uv run complexipy --failed pc_init
+uv run ruff check pc_init tests
+uv run ruff format pc_init tests
+uv run pyrefly check pc_init tests
+uv run ty check pc_init tests
 ```
 
 ## Submitting a pull request
