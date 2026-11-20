@@ -107,10 +107,14 @@ gh run watch
 
 - **Tag run fails after the TestPyPI upload succeeded**: TestPyPI refuses to re-upload a version, so do not reuse the number.
   Bump the patch version and start again with `just release`.
+
 - **Once `main` has moved and PyPI has the version**: the tag is permanent.
   Fix forward with a new patch version, and yank the bad one in the PyPI project settings if needed.
+
 - **`just ship` reports that `main` differs from the tag**: stop the `publish` run in GitHub Actions and investigate before anything else lands on `main`.
+
 - **`validate-presets` fails on the release PR** because a hook revision went out of date after the tag: this is rare and costs a new patch version.
+
 - **`validate-presets` reports an archived hook repo**: remove the hook from its preset (`just check-archived` runs the same check locally).
 
 ### Not covered
