@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Enhancements
 
 - Add `auto-walrus` (experimental) to the `py` preset, by @MarcoGorelli.
+- Add `just release X.Y.Z` and `just ship X.Y.Z` plus a changelog check and an automatic GitHub Release job: the release is tagged on `develop` first, validated and uploaded to TestPyPI by the tag run, then merged to `main` to publish to PyPI.
+  See `RELEASING.md`.
 - Add `scripts/check_archived_repos.py`, `just check-archived` and a CI step that fail when a preset references an archived or deleted GitHub hook repository, or any hook repository that is not an `https://` URL (`local` and `meta` are exempt).
 
 ### Changed

@@ -53,3 +53,11 @@ check-release-ready:
     prek autoupdate --check
     find lang framework -name "preset*.yaml" | xargs -I{} prek autoupdate --check -c {}
     ! uv lock --upgrade --dry-run 2>&1 | grep -E '^(Update|Add|Remove) '
+
+# Prepare a release on develop: upgrade, bump, promote the changelog, commit and tag (no push).
+release version:
+    uv run scripts/release.py {{version}}
+
+# Merge a tagged, green release into main so CI publishes it to PyPI.
+ship version:
+    uv run scripts/ship.py {{version}}

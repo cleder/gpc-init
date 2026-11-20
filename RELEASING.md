@@ -6,14 +6,23 @@ tags: [release, maintainer, ci]
 status: draft
 generated:
   by: claude-code/claude-sonnet-5-5
-  at: "2026-11-20T09:46:23Z"
+  at: "2026-11-20T10:01:13Z"
 sources:
   - id: workflow
     resource: .github/workflows/test-build-publish.yml
     title: test-build-publish workflow
   - id: justfile
     resource: .justfile
-    title: just recipes for the release checks
+    title: just recipes for the release
+  - id: release-script
+    resource: scripts/release.py
+    title: just release
+  - id: ship-script
+    resource: scripts/ship.py
+    title: just ship
+  - id: changelog-script
+    resource: scripts/changelog_section.py
+    title: changelog check, notes and promotion
 ---
 
 ## Releasing pc-init
@@ -21,88 +30,90 @@ sources:
 Only the maintainer releases.
 This is a runbook, not contributor documentation.
 
-### How publishing works
+### The flow
 
-- Pushing to `main` runs the `publish` job in `.github/workflows/test-build-publish.yml`, which uploads to **PyPI** (environment `release`, OIDC trusted publishing).
-- Pushing a tag runs the `vercheck` tag-versus-`pyproject.toml` check and the `test-publish` job, which uploads to **TestPyPI** (environment `test-release`).
-- PyPI refuses to re-upload an existing version, so the version in `pyproject.toml` must be right **before** the merge to `main`.
-- Tags have no `v` prefix: `0.8.1`, not `v0.8.1`.
-- The workflow creates no GitHub Release.
-
-### Steps
-
-#### 1. Start from a clean, green `develop`
-
-```bash
-git switch develop && git pull
-git status          # nothing unexpected
-gh run list -b develop -L 3
+```text
+develop:  just release X.Y.Z  ->  review  ->  push develop + tag
+CI (tag): vercheck, changelog, prerequisites, TestPyPI
+          just ship X.Y.Z     ->  PR merge to main
+CI (main): PyPI  ->  GitHub Release
 ```
 
-#### 2. Bring everything to the latest versions
+- The tag goes on `develop` **first**, so a mistake is caught before anything reaches PyPI.
+- Tags have no `v` prefix: `0.8.2`, not `v0.8.2`.
+  The `test-release` environment only accepts tags that look like `X.Y.Z`.
+- Merging to `main` uploads to PyPI straight away.
+  The `release` environment only accepts the `main` branch and has no approval step.
+- The PyPI package is called `pc-init`.
+
+### 1. Prepare the release
+
+Be on a clean `develop` with the changelog entries under `## [Unreleased]`.
 
 ```bash
-just prepare-release
+just release X.Y.Z
 ```
 
-This upgrades `uv.lock`, runs `prek autoupdate` on the local `.pre-commit-config.yaml` and on every preset, then runs the tests.
-Review the diff.
-A bumped hook can change behaviour, so read what moved before committing.
-Commit the result on its own.
+The recipe refuses to run unless you are on `develop`, tracked files are clean, and `X.Y.Z` is higher than the latest tag.
+Then it:
+
+1. runs `just prepare-release` (upgrades `uv.lock`, runs `prek autoupdate` on the local config and every preset, runs the tests),
+2. sets `version` in `pyproject.toml` and runs `uv lock`,
+3. moves the `[Unreleased]` entries under `## [X.Y.Z]` and validates the changelog,
+4. makes one `Release X.Y.Z` commit and an annotated tag `X.Y.Z`.
+
+It never pushes.
+Review what it did, including the hook and dependency bumps:
 
 ```bash
-just check-release-ready    # must exit 0
+git show --stat
 ```
 
-#### 3. Bump the version and the changelog
+Check that every hook added since the last release credits its author (`by @owner`), as `CLAUDE.md` requires.
 
-- Set `version` in `pyproject.toml`, then run `uv lock`.
-- In `CHANGELOG.md`, rename `## [Unreleased]` to the new version and add a fresh empty `## [Unreleased]` above it.
-- Check that every hook added since the last release has its author credited (`by @owner`), as `CLAUDE.md` requires.
-
-#### 4. Open the release PR (`develop` to `main`)
-
-- Summarise the changes from the changelog.
-- Repeat the author credits for new hooks in the PR description.
-- Wait for CI.
-  The PR-to-`main` run includes the check that the lockfile, local config and presets are current, and `validate-presets` fails on outdated hook revisions.
-  If upstream released something in the meantime, re-run `just prepare-release`, commit and push.
-
-#### 5. Merge, then verify PyPI
-
-Merging runs `publish` (it may wait for approval on the `release` environment).
-Confirm the new version at <https://pypi.org/project/pc-init/> and try it:
+### 2. Push and wait for the tag run
 
 ```bash
-uvx --refresh --from pc-init==<version> pc-init --help
+git push origin develop X.Y.Z
+gh run watch
 ```
 
-#### 6. Tag the release
+The tag run checks that the tag matches `pyproject.toml` (`vercheck`), that the changelog has a non-empty `X.Y.Z` section and an empty `[Unreleased]`, and that everything is up to date (`just check-release-ready`).
+Then it uploads to TestPyPI.
+
+### 3. Ship it
 
 ```bash
-git switch main && git pull
-git tag <version>
-git push origin <version>
+just ship X.Y.Z
 ```
 
-This runs `vercheck` and the TestPyPI upload.
-The tag comes after the PyPI publish, so a tag that mismatches `pyproject.toml` is only caught after the fact.
-Double-check the version before step 5.
+The recipe refuses to continue unless the tag exists locally and on `origin`, points at `origin/develop`, and its `test-build-publish` run succeeded.
+It then opens (or reuses) the `develop` to `main` pull request with the changelog section as its description, asks you to type the version to confirm, and merges with `gh pr merge --merge`.
+It checks that `main` has exactly the contents of the tag, then fast-forwards `develop` to `main`.
 
-#### 7. Finish up
+The push to `main` runs `publish` (PyPI), followed by `github-release`, which creates the GitHub Release from the changelog section.
 
-- Create the GitHub Release from the tag, using the changelog section as the notes (`gh release create <version> --notes-file ...`).
-- Merge `main` back into `develop` so the merge commit is not lost.
+```bash
+gh run watch
+```
 
 ### If something goes wrong
 
-- **Wrong version published to PyPI**: it cannot be replaced.
-  Fix forward with a new version, and yank the bad one in the PyPI project settings if needed.
-- **`check-release-ready` or CI fails on outdated versions**: upstream released since step 2.
-  Re-run `just prepare-release`.
+- **Tag run fails before the TestPyPI upload succeeded**: delete the tag, fix `develop`, tag again with the same version.
+
+  ```bash
+  git tag -d X.Y.Z && git push origin :refs/tags/X.Y.Z
+  ```
+
+- **Tag run fails after the TestPyPI upload succeeded**: TestPyPI refuses to re-upload a version, so do not reuse the number.
+  Bump the patch version and start again with `just release`.
+- **Once `main` has moved and PyPI has the version**: the tag is permanent.
+  Fix forward with a new patch version, and yank the bad one in the PyPI project settings if needed.
+- **`just ship` reports that `main` differs from the tag**: stop the `publish` run in GitHub Actions and investigate before anything else lands on `main`.
+- **`validate-presets` fails on the release PR** because a hook revision went out of date after the tag: this is rare and costs a new patch version.
 - **`validate-presets` reports an archived hook repo**: remove the hook from its preset (`just check-archived` runs the same check locally).
 
-### Open points
+### Not covered
 
-- Whether the `release` and `test-release` environments require manual approval has not been checked.
-- Tagging before the merge to `main` would let `vercheck` run before the PyPI upload; that would need a workflow change.
+- There is no smoke test of the package uploaded to TestPyPI.
+- There is no approval gate between the merge to `main` and the PyPI upload.
