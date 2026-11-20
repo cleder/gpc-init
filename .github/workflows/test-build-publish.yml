@@ -71,6 +71,15 @@ jobs:
         run: |
           uv run python main.py --lang py,js --format toml --output "$RUNNER_TEMP/prek.toml"
           uv run prek validate-config "$RUNNER_TEMP/prek.toml"
+      - name: Check release prerequisites are up to date
+        if: >-
+          github.base_ref == 'main' ||
+          startsWith(github.ref, 'refs/tags/')
+        run: |
+          uv run prek autoupdate --check
+          find lang framework -name "preset*.yaml" |
+            xargs -I{} uv run prek autoupdate --check -c {}
+          ! uv lock --upgrade --dry-run 2>&1 | grep -E '^(Update|Add|Remove) '
       - name: Check complexity
         run: |
           uv run radon cc --min B gpc_init

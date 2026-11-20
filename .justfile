@@ -39,3 +39,17 @@ test:
 # Fail if a preset references a non-https, archived or missing hook repo.
 check-archived:
     GITHUB_TOKEN="${GITHUB_TOKEN:-$(gh auth token 2>/dev/null)}" uv run scripts/check_archived_repos.py
+
+# Bring every dependency and hook revision to the latest version. Run before tagging a release.
+prepare-release:
+    uv lock --upgrade
+    uv sync
+    prek autoupdate
+    just update
+    just test
+
+# Fail if the lockfile, the local pre-commit config or any preset is not at the latest versions.
+check-release-ready:
+    prek autoupdate --check
+    find lang framework -name "preset*.yaml" | xargs -I{} prek autoupdate --check -c {}
+    ! uv lock --upgrade --dry-run 2>&1 | grep -E '^(Update|Add|Remove) '
