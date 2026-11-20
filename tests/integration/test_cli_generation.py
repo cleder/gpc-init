@@ -2753,6 +2753,48 @@ class TestProfileFlag:
         assert "mypy" not in hook_ids
         assert "flake8" not in hook_ids
 
+    def test_experimental_profile_adds_experimental_hooks(self, tmp_path: Path) -> None:
+        """--profile experimental opts in to hooks that are absent by default."""
+        default = tmp_path / "default.yaml"
+        opted_in = tmp_path / "experimental.yaml"
+        for path, extra in ((default, ()), (opted_in, ["--profile", "experimental"])):
+            result = runner.invoke(app, ["--lang", "py", *extra, "--output", str(path)])
+            assert result.exit_code == 0, result.output
+        assert "docfmt" not in _hook_ids(default.read_text(encoding="utf-8"))
+        assert "docfmt" in _hook_ids(opted_in.read_text(encoding="utf-8"))
+
+    def test_experimental_profile_adds_experimental_hook_for_csv(
+        self, tmp_path: Path
+    ) -> None:
+        default = tmp_path / "default.yaml"
+        opted_in = tmp_path / "experimental.yaml"
+        for path, extra in ((default, ()), (opted_in, ["--profile", "experimental"])):
+            result = runner.invoke(
+                app, ["--lang", "csv", *extra, "--output", str(path)]
+            )
+            assert result.exit_code == 0, result.output
+        assert "csv-quality-gate" not in _hook_ids(default.read_text(encoding="utf-8"))
+        assert "csv-quality-gate" in _hook_ids(opted_in.read_text(encoding="utf-8"))
+
+    @pytest.mark.parametrize(
+        "profile_args",
+        [
+            ["--profile", "legacy,experimental"],
+            ["--profile", "legacy", "--profile", "experimental"],
+        ],
+    )
+    def test_combined_profiles_add_both_legacy_and_experimental(
+        self, tmp_path: Path, profile_args: list[str]
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", *profile_args, "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        hook_ids = _hook_ids(output.read_text(encoding="utf-8"))
+        assert "mypy" in hook_ids  # legacy
+        assert "docfmt" in hook_ids  # experimental
+
     def test_comma_delimited_profiles_parsed(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         result = runner.invoke(
@@ -3345,3 +3387,23 @@ class TestForceHintQuotingAndSecrets:
             f"--output={output}",
             "--force",
         ]
+
+
+@pytest.fixture(scope="module")
+def js_config(tmp_path_factory: pytest.TempPathFactory) -> str:
+    output = tmp_path_factory.mktemp("js") / "js.yaml"
+    assert runner.invoke(app, ["--lang", "js", "--output", str(output)]).exit_code == 0
+    return output.read_text(encoding="utf-8")
+
+
+class TestTypescriptIsJavascript:
+    """TypeScript is covered by the js preset; ``ts`` / ``typescript`` are aliases."""
+
+    @pytest.mark.parametrize("alias", ["ts", "typescript", "javascript"])
+    def test_lang_alias_generates_js_preset(
+        self, tmp_path: Path, js_config: str, alias: str
+    ) -> None:
+        output = tmp_path / "alias.yaml"
+        result = runner.invoke(app, ["--lang", alias, "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert output.read_text(encoding="utf-8") == js_config
