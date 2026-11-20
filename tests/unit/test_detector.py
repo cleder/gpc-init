@@ -69,7 +69,7 @@ class TestDetectLanguages:
         self, tmp_path: Path, filename: str, lang: str
     ) -> None:
         (tmp_path / filename).touch()
-        assert lang in detect_languages(tmp_path, CATALOG)
+        assert detect_languages(tmp_path, CATALOG) == [lang]
 
     def test_detects_multiple_languages(self, tmp_path: Path) -> None:
         (tmp_path / "main.py").touch()

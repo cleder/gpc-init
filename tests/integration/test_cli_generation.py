@@ -3268,19 +3268,21 @@ class TestForceHintQuotingAndSecrets:
         ]
 
 
+@pytest.fixture(scope="module")
+def js_config(tmp_path_factory: pytest.TempPathFactory) -> str:
+    output = tmp_path_factory.mktemp("js") / "js.yaml"
+    assert runner.invoke(app, ["--lang", "js", "--output", str(output)]).exit_code == 0
+    return output.read_text(encoding="utf-8")
+
+
 class TestTypescriptIsJavascript:
     """TypeScript is covered by the js preset; ``ts`` / ``typescript`` are aliases."""
 
-    @pytest.mark.parametrize("name", ["ts", "typescript", "javascript", "js"])
-    def test_lang_alias_generates_js_preset(self, tmp_path: Path, name: str) -> None:
-        expected = tmp_path / "js.yaml"
-        actual = tmp_path / "alias.yaml"
-        assert (
-            runner.invoke(app, ["--lang", "js", "--output", str(expected)]).exit_code
-            == 0
-        )
-        result = runner.invoke(app, ["--lang", name, "--output", str(actual)])
+    @pytest.mark.parametrize("alias", ["ts", "typescript", "javascript"])
+    def test_lang_alias_generates_js_preset(
+        self, tmp_path: Path, js_config: str, alias: str
+    ) -> None:
+        output = tmp_path / "alias.yaml"
+        result = runner.invoke(app, ["--lang", alias, "--output", str(output)])
         assert result.exit_code == 0, result.output
-        assert actual.read_text(encoding="utf-8") == expected.read_text(
-            encoding="utf-8"
-        )
+        assert output.read_text(encoding="utf-8") == js_config
