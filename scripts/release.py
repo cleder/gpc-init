@@ -77,6 +77,15 @@ def check_preconditions(version: str) -> None:
     if git("status", "--porcelain", "--untracked-files=no"):
         msg = "the working tree has uncommitted changes to tracked files"
         raise ReleaseError(msg)
+    unreleased = subprocess.run(  # noqa: S603
+        [sys.executable, str(ROOT / "scripts" / "changelog_section.py"), "unreleased"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if unreleased.returncode:
+        raise ReleaseError(unreleased.stderr.strip() or "the changelog is not ready")
     latest = latest_version(git("tag", "--list").splitlines())
     if latest is not None and wanted <= latest:
         msg = (

@@ -165,3 +165,26 @@ def test_real_changelog_has_unreleased_section() -> None:
     assert (
         cs.section(cs.CHANGELOG.read_text(encoding="utf-8"), "Unreleased") is not None
     )
+
+
+def test_main_unreleased_passes_with_entries(tmp_path: Path) -> None:
+    file = tmp_path / "CHANGELOG.md"
+    file.write_text(UNRELEASED_ONLY, encoding="utf-8")
+    assert cs.main(["unreleased", "--file", str(file)]) == 0
+
+
+def test_main_unreleased_fails_when_empty(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    file = tmp_path / "CHANGELOG.md"
+    file.write_text(RELEASED, encoding="utf-8")
+    assert cs.main(["unreleased", "--file", str(file)]) == 1
+    assert "no entries" in capsys.readouterr().err
+
+
+def test_main_version_commands_require_a_version(tmp_path: Path) -> None:
+    file = tmp_path / "CHANGELOG.md"
+    file.write_text(RELEASED, encoding="utf-8")
+    with pytest.raises(SystemExit):
+        cs.main(["check", "--file", str(file)])

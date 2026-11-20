@@ -8,6 +8,7 @@ disagree:
     changelog_section.py check VERSION      fail unless VERSION has a non-empty
                                             section and [Unreleased] is empty
     changelog_section.py notes VERSION      print the VERSION section (release notes)
+    changelog_section.py unreleased         fail unless [Unreleased] has entries
     changelog_section.py promote VERSION    move the [Unreleased] entries under a
                                             new VERSION heading
 
@@ -64,12 +65,17 @@ def problems(text: str, version: str) -> list[str]:
     return found
 
 
-def promote(text: str, version: str) -> str:
-    """Move the [Unreleased] entries under a new ``## [version]`` heading."""
+def require_unreleased(text: str) -> None:
+    """Raise ChangelogError unless [Unreleased] has entries to release."""
     unreleased = section(text, UNRELEASED)
     if unreleased is None or not has_entries(unreleased):
         msg = f"'## [{UNRELEASED}]' has no entries to release"
         raise ChangelogError(msg)
+
+
+def promote(text: str, version: str) -> str:
+    """Move the [Unreleased] entries under a new ``## [version]`` heading."""
+    require_unreleased(text)
     if section(text, version) is not None:
         msg = f"'## [{version}]' already exists"
         raise ChangelogError(msg)
@@ -89,13 +95,17 @@ def notes(text: str, version: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     """Run the command line interface."""
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("command", choices=["check", "notes", "promote"])
-    parser.add_argument("version")
+    parser.add_argument("command", choices=["check", "notes", "promote", "unreleased"])
+    parser.add_argument("version", nargs="?")
     parser.add_argument("--file", type=Path, default=CHANGELOG)
     args = parser.parse_args(argv)
+    if args.command != "unreleased" and not args.version:
+        parser.error(f"{args.command} needs a VERSION")
     text = args.file.read_text(encoding="utf-8")
     try:
-        if args.command == "check":
+        if args.command == "unreleased":
+            require_unreleased(text)
+        elif args.command == "check":
             found = problems(text, args.version)
             if found:
                 sys.stderr.write(
