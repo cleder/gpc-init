@@ -1,12 +1,22 @@
 ---
-title: Releasing gpc-init
-description: Maintainer runbook for cutting a gpc-init release to PyPI.
-type: runbook
-audience: maintainer
+type: Playbook
+title: Releasing pc-init
+description: Maintainer runbook for cutting a pc-init release to PyPI.
+tags: [release, maintainer, ci]
 status: draft
+generated:
+  by: claude-code/claude-sonnet-5-5
+  at: "2026-11-20T09:46:23Z"
+sources:
+  - id: workflow
+    resource: .github/workflows/test-build-publish.yml
+    title: test-build-publish workflow
+  - id: justfile
+    resource: .justfile
+    title: just recipes for the release checks
 ---
 
-## Releasing gpc-init
+## Releasing pc-init
 
 Only the maintainer releases.
 This is a runbook, not contributor documentation.
