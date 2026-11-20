@@ -31,6 +31,10 @@ class TestNormalizeLang:
     def test_alias_javascript(self) -> None:
         assert normalize_lang("javascript", Catalog.load()) == "js"
 
+    @pytest.mark.parametrize("alias", ["ts", "typescript"])
+    def test_typescript_aliases_resolve_to_js(self, alias: str) -> None:
+        assert normalize_lang(alias, Catalog.load()) == "js"
+
     def test_alias_rust(self) -> None:
         assert normalize_lang("rust", Catalog.load()) == "rs"
 
