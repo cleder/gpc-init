@@ -207,3 +207,9 @@ repos:
         args: [alembic/versions/]
         description: "Catch Alembic migration rollback failures before they reach production"
         category: experimental
+  - repo: https://github.com/MarcoGorelli/auto-walrus
+    rev: 0.4.1
+    hooks:
+      - id: auto-walrus
+        description: "Automatically use the walrus operator"
+        category: experimental

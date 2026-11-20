@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Enhancements
 
+- Add `auto-walrus` (experimental) to the `py` preset, by @MarcoGorelli.
 - Add `scripts/check_archived_repos.py`, `just check-archived` and a CI step that fail when a preset references an archived or deleted GitHub hook repository, or any hook repository that is not an `https://` URL (`local` and `meta` are exempt).
 
 ### Bug Fixes

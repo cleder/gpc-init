@@ -17,6 +17,11 @@ See `docs/agents/triage-labels.md`.
 Single-context: `CONTEXT.md` at repo root, ADRs at `.claude/docs/adr/` (non-default location).
 See `docs/agents/domain.md`.
 
+## Adding hooks
+
+When a new hook is added to a preset, credit its author: add a `CHANGELOG.md` entry under `[Unreleased]` → `Enhancements` that names the hook and tags the upstream repository owner, e.g. ``Add `auto-walrus` (experimental) to the `py` preset, by @MarcoGorelli``, and repeat the credit in the commit message and the PR description.
+Take the handle from the hook repository's GitHub owner, not from a guess.
+
 <!-- code-map:begin -->
 ## Code map (generated)
 
