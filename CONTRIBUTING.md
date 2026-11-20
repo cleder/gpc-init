@@ -43,6 +43,10 @@ repos:
 A hook may optionally declare a `category` to mark it as `legacy` or `experimental` instead of the default `preset` category:
 
 ```yaml
+repos:
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.2.3
+    hooks:
       - id: mypy
         category: legacy
         description: "Mirror of mypy for pre-commit"

@@ -5,11 +5,14 @@ repos:
     hooks:
       - id: yamlfmt
         description: "This hook uses github.com/google/yamlfmt to format yaml files. Requires Go >1.18 to be installed."
+        category: legacy
   - repo: https://github.com/owenlamont/ryl-pre-commit
     # Match the latest ryl release tag.
-    rev: v0.29.0
+    rev: v0.30.0
     hooks:
-      - id: ryl
+      - id: ryl-check
         description: "Lint YAML files with the ryl CLI"
-      - id: ryl-markdown
+      - id: ryl-check-markdown
         description: "Lint YAML embedded in Markdown (front matter + fenced yaml blocks)"
+      - id: ryl-format
+        description: "Format YAML files with the ryl CLI"
