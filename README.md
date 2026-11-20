@@ -252,10 +252,12 @@ If none of your `--lang` selections match, `pc-init` prints an informational not
 
 ```text
 Note: preset 'react' recommends adding: --lang=js,css
-      Try: pc-init --lang=go,js,css --framework=react
+      Try: pc-init --lang=go,js,css --framework=react --force
 ```
 
-The suggested command preserves your existing `--lang` values so it is safe to run with `--force` — no hooks you already selected will be removed.
+The suggested command repeats your whole run (`--framework`, `--profile`, `--format`, `--presets`, `--output`, `--recommended`) and adds the missing languages, so no hooks you already selected are removed.
+It ends in `--force` because it overwrites the file that was just generated, with no diff.
+Credentials in a `--presets` URL are hidden in the hint; add them back before running it.
 
 Pass `--recommended` to apply all suggestions automatically in a single run:
 

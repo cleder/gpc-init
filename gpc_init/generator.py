@@ -7,8 +7,9 @@ from gpc_init.catalog import Catalog
 from gpc_init.merger import DEFAULT_CATEGORY, filter_by_category, merge_presets
 from gpc_init.renderer import OutputFormat, render
 from gpc_init.resolver import (
+    Recommendations,
     expand_recommendations,
-    get_recommendations_info,
+    get_recommendations,
     validate_frameworks,
     validate_langs,
     validate_profiles,
@@ -34,14 +35,15 @@ class GeneratedConfig:
     """
     Rendered config plus the final (post-expansion) langs and frameworks.
 
-    advice is the ready-to-print note about recommended languages/frameworks the
-    selection is missing, or None (also None when recommendations were applied).
+    recommendations is what the selected presets recommend and the selection is
+    missing, or None (also None when recommendations were applied). It is data, not
+    text: the caller renders it, repeating the whole invocation in its suggestion.
     """
 
     content: str
     langs: tuple[str, ...]
     frameworks: tuple[str, ...]
-    advice: str | None = None
+    recommendations: Recommendations | None = None
 
     @property
     def yaml_content(self) -> str:
@@ -97,14 +99,14 @@ def generate(request: GenerationRequest) -> GeneratedConfig:
     merged = merge_presets(catalog.common_preset(), lang_presets, fw_presets)
     categories = frozenset({DEFAULT_CATEGORY, *request.profiles})
     merged = filter_by_category(merged, categories)
-    advice = (
+    recommendations = (
         None
         if request.recommended
-        else get_recommendations_info(langs, frameworks, lang_presets, fw_presets)
+        else get_recommendations(langs, frameworks, lang_presets, fw_presets)
     )
     return GeneratedConfig(
         content=render(merged, request.fmt),
         langs=tuple(langs),
         frameworks=tuple(frameworks),
-        advice=advice,
+        recommendations=recommendations,
     )

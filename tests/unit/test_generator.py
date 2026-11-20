@@ -50,28 +50,30 @@ class TestGenerationRequest:
         assert request.recommended is False
 
 
-class TestGeneratedAdvice:
-    def test_names_the_missing_recommendation(self, tmp_preset_dir: Path) -> None:
-        result = _generate(["py"], ["react"], Catalog.load(tmp_preset_dir))
-        assert result.advice is not None
-        assert result.advice.startswith("Note: preset 'react' recommends adding:")
-        assert "--lang=js" in result.advice
-        assert "Try: pc-init --lang=py,js --framework=react" in result.advice
-
-    def test_no_advice_when_nothing_is_missing(self, tmp_preset_dir: Path) -> None:
-        result = _generate(["py"], [], Catalog.load(tmp_preset_dir))
-        assert result.advice is None
-
-    def test_no_advice_when_recommendations_are_applied(
+class TestGeneratedRecommendations:
+    def test_reports_the_missing_recommendation_as_data(
         self, tmp_preset_dir: Path
     ) -> None:
+        result = _generate(["py"], ["react"], Catalog.load(tmp_preset_dir))
+        assert result.recommendations is not None
+        assert result.recommendations.missing_langs == ("js",)
+        assert result.recommendations.missing_frameworks == ()
+        assert result.recommendations.notes == (
+            "Note: preset 'react' recommends adding: --lang=js",
+        )
+
+    def test_none_when_nothing_is_missing(self, tmp_preset_dir: Path) -> None:
+        result = _generate(["py"], [], Catalog.load(tmp_preset_dir))
+        assert result.recommendations is None
+
+    def test_none_when_recommendations_are_applied(self, tmp_preset_dir: Path) -> None:
         result = _generate(
             ["py"], ["react"], Catalog.load(tmp_preset_dir), recommended=True
         )
-        assert result.advice is None
+        assert result.recommendations is None
         assert result.langs == ("py", "js")
 
-    def test_recommended_suppresses_advice_even_for_unresolvable_items(
+    def test_recommended_suppresses_them_even_for_unresolvable_items(
         self, tmp_preset_dir: Path
     ) -> None:
         widget = tmp_preset_dir / "framework" / "widget"
@@ -81,9 +83,11 @@ class TestGeneratedAdvice:
         )
         catalog = Catalog.load(tmp_preset_dir)
         # Control: the missing recommendation is reported when not applied ...
-        assert _generate([], ["widget"], catalog).advice is not None
-        # ... and --recommended never reports advice, even if it cannot resolve it.
-        assert _generate([], ["widget"], catalog, recommended=True).advice is None
+        assert _generate([], ["widget"], catalog).recommendations is not None
+        # ... and --recommended never reports any, even if it cannot resolve it.
+        assert (
+            _generate([], ["widget"], catalog, recommended=True).recommendations is None
+        )
 
 
 class TestGenerateHappyPath:

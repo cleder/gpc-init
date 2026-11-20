@@ -5,6 +5,7 @@ import importlib.metadata
 import shlex
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Annotated, NoReturn
 from urllib.parse import urlsplit, urlunsplit
@@ -72,15 +73,49 @@ def _write_text(target: Path, content: str) -> None:
         raise typer.Exit(code=1) from exc
 
 
+def _recommendation_advice(
+    result: GeneratedConfig,
+    request: GenerationRequest,
+    *,
+    output: str | None,
+    presets: str | None,
+) -> str | None:
+    """
+    Render the notes about missing recommendations plus a ``Try:`` command.
+
+    The command repeats the whole run (profiles, format, output, presets, ...)
+    with the missing languages and frameworks added, so running it yields the
+    same config plus the recommended presets. It ends in ``--force`` because it
+    overwrites the file this run just wrote. URL credentials in ``--presets`` are
+    redacted, so a line tells the user to put them back.
+    """
+    recs = result.recommendations
+    if recs is None:
+        return None
+    wider = replace(
+        request,
+        langs=(*request.langs, *recs.missing_langs),
+        frameworks=(*request.frameworks, *recs.missing_frameworks),
+    )
+    command = _build_force_command(wider, output=output, presets=presets)
+    lines = [*recs.notes, f"      Try: {command}"]
+    if presets and _redact_url_credentials(presets) != presets:
+        lines.append("      (the --presets credentials are hidden; add them back)")
+    return "\n".join(lines)
+
+
 def _write_config(
-    target: Path, request: GenerationRequest, result: GeneratedConfig
+    target: Path,
+    request: GenerationRequest,
+    result: GeneratedConfig,
+    advice: str | None,
 ) -> None:
     """Write the generated config to target and report what was done."""
     overwritten = target.exists()
     _write_text(target, result.content)
 
-    if result.advice:
-        typer.echo(result.advice)
+    if advice:
+        typer.echo(advice)
 
     lang_str = ", ".join(result.langs)
     fw_str = (", ".join(result.frameworks)) if result.frameworks else "none"
@@ -116,7 +151,8 @@ def _build_force_command(
     Return a ready-to-run pc-init command that repeats the run, plus --force.
 
     output and presets are the raw option values: without them the command would
-    write to the default file or use the bundled catalog instead.
+    write to the default file or use the bundled catalog instead. Every ``Try:``
+    command is built here, so none can drop an option of the run.
     """
     parts = ["pc-init"]
     if request.langs:
@@ -451,7 +487,8 @@ def main(  # noqa: PLR0917
                 request, output=output, presets=presets
             )
             _show_diff_and_exit(target, result, force_command)
-        _write_config(target, request, result)
+        advice = _recommendation_advice(result, request, output=output, presets=presets)
+        _write_config(target, request, result, advice)
 
 
 @app.command("list")

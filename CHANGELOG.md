@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - Add `scripts/check_archived_repos.py`, `just check-archived` and a CI step that fail when a preset references an archived or deleted GitHub hook repository, or any hook repository that is not an `https://` URL (`local` and `meta` are exempt).
 
+### Bug Fixes
+
+- The recommendations `Try:` command repeats the whole run (`--profile`, `--format`, `--output`, `--presets`, `--recommended`) and no longer ends in an empty `--framework=`; it is built by the same code as the `--force` hint (#74).
+
 ### Removed
 
 - Merge the `ts` language into `js` (`.ts`/`.tsx` detection, `ts` and `typescript` aliases) and delete the `ts` preset, whose only distinct hook was an unconfigured eslint; `oxlint` and `biome-check` already cover TypeScript.

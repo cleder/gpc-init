@@ -2962,6 +2962,127 @@ class TestRecommendationAdvice:
         assert result.exit_code == 0, result.output
         assert "recommends adding" not in result.output
 
+    def test_try_command_repeats_the_whole_run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Running the suggestion gives the same run plus the recommended presets."""
+        workdir = tmp_path / "cwd"
+        workdir.mkdir()
+        monkeypatch.chdir(workdir)
+        output = tmp_path / "cfg.toml"
+        options = ["--profile", "legacy", "--format", "toml"]
+
+        first = runner.invoke(
+            app,
+            ["--lang", "go", "--framework", "react", *options, "--output", str(output)],
+        )
+        assert first.exit_code == 0, first.output
+        suggested = _hint_args(first.stdout)
+        second = runner.invoke(app, suggested)
+        assert second.exit_code == 0, second.output
+
+        expected = tmp_path / "expected.toml"
+        wanted = runner.invoke(
+            app,
+            [
+                "--lang",
+                "go",
+                "--framework",
+                "react",
+                "--recommended",
+                *options,
+                "--output",
+                str(expected),
+            ],
+        )
+        assert wanted.exit_code == 0, wanted.output
+        assert output.read_text(encoding="utf-8") == expected.read_text(
+            encoding="utf-8"
+        )
+        assert not list(workdir.iterdir())  # nothing written to the default file
+
+    @staticmethod
+    def _recommending_catalog(root: Path) -> Path:
+        """Build a catalog whose lang ``x`` recommends lang ``y``."""
+        catalog = root / "catalog"
+        for name, rec in (("x", "recommended:\n  lang: [y]\n"), ("y", "")):
+            (catalog / "lang" / name).mkdir(parents=True)
+            (catalog / "lang" / name / "preset.yaml").write_text(
+                f"{rec}repos: []\n", encoding="utf-8"
+            )
+        return catalog
+
+    def test_try_command_keeps_the_custom_catalog(self, tmp_path: Path) -> None:
+        catalog = self._recommending_catalog(tmp_path)
+        output = tmp_path / "out.yaml"
+
+        first = runner.invoke(
+            app,
+            ["--lang", "x", "--presets", str(catalog), "--output", str(output)],
+        )
+        assert first.exit_code == 0, first.output
+        suggested = _hint_args(first.stdout)
+        assert f"--presets={catalog}" in suggested
+        assert runner.invoke(app, suggested).exit_code == 0
+
+    def test_try_command_has_no_empty_flags(self, tmp_path: Path) -> None:
+        """A lang-only run that gains a lang must not end in a dangling --framework=."""
+        catalog = self._recommending_catalog(tmp_path)
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "x",
+                "--presets",
+                str(catalog),
+                "--output",
+                str(tmp_path / "o.yaml"),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        suggested = _hint_args(result.stdout)
+        assert "--lang=x,y" in suggested
+        assert not any(arg.endswith("=") for arg in suggested)
+
+    def test_try_command_ends_in_force_because_it_overwrites_the_output(
+        self, tmp_path: Path
+    ) -> None:
+        catalog = self._recommending_catalog(tmp_path)
+        result = runner.invoke(
+            app,
+            ["--lang", "x", "--presets", str(catalog), "--output", str(tmp_path / "o")],
+        )
+        assert result.exit_code == 0, result.output
+        assert _hint_args(result.stdout)[-1] == "--force"
+
+    def test_try_command_hides_credentials_and_says_so(self, tmp_path: Path) -> None:
+        catalog = self._recommending_catalog(tmp_path)
+        url = "https://s3cret-token@example.com/org/catalog.git"
+
+        @contextmanager
+        def fake_fetch(_url: str) -> Generator[Path]:
+            yield catalog
+
+        with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
+            result = runner.invoke(
+                app,
+                ["--lang", "x", "--presets", url, "--output", str(tmp_path / "o.yaml")],
+            )
+        assert result.exit_code == 0, result.output
+        assert "s3cret-token" not in result.output
+        assert "--presets=https://***@example.com/org/catalog.git" in result.stdout
+        assert "credentials are hidden" in result.stdout
+
+    def test_try_command_does_not_mention_credentials_when_there_are_none(
+        self, tmp_path: Path
+    ) -> None:
+        catalog = self._recommending_catalog(tmp_path)
+        result = runner.invoke(
+            app,
+            ["--lang", "x", "--presets", str(catalog), "--output", str(tmp_path / "o")],
+        )
+        assert "credentials" not in result.stdout
+
     def test_rerun_with_the_same_selection_reports_no_changes(
         self, tmp_path: Path
     ) -> None:

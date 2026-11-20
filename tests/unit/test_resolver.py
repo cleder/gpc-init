@@ -1,6 +1,7 @@
 """Unit tests for gpc_init/resolver.py."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -11,8 +12,9 @@ from gpc_init.exceptions import (
     UnsupportedProfileError,
 )
 from gpc_init.resolver import (
+    Recommendations,
     expand_recommendations,
-    get_recommendations_info,
+    get_recommendations,
     normalize_framework,
     normalize_lang,
     validate_frameworks,
@@ -140,269 +142,140 @@ class TestValidateProfiles:
         assert exc_info.value.supported == ["experimental", "legacy"]
 
 
-class TestGetRecommendationsInfo:
-    def test_returns_message_when_recommended_lang_missing(self) -> None:
-        result = get_recommendations_info(
+def _recs(
+    *,
+    langs: list[str],
+    frameworks: list[str],
+    lang_presets: list[dict[str, Any]] | None = None,
+    fw_presets: list[dict[str, Any]] | None = None,
+) -> Recommendations | None:
+    return get_recommendations(
+        langs=langs,
+        frameworks=frameworks,
+        lang_presets=lang_presets if lang_presets is not None else [{}] * len(langs),
+        fw_presets=fw_presets if fw_presets is not None else [{}] * len(frameworks),
+    )
+
+
+class TestGetRecommendations:
+    """The resolver reports what is missing; it does not build a command."""
+
+    def test_reports_missing_recommended_langs(self) -> None:
+        result = _recs(
             langs=["py"],
             frameworks=["react"],
-            lang_presets=[{}],
             fw_presets=[{"recommended": {"lang": ["js", "ts"]}}],
         )
         assert result is not None
-        assert "react" in result
-        assert "js" in result
+        assert result.missing_langs == ("js", "ts")
+        assert result.missing_frameworks == ()
 
-    def test_returns_none_when_recommended_lang_already_selected(self) -> None:
-        # react recommends js; user already has js — no note
-        result = get_recommendations_info(
-            langs=["js"],
-            frameworks=["react"],
-            lang_presets=[{}],
-            fw_presets=[{"recommended": {"lang": ["js"]}}],
-        )
-        assert result is None
-
-    def test_returns_none_when_one_of_recommended_langs_selected(self) -> None:
-        result = get_recommendations_info(
-            langs=["js"],
-            frameworks=["react"],
-            lang_presets=[{}],
-            fw_presets=[{"recommended": {"lang": ["js", "ts"]}}],
-        )
-        # js is selected — ts is still missing, so note IS emitted
-        assert result is not None
-        assert "ts" in result
-        assert "--lang=ts" in result
-
-    def test_returns_none_when_no_recommended_section(self) -> None:
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=["django"],
-            lang_presets=[{}],
-            fw_presets=[{}],
-        )
-        assert result is None
-
-    def test_message_contains_recommended_lang_names(self) -> None:
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=["react"],
-            lang_presets=[{}],
-            fw_presets=[{"recommended": {"lang": ["js", "ts"]}}],
-        )
-        assert result is not None
-        assert "js" in result
-        assert "ts" in result
-        assert "None" not in result
-
-    def test_message_includes_actionable_suggestion(self) -> None:
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=["react"],
-            lang_presets=[{}],
-            fw_presets=[{"recommended": {"lang": ["js", "ts"]}}],
-        )
-        assert result is not None
-        # selected lang preserved; missing recommended langs appended
-        assert "pc-init --lang=py,js,ts --framework=react" in result
-
-    def test_multiple_presets_consolidated_into_one_suggestion(self) -> None:
-        result = get_recommendations_info(
-            langs=["go"],
-            frameworks=["react", "django"],
-            lang_presets=[{}],
-            fw_presets=[
-                {"recommended": {"lang": ["js", "ts"]}},
-                {"recommended": {"lang": ["py"]}},
-            ],
-        )
-        assert result is not None
-        assert result.count("Try:") == 1
-        assert "pc-init --lang=go,js,ts,py --framework=react,django" in result
-
-    def test_framework_recommendation_reported(self) -> None:
-        # A lang preset that recommends a framework
-        result = get_recommendations_info(
+    def test_reports_missing_recommended_frameworks(self) -> None:
+        result = _recs(
             langs=["py"],
             frameworks=[],
-            lang_presets=[{"recommended": {"framework": ["git"]}}],
-            fw_presets=[],
+            lang_presets=[{"recommended": {"framework": ["git", "docker"]}}],
         )
         assert result is not None
-        assert "git" in result
-        assert "--framework=git" in result
+        assert result.missing_langs == ()
+        assert result.missing_frameworks == ("git", "docker")
 
-    def test_missing_recommendations_returns_missing_frameworks(self) -> None:
-        # A framework preset recommends a framework not in the current selection.
-        # _missing_recommendations must look up "framework" (not any other key) to
-        # detect it. The mutant changes that key to "XXframeworkXX", making
-        # missing_fws always empty and suppressing the note entirely.
-        result = get_recommendations_info(
+    def test_framework_preset_can_recommend_a_framework(self) -> None:
+        result = _recs(
             langs=[],
             frameworks=["react"],
-            lang_presets=[],
             fw_presets=[{"recommended": {"framework": ["docker"]}}],
         )
         assert result is not None
-        assert "docker" in result
-        assert "--framework=docker" in result
+        assert result.missing_frameworks == ("docker",)
 
-    def test_suggestion_includes_all_selected_frameworks(self) -> None:
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=["react", "django"],
-            lang_presets=[{}],
-            fw_presets=[
-                {"recommended": {"lang": ["js", "ts"]}},
-                {"recommended": {"lang": ["py"]}},
-            ],
+    def test_none_when_everything_recommended_is_selected(self) -> None:
+        assert (
+            _recs(
+                langs=["js"],
+                frameworks=["react"],
+                fw_presets=[{"recommended": {"lang": ["js"]}}],
+            )
+            is None
+        )
+
+    def test_none_without_a_recommended_section(self) -> None:
+        assert _recs(langs=["py"], frameworks=["django"]) is None
+
+    def test_only_the_unselected_part_is_reported(self) -> None:
+        result = _recs(
+            langs=["js"],
+            frameworks=["react"],
+            fw_presets=[{"recommended": {"lang": ["js", "ts"]}}],
         )
         assert result is not None
-        assert "--framework=react,django" in result
+        assert result.missing_langs == ("ts",)
 
-    def test_multiple_presets_multiple_notes(self) -> None:
-        result = get_recommendations_info(
+    def test_one_note_per_preset_naming_what_to_add(self) -> None:
+        result = _recs(
             langs=["go"],
             frameworks=["react", "django"],
-            lang_presets=[{}],
             fw_presets=[
                 {"recommended": {"lang": ["js"]}},
                 {"recommended": {"lang": ["py"]}},
             ],
         )
         assert result is not None
-        assert "react" in result
-        assert "django" in result
-        assert "js" in result
-        assert "py" in result
+        assert result.notes == (
+            "Note: preset 'react' recommends adding: --lang=js",
+            "Note: preset 'django' recommends adding: --lang=py",
+        )
 
-    def test_raises_value_error_when_langs_and_lang_presets_length_mismatch(
-        self,
-    ) -> None:
-        # langs has 2 entries but lang_presets has only 1 — strict=True must catch this.
-        with pytest.raises(ValueError, match=r"zip\(\) argument.*shorter"):
-            get_recommendations_info(
-                langs=["py", "go"],
-                frameworks=[],
-                lang_presets=[{}],  # intentionally one element short
-                fw_presets=[],
-            )
+    def test_note_lists_langs_and_frameworks_of_one_preset(self) -> None:
+        result = _recs(
+            langs=["py"],
+            frameworks=[],
+            lang_presets=[
+                {"recommended": {"lang": ["js", "ts"], "framework": ["git", "docker"]}}
+            ],
+        )
+        assert result is not None
+        assert result.notes == (
+            "Note: preset 'py' recommends adding: --lang=js,ts --framework=git,docker",
+        )
 
-    def test_raises_on_mismatched_langs_and_lang_presets(self) -> None:
-        # langs has 2 entries but lang_presets has only 1 — strict=True must raise
-        with pytest.raises(ValueError, match=r"zip\(\) argument.*shorter"):
-            get_recommendations_info(
-                langs=["py", "go"],
-                frameworks=[],
-                lang_presets=[{}],
-                fw_presets=[],
-            )
+    def test_missing_items_are_consolidated_without_duplicates(self) -> None:
+        result = _recs(
+            langs=["go"],
+            frameworks=["react", "vue"],
+            fw_presets=[
+                {"recommended": {"lang": ["js", "ts"]}},
+                {"recommended": {"lang": ["js", "css"]}},
+            ],
+        )
+        assert result is not None
+        assert result.missing_langs == ("js", "ts", "css")
 
-    def test_mismatched_frameworks_and_fw_presets_raises(self) -> None:
-        # frameworks has 2 entries but fw_presets has only 1; strict=True must
-        # raise ValueError — without strict the mismatch would be silently ignored.
-        with pytest.raises(ValueError):  # noqa: PT011
-            get_recommendations_info(
-                langs=["py"],
-                frameworks=["react", "django"],
-                lang_presets=[{}],
-                fw_presets=[{"recommended": {"lang": ["js"]}}],
-            )
-
-    def test_raises_when_frameworks_and_fw_presets_length_mismatch(self) -> None:
-        # frameworks has 2 entries but fw_presets has only 1 — strict=True must raise
-        with pytest.raises(ValueError, match=r"zip\(\) argument.*shorter"):
-            get_recommendations_info(
-                langs=["py"],
-                frameworks=["react", "django"],
-                lang_presets=[{}],
-                fw_presets=[{"recommended": {"lang": ["js"]}}],
-            )
-
-    def test_note_lang_flag_uses_comma_separator_for_multiple_missing_langs(
-        self,
-    ) -> None:
-        # react recommends js and ts; both are missing — the per-preset note must
-        # show "--lang=js,ts" (comma-separated, no extra characters).
-        result = get_recommendations_info(
+    def test_primary_languages_is_treated_as_a_recommendation(self) -> None:
+        result = _recs(
             langs=["py"],
             frameworks=["react"],
-            lang_presets=[{}],
-            fw_presets=[{"recommended": {"lang": ["js", "ts"]}}],
-        )
-        assert result is not None
-        # The "recommends adding:" note line must contain the compact flag form.
-        note_line = next(
-            line for line in result.splitlines() if "recommends adding" in line
-        )
-        assert "--lang=js,ts" in note_line
-
-    def test_note_uses_comma_separator_for_multiple_missing_frameworks(self) -> None:
-        # A lang preset that recommends two frameworks, neither currently selected.
-        # The per-preset note must use ',' (not 'XX,XX') to join the framework ids.
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=[],
-            lang_presets=[{"recommended": {"framework": ["git", "docker"]}}],
-            fw_presets=[],
-        )
-        assert result is not None
-        assert "--framework=git,docker" in result
-
-    def test_note_joins_lang_and_framework_parts_with_space(self) -> None:
-        # A single preset recommends both a missing language and framework.
-        # The two parts in the note must be separated by a plain space, not 'XX XX'.
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=[],
-            lang_presets=[{"recommended": {"lang": ["js"], "framework": ["git"]}}],
-            fw_presets=[],
-        )
-        assert result is not None
-        assert "--lang=js --framework=git" in result
-
-    def test_note_line_framework_flag_uses_comma_separator(self) -> None:
-        # A lang preset recommends two frameworks, neither currently selected.
-        # The per-preset "recommends adding:" note line must join framework ids
-        # with ',' — not with any other string like 'XX,XX'.
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=[],
-            lang_presets=[{"recommended": {"framework": ["git", "docker"]}}],
-            fw_presets=[],
-        )
-        assert result is not None
-        note_line = next(
-            line for line in result.splitlines() if "recommends adding" in line
-        )
-        assert "--framework=git,docker" in note_line
-
-    def test_primary_languages_fallback_treated_as_recommendations(self) -> None:
-        # A preset using the legacy 'primary_languages' key (no 'recommended' key)
-        # must still trigger a recommendation note for the missing languages.
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=["react"],
-            lang_presets=[{}],
             fw_presets=[{"primary_languages": ["js", "ts"]}],
         )
         assert result is not None
-        assert "js" in result
-        assert "ts" in result
+        assert result.missing_langs == ("js", "ts")
 
-    def test_notes_and_suggestion_joined_by_newline(self) -> None:
-        result = get_recommendations_info(
-            langs=["py"],
-            frameworks=["react"],
-            lang_presets=[{}],
-            fw_presets=[{"recommended": {"lang": ["js", "ts"]}}],
-        )
-        assert result is not None
-        lines = result.split("\n")
-        # Exactly two lines: one Note line and one Try line
-        assert len(lines) == 2
-        assert lines[0].startswith("Note:")
-        assert lines[1].strip().startswith("Try:")
+    @pytest.mark.parametrize(
+        ("langs", "frameworks", "lang_presets", "fw_presets"),
+        [
+            (["py", "go"], [], [{}], []),
+            (["py"], ["react", "django"], [{}], [{"recommended": {"lang": ["js"]}}]),
+        ],
+    )
+    def test_presets_must_match_the_selection(
+        self,
+        langs: list[str],
+        frameworks: list[str],
+        lang_presets: list[dict[str, Any]],
+        fw_presets: list[dict[str, Any]],
+    ) -> None:
+        with pytest.raises(ValueError, match=r"zip\(\) argument.*shorter"):
+            get_recommendations(langs, frameworks, lang_presets, fw_presets)
 
 
 class TestExpandRecommendations:
