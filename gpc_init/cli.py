@@ -85,7 +85,9 @@ def _recommendation_advice(
 
     The command repeats the whole run (profiles, format, output, presets, ...)
     with the missing languages and frameworks added, so running it yields the
-    same config plus the recommended presets.
+    same config plus the recommended presets. It ends in ``--force`` because it
+    overwrites the file this run just wrote. URL credentials in ``--presets`` are
+    redacted, so a line tells the user to put them back.
     """
     recs = result.recommendations
     if recs is None:
@@ -96,7 +98,10 @@ def _recommendation_advice(
         frameworks=(*request.frameworks, *recs.missing_frameworks),
     )
     command = _build_force_command(wider, output=output, presets=presets)
-    return "\n".join([*recs.notes, f"      Try: {command}"])
+    lines = [*recs.notes, f"      Try: {command}"]
+    if presets and _redact_url_credentials(presets) != presets:
+        lines.append("      (the --presets credentials are hidden; add them back)")
+    return "\n".join(lines)
 
 
 def _write_config(
