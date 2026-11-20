@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.17.4
+    rev: v0.17.6
     hooks:
       - id: ruff-check
         description: "Run 'ruff check' for extremely fast Python linting"
@@ -29,7 +29,7 @@ repos:
       - id: pyrefly-check
         description: "Run `pyrefly check` for Python type checking."
   - repo: https://github.com/astral-sh/ty-pre-commit
-    rev: v0.0.99
+    rev: v0.0.107
     hooks:
       - id: ty
         description: "Run 'ty' for extremely fast Python type checking"
@@ -52,7 +52,7 @@ repos:
         category: legacy
         description: "Style guide enforcement (superseded by ruff-check)"
   - repo: https://github.com/PyCQA/isort
-    rev: 10.0.0b2
+    rev: 10.0.0b3
     hooks:
       - id: isort
         category: legacy
@@ -65,7 +65,7 @@ repos:
         language_version: python3
         description: "The uncompromising Python code formatter (superseded by ruff-format)"
   - repo: https://github.com/rohaquinlop/complexipy-pre-commit
-    rev: v8.3.0
+    rev: v9.0.0
     hooks:
       - id: complexipy
         description: "Run 'complexipy' for extremely fast calculation of cognitive complexity of Python files"
@@ -114,7 +114,7 @@ repos:
         description: "Automatically upgrade syntax for newer versions."
         category: legacy
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.13.7
+    rev: 0.13.9
     hooks:
       - id: uv-lock
         description: "Automatically run 'uv lock' on your project dependencies"
@@ -138,7 +138,7 @@ repos:
       - id: deptry
         description: "deptry is a command line tool to check for issues with dependencies in a Python project, such as unused or missing dependencies."
   - repo: https://github.com/shelkesays/safelint
-    rev: v2.18.1rc1  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
+    rev: v2.18.1  # replace with the latest release tag (Java requires v2.1.0+, Rust requires v2.2.0+)
     hooks:
       - id: safelint
         # Required in v2.0.0+, pick the line for the language(s) your repo lints:
@@ -180,7 +180,7 @@ repos:
         description: Check if __all__ is properly defined in __init__.py files and updates it if necessary.
         category: experimental
   - repo: https://github.com/15r10nk/matchify
-    rev: v0.3.0
+    rev: v0.3.1
     hooks:
       - id: matchify
         description: "Automatically convert if-else statements to match-case statements in Python 3.10+"

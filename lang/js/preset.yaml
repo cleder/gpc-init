@@ -1,13 +1,13 @@
 ---
 repos:
   - repo: https://github.com/biomejs/pre-commit
-    rev: v2.6.6
+    rev: v2.6.8
     hooks:
       - id: biome-check
         additional_dependencies: ["@biomejs/biome@1.9.4"]
         description: "Biome's pre-commit hooks."
   - repo: https://github.com/oxc-project/mirrors-oxlint
-    rev: v1.93.0
+    rev: v1.94.0
     hooks:
       - id: oxlint
         verbose: true

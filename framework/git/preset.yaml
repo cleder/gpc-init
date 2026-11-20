@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/commit-check/commit-check
-    rev: v2.20.2
+    rev: v2.23.0
     hooks:
       - id: check-message
         args:
@@ -19,7 +19,7 @@ repos:
       - id: check-no-force-push
         description: "prevents force pushes to remote branches"
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.19.3
+    rev: v4.19.4
     hooks:
       - id: commitizen
         stages: [commit-msg]

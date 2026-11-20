@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.9.0]
+
 ### Enhancements
 
 - Add `auto-walrus` (experimental) to the `py` preset, by @MarcoGorelli.
