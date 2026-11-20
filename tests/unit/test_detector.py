@@ -26,9 +26,50 @@ def _catalog_of(root: Path, kind: str, ids_to_metadata: dict[str, str]) -> Catal
 
 
 class TestDetectLanguages:
-    def test_detects_python_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "main.py").touch()
-        assert "py" in detect_languages(tmp_path, CATALOG)
+    @pytest.mark.parametrize(
+        ("filename", "lang"),
+        [
+            ("main.py", "py"),
+            ("Dockerfile", "docker"),
+            ("dockerfile", "docker"),
+            ("Makefile", "make"),
+            ("makefile", "make"),
+            ("lib.rs", "rs"),
+            ("main.rb", "rb"),
+            ("main.cpp", "cpp"),
+            ("main.c", "cpp"),
+            ("service.proto", "proto"),
+            ("main.swift", "swift"),
+            ("Main.kt", "kt"),
+            ("build.gradle.kts", "kt"),
+            ("styles.css", "css"),
+            ("styles.scss", "css"),
+            ("README.md", "md"),
+            ("config.yaml", "yaml"),
+            ("config.yml", "yaml"),
+            ("analysis.ipynb", "nb"),
+            ("main.tf", "tf"),
+            ("logo.png", "img"),
+            ("Component.jsx", "js"),
+            ("Component.tsx", "js"),
+            ("data.csv", "csv"),
+            ("deploy.bash", "sh"),
+            ("main.lua", "lua"),
+            ("script.groovy", "groovy"),
+            ("script.gvy", "groovy"),
+            ("build.gradle", "groovy"),
+            ("Jenkinsfile", "groovy"),
+            ("jenkinsfile", "groovy"),
+            (".env", "env"),
+            (".env.local", "env"),
+            (".env.production", "env"),
+        ],
+    )
+    def test_detects_language_from_filename(
+        self, tmp_path: Path, filename: str, lang: str
+    ) -> None:
+        (tmp_path / filename).touch()
+        assert lang in detect_languages(tmp_path, CATALOG)
 
     def test_detects_multiple_languages(self, tmp_path: Path) -> None:
         (tmp_path / "main.py").touch()
@@ -38,86 +79,6 @@ class TestDetectLanguages:
         assert "py" in result
         assert "js" in result
         assert "go" in result
-
-    def test_detects_dockerfile_by_filename(self, tmp_path: Path) -> None:
-        (tmp_path / "Dockerfile").touch()
-        assert "docker" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_dockerfile_case_insensitive(self, tmp_path: Path) -> None:
-        (tmp_path / "dockerfile").touch()
-        assert "docker" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_makefile_by_filename(self, tmp_path: Path) -> None:
-        (tmp_path / "Makefile").touch()
-        assert "make" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_makefile_case_insensitive(self, tmp_path: Path) -> None:
-        (tmp_path / "makefile").touch()
-        assert "make" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_rust_by_rs_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "lib.rs").touch()
-        assert "rs" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_ruby_by_rb_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "main.rb").touch()
-        assert "rb" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_cpp_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "main.cpp").touch()
-        assert "cpp" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_c_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "main.c").touch()
-        assert "cpp" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_proto_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "service.proto").touch()
-        assert "proto" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_swift_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "main.swift").touch()
-        assert "swift" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_kotlin_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "Main.kt").touch()
-        assert "kt" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_kotlin_script_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "build.gradle.kts").touch()
-        assert "kt" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_css_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "styles.css").touch()
-        assert "css" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_scss_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "styles.scss").touch()
-        assert "css" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_markdown(self, tmp_path: Path) -> None:
-        (tmp_path / "README.md").touch()
-        assert "md" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_yaml(self, tmp_path: Path) -> None:
-        (tmp_path / "config.yaml").touch()
-        assert "yaml" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_yaml_yml_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "config.yml").touch()
-        assert "yaml" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_notebook(self, tmp_path: Path) -> None:
-        (tmp_path / "analysis.ipynb").touch()
-        assert "nb" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_terraform(self, tmp_path: Path) -> None:
-        (tmp_path / "main.tf").touch()
-        assert "tf" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_image_files(self, tmp_path: Path) -> None:
-        (tmp_path / "logo.png").touch()
-        assert "img" in detect_languages(tmp_path, CATALOG)
 
     def test_skips_node_modules(self, tmp_path: Path) -> None:
         nm = tmp_path / "node_modules"
@@ -166,65 +127,11 @@ class TestDetectLanguages:
         (sub / "app.py").touch()
         assert "py" in detect_languages(tmp_path, CATALOG)
 
-    def test_jsx_maps_to_js(self, tmp_path: Path) -> None:
-        (tmp_path / "Component.jsx").touch()
-        assert "js" in detect_languages(tmp_path, CATALOG)
-
-    def test_tsx_maps_to_js(self, tmp_path: Path) -> None:
-        (tmp_path / "Component.tsx").touch()
-        assert "js" in detect_languages(tmp_path, CATALOG)
-
     def test_ts_maps_to_js(self, tmp_path: Path) -> None:
         (tmp_path / "index.ts").touch()
         langs = detect_languages(tmp_path, CATALOG)
         assert "js" in langs
         assert "ts" not in langs
-
-    def test_detects_csv_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "data.csv").touch()
-        assert "csv" in detect_languages(tmp_path, CATALOG)
-
-    def test_bash_extension_maps_to_sh(self, tmp_path: Path) -> None:
-        (tmp_path / "deploy.bash").touch()
-        assert "sh" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_lua_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "main.lua").touch()
-        assert "lua" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_groovy_by_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "script.groovy").touch()
-        assert "groovy" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_groovy_gvy_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "script.gvy").touch()
-        assert "groovy" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_groovy_from_gradle_extension(self, tmp_path: Path) -> None:
-        (tmp_path / "build.gradle").touch()
-        assert "groovy" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_groovy_from_jenkinsfile(self, tmp_path: Path) -> None:
-        (tmp_path / "Jenkinsfile").touch()
-        assert "groovy" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_groovy_from_jenkinsfile_case_insensitive(
-        self, tmp_path: Path
-    ) -> None:
-        (tmp_path / "jenkinsfile").touch()
-        assert "groovy" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_env_file(self, tmp_path: Path) -> None:
-        (tmp_path / ".env").touch()
-        assert "env" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_env_local_file(self, tmp_path: Path) -> None:
-        (tmp_path / ".env.local").touch()
-        assert "env" in detect_languages(tmp_path, CATALOG)
-
-    def test_detects_env_production_file(self, tmp_path: Path) -> None:
-        (tmp_path / ".env.production").touch()
-        assert "env" in detect_languages(tmp_path, CATALOG)
 
     def test_env_skip_dir_does_not_falsely_detect_env_lang(
         self, tmp_path: Path
