@@ -1,4 +1,4 @@
-"""Small, dependency-free helpers shared across gpc_init modules."""
+"""Small, dependency-free helpers shared across pc_init modules."""
 
 
 def deduplicate_preserving_order(values: list[str]) -> list[str]:

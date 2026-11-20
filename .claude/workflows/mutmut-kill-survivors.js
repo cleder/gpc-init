@@ -19,9 +19,11 @@ const DISCOVERY_SCHEMA = {
     project: { type: 'string' },
     mutmut_bin: { type: 'string' },
     pytest_bin: { type: 'string' },
+    run_exit_code: { type: 'number' },
+    total_mutants: { type: 'number' },
     survivors: { type: 'array', items: { type: 'string' } },
   },
-  required: ['project', 'mutmut_bin', 'pytest_bin', 'survivors'],
+  required: ['project', 'mutmut_bin', 'pytest_bin', 'run_exit_code', 'total_mutants', 'survivors'],
 }
 
 const CACHE_LOAD_SCHEMA = {
@@ -74,10 +76,29 @@ const WRITE_SCHEMA = {
 const VERIFY_SCHEMA = {
   type: 'object',
   properties: {
+    run_exit_code: { type: 'number' },
+    total_mutants: { type: 'number' },
     remaining_count: { type: 'number' },
     remaining: { type: 'array', items: { type: 'string' } },
   },
-  required: ['remaining_count', 'remaining'],
+  required: ['run_exit_code', 'total_mutants', 'remaining_count', 'remaining'],
+}
+
+// mutmut only reads stale results unless it is actually run, so an empty survivor list
+// proves nothing by itself. Both the Discover and Verify agents must report that
+// "mutmut run" executed (exit 0) and that it produced mutants; anything else is a failure,
+// never a green result.
+function assertMutmutRan(step, report) {
+  if (report.run_exit_code !== 0) {
+    throw new Error(
+      `${step}: "mutmut run" exited with ${report.run_exit_code}; refusing to report results from a run that did not complete.`,
+    )
+  }
+  if (!(report.total_mutants > 0)) {
+    throw new Error(
+      `${step}: mutmut reported ${report.total_mutants} mutants, so it did not actually run; an empty survivor list is not a result.`,
+    )
+  }
 }
 
 // ─── Phase 1: Discover ────────────────────────────────────────────────────────
@@ -101,20 +122,30 @@ Step 2 — Find the pytest binary (try each in order):
   <project>/venv/bin/pytest
   which pytest
 
-Step 3 — List surviving mutants:
-  cd <project> && <mutmut_bin> results 2>&1 | grep ": survived" || true
-  Extract the mutant name from each line (the part before ": survived").
+Step 3 — Run mutmut for real. Never skip this: "mutmut results" alone only reads stale
+  data and reports no survivors when nothing has run.
+  cd <project> && <mutmut_bin> run
+  Record the command's exit code as run_exit_code. Do not retry or hide a failure:
+  report the non-zero exit code as it is.
 
-Return: the resolved project path, mutmut_bin path, pytest_bin path, and the survivors list.`,
+Step 4 — Count and list the mutants (only after step 3):
+  cd <project> && <mutmut_bin> results --all true 2>&1
+  total_mutants = the number of lines of the form "<name>: <status>".
+  survivors = the names (part before ": survived") of the lines whose status is "survived".
+
+Return: the resolved project path, mutmut_bin path, pytest_bin path, run_exit_code,
+total_mutants, and the survivors list.`,
   { schema: DISCOVERY_SCHEMA },
 )
+
+assertMutmutRan('Discover', discovery)
 
 const project = PROJECT || discovery.project
 const mutmutBin = discovery.mutmut_bin
 const pytestBin = discovery.pytest_bin
 
 if (discovery.survivors.length === 0) {
-  log('No surviving mutants — mutation score is 100%.')
+  log(`No surviving mutants out of ${discovery.total_mutants} — mutation score is 100%.`)
   return { status: 'complete', killed: 0, equivalent: 0, remaining: 0 }
 }
 
@@ -307,12 +338,16 @@ const verification = await agent(
 
 Steps:
   cd ${project} && ${mutmutBin} run
-  cd ${project} && ${mutmutBin} results 2>&1 | grep ": survived" || true
+  Record the command's exit code as run_exit_code; report a non-zero code as it is.
+  cd ${project} && ${mutmutBin} results --all true 2>&1
+  total_mutants = the number of lines of the form "<name>: <status>".
+  remaining = the names (part before ": survived") of the lines whose status is "survived".
 
-Extract the remaining survivor names (part before ": survived") and return them.
-Count them in remaining_count.`,
+Return run_exit_code, total_mutants, the remaining names, and remaining_count (their number).`,
   { schema: VERIFY_SCHEMA, phase: 'Verify' },
 )
+
+assertMutmutRan('Verify', verification)
 
 const started = discovery.survivors.length
 const remaining = verification.remaining_count

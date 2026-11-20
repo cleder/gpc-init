@@ -1,6 +1,6 @@
-"""Unit tests for gpc_init/util.py."""
+"""Unit tests for pc_init/util.py."""
 
-from gpc_init.util import deduplicate_preserving_order
+from pc_init.util import deduplicate_preserving_order
 
 
 class TestDeduplicatePreservingOrder:

@@ -37,6 +37,11 @@ jobs:
       - name: Validate lang/framework metadata catalog
         run: uv run scripts/validate_metadata.py
 
+      - name: Fail if any hook repository is archived
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run scripts/check_archived_repos.py
+
       - name: Validate presets (pre-commit)
         run: |
           find . -name "preset*.yaml" |

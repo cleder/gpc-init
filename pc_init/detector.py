@@ -5,8 +5,8 @@ import json
 from collections.abc import Callable, Generator
 from pathlib import Path
 
-from gpc_init.catalog import load_catalog
-from gpc_init.util import deduplicate_preserving_order
+from pc_init.catalog import Catalog
+from pc_init.util import deduplicate_preserving_order
 
 _SKIP_DIRS: frozenset[str] = frozenset(
     {
@@ -37,28 +37,19 @@ def _is_dotenv_file(name: str) -> bool:
     return lname == ".env" or lname.startswith(".env.")
 
 
-def detect_languages(
-    repo_dir: Path,
-    supported_langs: list[str],
-    base_dir: Path | None = None,
-) -> list[str]:
+def detect_languages(repo_dir: Path, catalog: Catalog) -> list[str]:
     """
     Return detected language IDs for the given repository directory.
 
     Walks the directory tree (skipping common non-source dirs), maps file
     extensions and well-known filenames — read from each lang's metadata.yaml —
-    to language IDs, and filters the result to only IDs present in
-    supported_langs.
+    to language IDs, and filters the result to the catalog's languages.
 
     Args:
         repo_dir: Directory to scan.
-        supported_langs: Language IDs to filter detection results to.
-        base_dir: Override base directory for the metadata catalog (used in
-            tests / custom --presets catalogs).
+        catalog: The catalog supplying the metadata and the supported languages.
 
     """
-    catalog = load_catalog(base_dir)
-    supported = set(supported_langs)
     seen: list[str] = []
     for file in _walk(repo_dir):
         lang = catalog.filename_to_lang.get(file.stem.lower())
@@ -66,7 +57,7 @@ def detect_languages(
             lang = catalog.extension_to_lang.get(file.suffix.lower())
         if lang is None and _is_dotenv_file(file.name):
             lang = "env"
-        if lang and lang in supported:
+        if lang and lang in catalog.langs:
             seen.append(lang)
     return deduplicate_preserving_order(seen)
 
@@ -131,7 +122,7 @@ def _has_github_workflows(repo_dir: Path) -> bool:
 # Fixed allowlist for the `python:<name>` escape hatch in framework metadata.yaml
 # `detect` rules. Deliberately NOT a dotted import path: a custom --presets
 # catalog (which may point at an arbitrary git URL) must only be able to
-# reference gpc-init's own built-in detectors, never inject new code.
+# reference pc-init's own built-in detectors, never inject new code.
 _DETECTOR_REGISTRY: dict[str, Callable[[Path], bool]] = {
     "_has_sphinx_conf": _has_sphinx_conf,
     "_has_kubernetes_files": _has_kubernetes_files,
@@ -188,30 +179,20 @@ def _evaluate_detect_rule(repo_dir: Path, rule: object) -> bool:
     raise TypeError(msg)
 
 
-def detect_frameworks(
-    repo_dir: Path,
-    supported_frameworks: list[str],
-    base_dir: Path | None = None,
-) -> list[str]:
+def detect_frameworks(repo_dir: Path, catalog: Catalog) -> list[str]:
     """
     Return detected framework IDs for the given repository directory.
 
     Checks each known framework against the detect rules declared in its
-    metadata.yaml and filters to only IDs present in supported_frameworks.
+    metadata.yaml.
 
     Args:
         repo_dir: Directory to scan.
-        supported_frameworks: Framework IDs to filter detection results to.
-        base_dir: Override base directory for the metadata catalog (used in
-            tests / custom --presets catalogs).
+        catalog: The catalog supplying the frameworks and their detect rules.
 
     """
-    catalog = load_catalog(base_dir)
-    supported = set(supported_frameworks)
     detected: list[str] = []
-    for fw_id in sorted(catalog.frameworks):
-        if fw_id not in supported:
-            continue
+    for fw_id in catalog.framework_ids:
         meta = catalog.frameworks[fw_id]
         if any(_evaluate_detect_rule(repo_dir, rule) for rule in meta.detect):
             detected.append(fw_id)

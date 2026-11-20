@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from gpc_init.exceptions import PresetFetchError
+from pc_init.exceptions import PresetFetchError
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -46,7 +46,7 @@ def fetch_preset_repo(url: str) -> Generator[Path]:
         msg = "git is not installed or not on PATH"
         raise PresetFetchError(url, msg)
 
-    with tempfile.TemporaryDirectory(prefix="gpc-init-presets-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="pc-init-presets-") as tmp:
         try:
             subprocess.run(  # noqa: S603
                 [git, "clone", "--depth=1", "--", url, tmp],

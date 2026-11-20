@@ -1,66 +1,146 @@
-"""Unit tests for gpc_init/generator.py."""
+"""Unit tests for pc_init/generator.py."""
 
+import tomllib
+from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
+import yaml
 
-from gpc_init.exceptions import (
-    PresetNotFoundError,
+from pc_init.catalog import Catalog
+from pc_init.exceptions import (
     PresetParseError,
     UnsupportedFrameworkError,
     UnsupportedLanguageError,
     UnsupportedProfileError,
 )
-from gpc_init.generator import generate
+from pc_init.generator import GeneratedConfig, GenerationRequest, generate
+from pc_init.renderer import OutputFormat
+
+
+def _generate(
+    langs: list[str],
+    frameworks: list[str],
+    catalog: Catalog,
+    **options: Any,
+) -> GeneratedConfig:
+    base = GenerationRequest(
+        langs=tuple(langs), frameworks=tuple(frameworks), catalog=catalog
+    )
+    return generate(replace(base, **options))
+
+
+class TestGenerationRequest:
+    def test_request_in_result_out(self, tmp_preset_dir: Path) -> None:
+        request = GenerationRequest(
+            langs=("py",), frameworks=(), catalog=Catalog.load(tmp_preset_dir)
+        )
+        result = generate(request)
+        assert "ruff-check" in result.content
+        assert result.langs == ("py",)
+        assert result.frameworks == ()
+
+    def test_request_defaults(self, tmp_preset_dir: Path) -> None:
+        request = GenerationRequest(
+            langs=("py",), frameworks=(), catalog=Catalog.load(tmp_preset_dir)
+        )
+        assert request.profiles == ()
+        assert request.fmt is OutputFormat.YAML
+        assert request.recommended is False
+
+
+class TestGeneratedRecommendations:
+    def test_reports_the_missing_recommendation_as_data(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        result = _generate(["py"], ["react"], Catalog.load(tmp_preset_dir))
+        assert result.recommendations is not None
+        assert result.recommendations.missing_langs == ("js",)
+        assert result.recommendations.missing_frameworks == ()
+        assert result.recommendations.notes == (
+            "Note: preset 'react' recommends adding: --lang=js",
+        )
+
+    def test_none_when_nothing_is_missing(self, tmp_preset_dir: Path) -> None:
+        result = _generate(["py"], [], Catalog.load(tmp_preset_dir))
+        assert result.recommendations is None
+
+    def test_none_when_recommendations_are_applied(self, tmp_preset_dir: Path) -> None:
+        result = _generate(
+            ["py"], ["react"], Catalog.load(tmp_preset_dir), recommended=True
+        )
+        assert result.recommendations is None
+        assert result.langs == ("py", "js")
+
+    def test_recommended_suppresses_them_even_for_unresolvable_items(
+        self, tmp_preset_dir: Path
+    ) -> None:
+        widget = tmp_preset_dir / "framework" / "widget"
+        widget.mkdir()
+        (widget / "preset.yaml").write_text(
+            "recommended:\n  lang: [nosuchlang]\nrepos: []\n", encoding="utf-8"
+        )
+        catalog = Catalog.load(tmp_preset_dir)
+        # Control: the missing recommendation is reported when not applied ...
+        assert _generate([], ["widget"], catalog).recommendations is not None
+        # ... and --recommended never reports any, even if it cannot resolve it.
+        assert (
+            _generate([], ["widget"], catalog, recommended=True).recommendations is None
+        )
 
 
 class TestGenerateHappyPath:
     def test_merges_common_and_language(self, tmp_preset_dir: Path) -> None:
-        result = generate(["py"], [], base_dir=tmp_preset_dir)
-        assert result.langs == ["py"]
-        assert result.frameworks == []
-        assert "ruff-check" in result.yaml_content
-        assert "trailing-whitespace" in result.yaml_content
+        result = _generate(["py"], [], Catalog.load(tmp_preset_dir))
+        assert result.langs == ("py",)
+        assert result.frameworks == ()
+        assert "ruff-check" in result.content
+        assert "trailing-whitespace" in result.content
 
     def test_merges_language_and_framework(self, tmp_preset_dir: Path) -> None:
-        result = generate(["js"], ["react"], base_dir=tmp_preset_dir)
-        assert "prettier" in result.yaml_content
-        assert "eslint-react" in result.yaml_content
+        result = _generate(["js"], ["react"], Catalog.load(tmp_preset_dir))
+        assert "prettier" in result.content
+        assert "eslint-react" in result.content
 
-    def test_framework_preset_loaded_from_base_dir(self, tmp_preset_dir: Path) -> None:
+    def test_framework_preset_loaded_from_the_catalog(
+        self, tmp_preset_dir: Path
+    ) -> None:
         # The fixture react preset pins eslint-plugin-react@7.0.0, distinct from
         # the real default preset's version, so this fails if the framework
         # preset is loaded from the default base_dir instead of tmp_preset_dir.
-        result = generate(["js"], ["react"], base_dir=tmp_preset_dir)
-        assert "eslint-plugin-react@7.0.0" in result.yaml_content
+        result = _generate(["js"], ["react"], Catalog.load(tmp_preset_dir))
+        assert "eslint-plugin-react@7.0.0" in result.content
 
-    def test_common_preset_loaded_from_base_dir(self, tmp_preset_dir: Path) -> None:
+    def test_common_preset_loaded_from_the_catalog(self, tmp_preset_dir: Path) -> None:
         # The fixture common preset only has trailing-whitespace/end-of-file
         # hooks; the real default common preset also has 'gitleaks', so this
         # fails if the common preset is loaded from the default base_dir
         # instead of tmp_preset_dir.
-        result = generate(["py"], [], base_dir=tmp_preset_dir)
-        assert "gitleaks" not in result.yaml_content
+        result = _generate(["py"], [], Catalog.load(tmp_preset_dir))
+        assert "gitleaks" not in result.content
 
 
 class TestGenerateRecommended:
     def test_expands_recommended_language(self, tmp_preset_dir: Path) -> None:
         # framework/react/preset.yaml recommends lang: [js]
-        result = generate([], ["react"], base_dir=tmp_preset_dir, recommended=True)
-        assert result.langs == ["js"]
-        assert "prettier" in result.yaml_content
+        result = _generate(
+            [], ["react"], Catalog.load(tmp_preset_dir), recommended=True
+        )
+        assert result.langs == ("js",)
+        assert "prettier" in result.content
 
     def test_no_expansion_when_not_recommended(self, tmp_preset_dir: Path) -> None:
-        result = generate([], ["react"], base_dir=tmp_preset_dir, recommended=False)
-        assert result.langs == []
+        result = _generate(
+            [], ["react"], Catalog.load(tmp_preset_dir), recommended=False
+        )
+        assert result.langs == ()
 
     def test_recommended_defaults_to_false(self, tmp_preset_dir: Path) -> None:
-        result = generate(["py"], ["react"], base_dir=tmp_preset_dir)
-        assert result.langs == ["py"]
+        result = _generate(["py"], ["react"], Catalog.load(tmp_preset_dir))
+        assert result.langs == ("py",)
 
-    def test_expansion_checks_base_dir_catalog_not_default(
-        self, tmp_preset_dir: Path
-    ) -> None:
+    def test_expansion_checks_the_given_catalog(self, tmp_preset_dir: Path) -> None:
         # "zzlang" only exists in tmp_preset_dir's catalog, not in the real
         # default catalog. This fails if expand_recommendations is fed the
         # default catalog's supported langs instead of tmp_preset_dir's.
@@ -74,10 +154,12 @@ class TestGenerateRecommended:
             "recommended:\n  lang:\n    - zzlang\nrepos: []\n", encoding="utf-8"
         )
 
-        result = generate([], ["customfw"], base_dir=tmp_preset_dir, recommended=True)
-        assert result.langs == ["zzlang"]
+        result = _generate(
+            [], ["customfw"], Catalog.load(tmp_preset_dir), recommended=True
+        )
+        assert result.langs == ("zzlang",)
 
-    def test_recommended_framework_uses_custom_base_dir(
+    def test_recommended_framework_uses_the_custom_catalog(
         self, tmp_preset_dir: Path
     ) -> None:
         # "widget" only exists as a framework in tmp_preset_dir, not in the
@@ -99,34 +181,36 @@ class TestGenerateRecommended:
             "      - id: ruff-format\n",
             encoding="utf-8",
         )
-        result = generate(["py"], [], base_dir=tmp_preset_dir, recommended=True)
-        assert result.frameworks == ["widget"]
+        result = _generate(["py"], [], Catalog.load(tmp_preset_dir), recommended=True)
+        assert result.frameworks == ("widget",)
 
-    def test_reloads_framework_preset_from_base_dir_when_recommended(
+    def test_reloads_framework_preset_from_the_catalog_when_recommended(
         self, tmp_preset_dir: Path
     ) -> None:
         # After recommendation expansion, presets are reloaded a second time;
         # the fixture react preset pins eslint-plugin-react@7.0.0, distinct
         # from the real default preset's version, so this fails if that
         # reload uses the default base_dir instead of tmp_preset_dir.
-        result = generate([], ["react"], base_dir=tmp_preset_dir, recommended=True)
-        assert "eslint-plugin-react@7.0.0" in result.yaml_content
+        result = _generate(
+            [], ["react"], Catalog.load(tmp_preset_dir), recommended=True
+        )
+        assert "eslint-plugin-react@7.0.0" in result.content
 
 
 class TestGenerateValidationErrors:
     def test_unsupported_language_raises(self, tmp_preset_dir: Path) -> None:
         with pytest.raises(UnsupportedLanguageError):
-            generate(["cobol"], [], base_dir=tmp_preset_dir)
+            _generate(["cobol"], [], Catalog.load(tmp_preset_dir))
 
     def test_unsupported_framework_raises(self, tmp_preset_dir: Path) -> None:
         with pytest.raises(UnsupportedFrameworkError):
-            generate(["py"], ["angular"], base_dir=tmp_preset_dir)
+            _generate(["py"], ["angular"], Catalog.load(tmp_preset_dir))
 
     def test_unsupported_profile_raises(self, tmp_preset_dir: Path) -> None:
         with pytest.raises(UnsupportedProfileError):
-            generate(["py"], [], base_dir=tmp_preset_dir, profiles=("bogus",))
+            _generate(["py"], [], Catalog.load(tmp_preset_dir), profiles=("bogus",))
 
-    def test_validation_uses_base_dir_for_custom_framework(
+    def test_validation_uses_the_catalog_for_custom_framework(
         self, tmp_path: Path
     ) -> None:
         (tmp_path / "lang").mkdir()
@@ -142,10 +226,10 @@ class TestGenerateValidationErrors:
             "        language: system\n",
             encoding="utf-8",
         )
-        result = generate([], ["customfw"], base_dir=tmp_path)
-        assert result.frameworks == ["customfw"]
+        result = _generate([], ["customfw"], Catalog.load(tmp_path))
+        assert result.frameworks == ("customfw",)
 
-    def test_unsupported_framework_uses_supplied_base_dir(
+    def test_unsupported_framework_uses_the_given_catalog(
         self, tmp_preset_dir: Path
     ) -> None:
         # "django" is supported in the real default preset catalog but not
@@ -153,16 +237,10 @@ class TestGenerateValidationErrors:
         # instead of UnsupportedFrameworkError if validate_frameworks ignores
         # the supplied base_dir and falls back to the default one.
         with pytest.raises(UnsupportedFrameworkError):
-            generate(["py"], ["django"], base_dir=tmp_preset_dir)
+            _generate(["py"], ["django"], Catalog.load(tmp_preset_dir))
 
 
 class TestGeneratePresetErrors:
-    def test_missing_lang_subdir_raises_preset_not_found(self, tmp_path: Path) -> None:
-        empty_dir = tmp_path / "empty"
-        empty_dir.mkdir()
-        with pytest.raises(PresetNotFoundError, match="lang' subdirectory"):
-            generate(["py"], [], base_dir=empty_dir)
-
     def test_malformed_preset_yaml_raises_parse_error(
         self, tmp_preset_dir: Path
     ) -> None:
@@ -170,4 +248,25 @@ class TestGeneratePresetErrors:
         bad_lang_dir.mkdir()
         (bad_lang_dir / "preset.yaml").write_text(": bad: [", encoding="utf-8")
         with pytest.raises(PresetParseError):
-            generate(["bad"], [], base_dir=tmp_preset_dir)
+            _generate(["bad"], [], Catalog.load(tmp_preset_dir))
+
+
+class TestGenerateFormat:
+    @pytest.mark.parametrize(
+        ("langs", "frameworks"),
+        [(["py"], []), (["js"], ["react"])],
+    )
+    def test_toml_matches_yaml_data(
+        self, tmp_preset_dir: Path, langs: list[str], frameworks: list[str]
+    ) -> None:
+        as_yaml = _generate(langs, frameworks, Catalog.load(tmp_preset_dir))
+        as_toml = _generate(
+            langs, frameworks, Catalog.load(tmp_preset_dir), fmt=OutputFormat.TOML
+        )
+        assert tomllib.loads(as_toml.content) == yaml.safe_load(as_yaml.content)
+
+
+class TestGeneratedConfigCompat:
+    def test_yaml_content_aliases_content(self, tmp_preset_dir: Path) -> None:
+        result = _generate(["py"], [], Catalog.load(tmp_preset_dir))
+        assert result.yaml_content == result.content

@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/nvuillam/npm-groovy-lint
-    rev: v18.0.0
+    rev: v19.0.1
     hooks:
       - id: npm-groovy-lint
         description: Groovy & Jenkinsfile Linter

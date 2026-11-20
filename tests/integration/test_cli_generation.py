@@ -1,8 +1,10 @@
 """Integration tests for pc-init CLI generation."""
 
 import importlib.metadata
+import shlex
 import shutil
-from collections.abc import Iterator
+import tomllib
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -12,11 +14,9 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from gpc_init.cli import app, entry_point
-from gpc_init.exceptions import (
+from pc_init.cli import app, entry_point
+from pc_init.exceptions import (
     PresetFetchError,
-    PresetNotFoundError,
-    PresetParseError,
 )
 
 runner = CliRunner()
@@ -150,13 +150,13 @@ class TestFrameworkGeneration:
             ["--lang", "js", "--framework", "react", "--output", str(output)],
         )
         parsed = yaml.safe_load(output.read_text(encoding="utf-8"))
-        # js has prettier - it should still be there
+        # js has biome-check - it should still be there
         all_hook_ids = [
             hook["id"]
             for repo in parsed.get("repos", [])
             for hook in repo.get("hooks", [])
         ]
-        assert "prettier" in all_hook_ids
+        assert "biome-check" in all_hook_ids
 
     def test_framework_with_non_primary_lang_succeeds(self, tmp_path: Path) -> None:
         """React framework should work with Go language (no validation error)."""
@@ -883,10 +883,10 @@ class TestPresetsOption:
         output = tmp_path / "out.yaml"
 
         @contextmanager
-        def fake_fetch(_url: str) -> Iterator[Path]:
+        def fake_fetch(_url: str) -> Generator[Path]:
             yield tmp_preset_dir
 
-        with patch("gpc_init.fetcher.fetch_preset_repo", fake_fetch):
+        with patch("pc_init.fetcher.fetch_preset_repo", fake_fetch):
             result = runner.invoke(
                 app,
                 [
@@ -904,7 +904,7 @@ class TestPresetsOption:
     def test_git_url_fetch_error(self, tmp_path: Path) -> None:
         output = tmp_path / "out.yaml"
         with patch(
-            "gpc_init.fetcher.fetch_preset_repo",
+            "pc_init.fetcher.fetch_preset_repo",
             side_effect=PresetFetchError("https://x", "connection refused"),
         ):
             result = runner.invoke(
@@ -1257,7 +1257,7 @@ class TestPresetsOption:
         The fixture react preset recommends lang=js.  When --recommended is set and
         --presets points at tmp_preset_dir, the js preset loaded after expansion must
         come from the fixture (prettier@3.0.0 as a local dep), not from the bundled
-        catalog (which uses a mirrors-prettier repo).  The mutant drops base_dir from
+        catalog (which no longer ships prettier).  The mutant drops base_dir from
         the load_language_preset call inside the recommended block, so it would load
         the bundled js preset instead.
         """
@@ -1277,7 +1277,7 @@ class TestPresetsOption:
         assert result.exit_code == 0, result.output
         content = output.read_text(encoding="utf-8")
         # The fixture lang/js/preset.yaml pins prettier@3.0.0 as a local dep.
-        # The bundled lang/js/preset.yaml uses a remote mirrors-prettier repo instead.
+        # The bundled lang/js/preset.yaml does not pin prettier at all.
         # If base_dir is not forwarded, the bundled preset is used and
         # this assertion fails.
         assert "prettier@3.0.0" in content
@@ -1400,27 +1400,6 @@ class TestErrorPaths:
         assert "must contain a 'lang' subdirectory" in result.stderr
         assert "must contain a 'lang' subdirectory" not in result.stdout
 
-    def test_preset_not_found_error(self, tmp_path: Path) -> None:
-        output = tmp_path / "out.yaml"
-        with patch(
-            "gpc_init.generator.load_language_preset",
-            side_effect=PresetNotFoundError("preset not found"),
-        ):
-            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
-        assert result.exit_code == 1
-        assert "preset not found" in result.output
-
-    def test_preset_not_found_error_goes_to_stderr(self, tmp_path: Path) -> None:
-        output = tmp_path / "out.yaml"
-        with patch(
-            "gpc_init.generator.load_language_preset",
-            side_effect=PresetNotFoundError("preset not found"),
-        ):
-            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
-        assert result.exit_code == 1
-        assert "preset not found" in result.stderr
-        assert "preset not found" not in result.stdout
-
     def test_preset_parse_error(self, tmp_path: Path) -> None:
         lang_dir = tmp_path / "lang" / "bad"
         lang_dir.mkdir(parents=True)
@@ -1441,12 +1420,20 @@ class TestErrorPaths:
         assert "failed to parse" in result.output
 
     def test_preset_parse_error_writes_to_stderr(self, tmp_path: Path) -> None:
-        output = tmp_path / "out.yaml"
-        with patch(
-            "gpc_init.generator.load_language_preset",
-            side_effect=PresetParseError("bad yaml"),
-        ):
-            result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        lang_dir = tmp_path / "lang" / "bad"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text(": bad: [", encoding="utf-8")
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "bad",
+                "--presets",
+                str(tmp_path),
+                "--output",
+                str(tmp_path / "out.yaml"),
+            ],
+        )
         assert result.exit_code == 1
         assert "failed to parse" in result.stderr
         assert "failed to parse" not in result.stdout
@@ -1691,13 +1678,14 @@ class TestDiffOnExistingFile:
         The mutant replaces ' '.join(parts) with 'XX XX'.join(parts), producing
         a garbled hint like 'pc-initXX XX--lang=pyXX XX--force'.  This test
         verifies that the 'Try:' hint is a properly space-separated shell command
-        by checking that 'pc-init --lang=py --force' appears literally in the output.
+        by checking that the whole command, including the --output the run used,
+        appears literally in the output.
         """
         output = tmp_path / ".pre-commit-config.yaml"
         output.write_text("existing: content\n", encoding="utf-8")
         result = runner.invoke(app, ["--lang", "py", "--output", str(output)])
         assert result.exit_code == 1
-        assert "pc-init --lang=py --force" in result.output
+        assert f"pc-init --lang=py --output={output} --force" in result.output
 
     def test_force_command_hint_includes_lang_flag(self, tmp_path: Path) -> None:
         """
@@ -2133,31 +2121,31 @@ class TestDiffOnExistingFile:
 
 class TestVersion:
     def test_version_exits_zero(self) -> None:
-        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+        with patch("pc_init.cli.importlib.metadata.version", return_value="9.9.9"):
             result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
 
     def test_version_prints_version_string(self) -> None:
-        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+        with patch("pc_init.cli.importlib.metadata.version", return_value="9.9.9"):
             result = runner.invoke(app, ["--version"])
         assert result.output.strip() == "9.9.9"
 
     def test_version_is_eager_no_lang_required(self) -> None:
-        with patch("gpc_init.cli.importlib.metadata.version", return_value="9.9.9"):
+        with patch("pc_init.cli.importlib.metadata.version", return_value="9.9.9"):
             result = runner.invoke(app, ["--version"])
         assert result.exit_code == 0
         assert "Missing" not in result.output
 
     def test_version_queries_correct_package_name(self) -> None:
         with patch(
-            "gpc_init.cli.importlib.metadata.version", return_value="1.2.3"
+            "pc_init.cli.importlib.metadata.version", return_value="1.2.3"
         ) as mock_ver:
             runner.invoke(app, ["--version"])
         mock_ver.assert_called_once_with("pc-init")
 
     def test_version_prints_unknown_when_package_not_found(self) -> None:
         with patch(
-            "gpc_init.cli.importlib.metadata.version",
+            "pc_init.cli.importlib.metadata.version",
             side_effect=importlib.metadata.PackageNotFoundError("pc-init"),
         ):
             result = runner.invoke(app, ["--version"])
@@ -2166,7 +2154,7 @@ class TestVersion:
 
     def test_version_package_not_found_prints_unknown(self) -> None:
         with patch(
-            "gpc_init.cli.importlib.metadata.version",
+            "pc_init.cli.importlib.metadata.version",
             side_effect=importlib.metadata.PackageNotFoundError("pc-init"),
         ):
             result = runner.invoke(app, ["--version"])
@@ -2176,7 +2164,7 @@ class TestVersion:
 
 class TestEntryPoint:
     def test_entry_point_calls_app(self) -> None:
-        with patch("gpc_init.cli.app") as mock_app:
+        with patch("pc_init.cli.app") as mock_app:
             entry_point()
         mock_app.assert_called_once_with()
 
@@ -2185,8 +2173,8 @@ class TestDetect:
     def test_detect_flag_generates_valid_config(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2198,8 +2186,8 @@ class TestDetect:
     def test_detect_flag_prints_detected_langs(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2209,8 +2197,8 @@ class TestDetect:
     def test_detect_flag_prints_detected_frameworks(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=["django"]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=["django"]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2221,8 +2209,8 @@ class TestDetect:
         """Detected languages and explicitly passed --lang are both included."""
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(
                 app, ["--detect", "--lang", "md", "--output", str(output)]
@@ -2235,8 +2223,8 @@ class TestDetect:
         """When detect returns a lang also passed via --lang, it appears once."""
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(
                 app, ["--detect", "--lang", "py", "--output", str(output)]
@@ -2249,8 +2237,8 @@ class TestDetect:
         """--detect with nothing detected and no --lang must exit non-zero."""
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=[]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=[]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code != 0
@@ -2258,8 +2246,8 @@ class TestDetect:
     def test_detect_no_files_error_message(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=[]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=[]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert (
@@ -2279,66 +2267,43 @@ class TestDetect:
         """--detect + --framework but no lang detected and no --recommended → error."""
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=[]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=[]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(
                 app, ["--detect", "--framework", "django", "--output", str(output)]
             )
         assert result.exit_code != 0
 
-    def test_detect_passes_custom_presets_supported_langs_to_detector(
-        self, tmp_path: Path, tmp_preset_dir: Path
+    def test_detect_only_reports_languages_of_the_custom_catalog(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """
-        _apply_detection calls detect_languages with get_supported_languages(base_dir).
+        """With --presets, detection is limited to that catalog's languages."""
+        catalog_dir = tmp_path / "catalog"
+        py_dir = catalog_dir / "lang" / "py"
+        py_dir.mkdir(parents=True)
+        (py_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+        (py_dir / "metadata.yaml").write_text("extensions: [.py]\n", encoding="utf-8")
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "main.py").touch()
+        (repo / "main.go").touch()
+        monkeypatch.chdir(repo)
 
-        When --detect and --presets are combined, the supported-language list
-        passed to detect_languages must come from the custom presets directory
-        (base_dir), not from the bundled catalog (None).
-
-        The fixture presets dir contains only 'js' and 'py'.  The bundled catalog
-        contains many more (go, docker, ts, …).  With the mutant
-        (get_supported_languages(None)), the bundled catalog is used and languages
-        like 'go' appear in the supported list.  With the original code,
-        get_supported_languages(base_dir) returns only ['js', 'py'] and 'go' is
-        absent from the supported list.
-
-        This test captures the supported list argument and asserts that it matches
-        the custom catalog's contents exactly, killing the mutant.
-        """
-        output = tmp_path / ".pre-commit-config.yaml"
-        captured_supported: list[list[str]] = []
-
-        def capturing_detect_languages(
-            _repo_dir: Path, supported: list[str], **_kwargs: object
-        ) -> list[str]:
-            captured_supported.append(list(supported))
-            return ["py"]
-
-        with (
-            patch(
-                "gpc_init.cli.detect_languages", side_effect=capturing_detect_languages
-            ),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
-        ):
-            result = runner.invoke(
-                app,
-                ["--detect", "--presets", str(tmp_preset_dir), "--output", str(output)],
-            )
+        result = runner.invoke(
+            app,
+            [
+                "--detect",
+                "--presets",
+                str(catalog_dir),
+                "--output",
+                str(tmp_path / "out.yaml"),
+            ],
+        )
 
         assert result.exit_code == 0, result.output
-        assert captured_supported, "detect_languages was never called"
-        supported_used = set(captured_supported[0])
-        # The fixture presets dir has only 'js' and 'py'; the bundled catalog has
-        # many more (e.g. 'go', 'docker', 'ts').  The mutant passes None and gets
-        # the full bundled list, so 'go' would be present.
-        assert "go" not in supported_used, (
-            f"'go' must not be in the supported langs (bundled catalog leaked in): "
-            f"{supported_used}"
-        )
-        assert "js" in supported_used
-        assert "py" in supported_used
+        assert "Detected languages: py" in result.output
+        assert "go" not in result.output.split("Detected languages:")[1].split("\n")[0]
 
     def test_detect_languages_uses_custom_base_dir_catalog(
         self,
@@ -2368,7 +2333,7 @@ class TestDetect:
         # directory changed.
         monkeypatch.setattr(Path, "cwd", staticmethod(lambda: repo_dir))
 
-        with patch("gpc_init.cli.detect_frameworks", return_value=[]):
+        with patch("pc_init.cli.detect_frameworks", return_value=[]):
             result = runner.invoke(
                 app,
                 [
@@ -2639,8 +2604,8 @@ class TestDetect:
         """
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py", "js"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py", "js"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2660,8 +2625,8 @@ class TestDetect:
         """
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=["django", "react"]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=["django", "react"]),
         ):
             result = runner.invoke(app, ["--detect", "--output", str(output)])
         assert result.exit_code == 0, result.output
@@ -2682,8 +2647,8 @@ class TestDetect:
         """
         output = tmp_path / ".pre-commit-config.yaml"
         with (
-            patch("gpc_init.cli.detect_languages", return_value=["py"]),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.detect_languages", return_value=["py"]),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             result = runner.invoke(
                 app, ["--detect", "--framework", "react", "--output", str(output)]
@@ -2708,9 +2673,9 @@ class TestDetect:
             return ["py"]
 
         with (
-            patch("gpc_init.cli.Path") as mock_path_cls,
-            patch("gpc_init.cli.detect_languages", side_effect=fake_detect_langs),
-            patch("gpc_init.cli.detect_frameworks", return_value=[]),
+            patch("pc_init.cli.Path") as mock_path_cls,
+            patch("pc_init.cli.detect_languages", side_effect=fake_detect_langs),
+            patch("pc_init.cli.detect_frameworks", return_value=[]),
         ):
             mock_path_cls.cwd.return_value = cwd
             mock_path_cls.return_value = Path(str(output))
@@ -2787,6 +2752,48 @@ class TestProfileFlag:
         hook_ids = _hook_ids(output.read_text(encoding="utf-8"))
         assert "mypy" not in hook_ids
         assert "flake8" not in hook_ids
+
+    def test_experimental_profile_adds_experimental_hooks(self, tmp_path: Path) -> None:
+        """--profile experimental opts in to hooks that are absent by default."""
+        default = tmp_path / "default.yaml"
+        opted_in = tmp_path / "experimental.yaml"
+        for path, extra in ((default, ()), (opted_in, ["--profile", "experimental"])):
+            result = runner.invoke(app, ["--lang", "py", *extra, "--output", str(path)])
+            assert result.exit_code == 0, result.output
+        assert "docfmt" not in _hook_ids(default.read_text(encoding="utf-8"))
+        assert "docfmt" in _hook_ids(opted_in.read_text(encoding="utf-8"))
+
+    def test_experimental_profile_adds_experimental_hook_for_csv(
+        self, tmp_path: Path
+    ) -> None:
+        default = tmp_path / "default.yaml"
+        opted_in = tmp_path / "experimental.yaml"
+        for path, extra in ((default, ()), (opted_in, ["--profile", "experimental"])):
+            result = runner.invoke(
+                app, ["--lang", "csv", *extra, "--output", str(path)]
+            )
+            assert result.exit_code == 0, result.output
+        assert "csv-quality-gate" not in _hook_ids(default.read_text(encoding="utf-8"))
+        assert "csv-quality-gate" in _hook_ids(opted_in.read_text(encoding="utf-8"))
+
+    @pytest.mark.parametrize(
+        "profile_args",
+        [
+            ["--profile", "legacy,experimental"],
+            ["--profile", "legacy", "--profile", "experimental"],
+        ],
+    )
+    def test_combined_profiles_add_both_legacy_and_experimental(
+        self, tmp_path: Path, profile_args: list[str]
+    ) -> None:
+        output = tmp_path / ".pre-commit-config.yaml"
+        result = runner.invoke(
+            app, ["--lang", "py", *profile_args, "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        hook_ids = _hook_ids(output.read_text(encoding="utf-8"))
+        assert "mypy" in hook_ids  # legacy
+        assert "docfmt" in hook_ids  # experimental
 
     def test_comma_delimited_profiles_parsed(self, tmp_path: Path) -> None:
         output = tmp_path / ".pre-commit-config.yaml"
@@ -2906,3 +2913,520 @@ class TestProfileFlag:
         )
         assert result.exit_code == 1
         assert "mypy" in result.output
+
+
+class TestFormatOption:
+    def test_toml_to_explicit_output(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "toml", "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "repos" in tomllib.loads(output.read_text())
+
+    def test_toml_default_filename_is_prek_toml(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["--lang", "py", "--format", "toml"])
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / "prek.toml").exists()
+        assert not (tmp_path / ".pre-commit-config.yaml").exists()
+
+    def test_yaml_default_filename_unchanged(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["--lang", "py"])
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / ".pre-commit-config.yaml").exists()
+
+    @pytest.mark.parametrize(
+        ("fmt", "name"),
+        [("toml", "out.yaml"), ("toml", "out.yml"), ("yaml", "out.toml")],
+    )
+    def test_conflicting_extension_errors(
+        self, tmp_path: Path, fmt: str, name: str
+    ) -> None:
+        output = tmp_path / name
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", fmt, "--output", str(output)]
+        )
+        assert result.exit_code == 1
+        assert "--format" in result.output
+        assert not output.exists()
+
+    @pytest.mark.parametrize("fmt", ["toml", "yaml"])
+    def test_unknown_extension_is_accepted(self, tmp_path: Path, fmt: str) -> None:
+        output = tmp_path / "ci-config"
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", fmt, "--output", str(output)]
+        )
+        assert result.exit_code == 0, result.output
+        assert output.exists()
+
+    def test_invalid_format_rejected(self, tmp_path: Path) -> None:
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "json", "--output", str(tmp_path / "x")]
+        )
+        assert result.exit_code != 0
+
+    def test_force_hint_includes_format(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        output.write_text("stale = true\n")
+        result = runner.invoke(
+            app, ["--lang", "py", "--format", "toml", "--output", str(output)]
+        )
+        assert result.exit_code == 1
+        assert "--format=toml" in result.output
+
+    def test_help_mentions_prek_only(self) -> None:
+        result = runner.invoke(app, ["--help"])
+        assert "prek" in result.output
+        assert "pre-commit cannot read" in " ".join(result.output.split())
+
+
+class TestRecommendationAdvice:
+    def test_advice_is_not_printed_with_recommended(self, tmp_path: Path) -> None:
+        output = tmp_path / "out.yaml"
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "go",
+                "--framework",
+                "react",
+                "--recommended",
+                "--output",
+                str(output),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        assert "recommends adding" not in result.output
+
+    def test_try_command_repeats_the_whole_run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Running the suggestion gives the same run plus the recommended presets."""
+        workdir = tmp_path / "cwd"
+        workdir.mkdir()
+        monkeypatch.chdir(workdir)
+        output = tmp_path / "cfg.toml"
+        options = ["--profile", "legacy", "--format", "toml"]
+
+        first = runner.invoke(
+            app,
+            ["--lang", "go", "--framework", "react", *options, "--output", str(output)],
+        )
+        assert first.exit_code == 0, first.output
+        suggested = _hint_args(first.stdout)
+        second = runner.invoke(app, suggested)
+        assert second.exit_code == 0, second.output
+
+        expected = tmp_path / "expected.toml"
+        wanted = runner.invoke(
+            app,
+            [
+                "--lang",
+                "go",
+                "--framework",
+                "react",
+                "--recommended",
+                *options,
+                "--output",
+                str(expected),
+            ],
+        )
+        assert wanted.exit_code == 0, wanted.output
+        assert output.read_text(encoding="utf-8") == expected.read_text(
+            encoding="utf-8"
+        )
+        assert not list(workdir.iterdir())  # nothing written to the default file
+
+    @staticmethod
+    def _recommending_catalog(root: Path) -> Path:
+        """Build a catalog whose lang ``x`` recommends lang ``y``."""
+        catalog = root / "catalog"
+        for name, rec in (("x", "recommended:\n  lang: [y]\n"), ("y", "")):
+            (catalog / "lang" / name).mkdir(parents=True)
+            (catalog / "lang" / name / "preset.yaml").write_text(
+                f"{rec}repos: []\n", encoding="utf-8"
+            )
+        return catalog
+
+    def test_try_command_keeps_the_custom_catalog(self, tmp_path: Path) -> None:
+        catalog = self._recommending_catalog(tmp_path)
+        output = tmp_path / "out.yaml"
+
+        first = runner.invoke(
+            app,
+            ["--lang", "x", "--presets", str(catalog), "--output", str(output)],
+        )
+        assert first.exit_code == 0, first.output
+        suggested = _hint_args(first.stdout)
+        assert f"--presets={catalog}" in suggested
+        assert runner.invoke(app, suggested).exit_code == 0
+
+    def test_try_command_has_no_empty_flags(self, tmp_path: Path) -> None:
+        """A lang-only run that gains a lang must not end in a dangling --framework=."""
+        catalog = self._recommending_catalog(tmp_path)
+        result = runner.invoke(
+            app,
+            [
+                "--lang",
+                "x",
+                "--presets",
+                str(catalog),
+                "--output",
+                str(tmp_path / "o.yaml"),
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        suggested = _hint_args(result.stdout)
+        assert "--lang=x,y" in suggested
+        assert not any(arg.endswith("=") for arg in suggested)
+
+    def test_try_command_ends_in_force_because_it_overwrites_the_output(
+        self, tmp_path: Path
+    ) -> None:
+        catalog = self._recommending_catalog(tmp_path)
+        result = runner.invoke(
+            app,
+            ["--lang", "x", "--presets", str(catalog), "--output", str(tmp_path / "o")],
+        )
+        assert result.exit_code == 0, result.output
+        assert _hint_args(result.stdout)[-1] == "--force"
+
+    def test_try_command_hides_credentials_and_says_so(self, tmp_path: Path) -> None:
+        catalog = self._recommending_catalog(tmp_path)
+        url = "https://s3cret-token@example.com/org/catalog.git"
+
+        @contextmanager
+        def fake_fetch(_url: str) -> Generator[Path]:
+            yield catalog
+
+        with patch("pc_init.fetcher.fetch_preset_repo", fake_fetch):
+            result = runner.invoke(
+                app,
+                ["--lang", "x", "--presets", url, "--output", str(tmp_path / "o.yaml")],
+            )
+        assert result.exit_code == 0, result.output
+        assert "s3cret-token" not in result.output
+        assert "--presets=https://***@example.com/org/catalog.git" in result.stdout
+        assert (
+            "      (the --presets credentials are hidden; add them back)"
+            in result.stdout.splitlines()
+        )
+
+    def test_try_command_adds_a_recommended_framework(self, tmp_path: Path) -> None:
+        """A lang that recommends a framework gets it added to the suggestion."""
+        catalog = tmp_path / "catalog"
+        (catalog / "lang" / "x").mkdir(parents=True)
+        (catalog / "lang" / "x" / "preset.yaml").write_text(
+            "recommended:\n  framework: [f]\nrepos: []\n", encoding="utf-8"
+        )
+        (catalog / "framework" / "f").mkdir(parents=True)
+        (catalog / "framework" / "f" / "preset.yaml").write_text(
+            "repos: []\n", encoding="utf-8"
+        )
+        result = runner.invoke(
+            app,
+            ["--lang", "x", "--presets", str(catalog), "--output", str(tmp_path / "o")],
+        )
+        assert result.exit_code == 0, result.output
+        suggested = _hint_args(result.stdout)
+        assert "--lang=x" in suggested
+        assert "--framework=f" in suggested
+
+    def test_try_command_does_not_mention_credentials_when_there_are_none(
+        self, tmp_path: Path
+    ) -> None:
+        catalog = self._recommending_catalog(tmp_path)
+        result = runner.invoke(
+            app,
+            ["--lang", "x", "--presets", str(catalog), "--output", str(tmp_path / "o")],
+        )
+        assert "credentials" not in result.stdout
+
+    def test_rerun_with_the_same_selection_reports_no_changes(
+        self, tmp_path: Path
+    ) -> None:
+        output = tmp_path / "out.yaml"
+        args = ["--lang", "go", "--framework", "react", "--output", str(output)]
+        assert runner.invoke(app, args).exit_code == 0
+        second = runner.invoke(app, args)
+        assert second.exit_code == 0
+        assert "No changes" in second.output
+        assert "recommends adding" not in second.output
+
+
+class TestFormatConflictAndDiff:
+    def test_conflict_message_names_format_in_uppercase_on_stderr(
+        self, tmp_path: Path
+    ) -> None:
+        result = runner.invoke(
+            app,
+            ["--lang", "py", "--format", "yaml", "--output", str(tmp_path / "a.toml")],
+        )
+        assert result.exit_code == 1
+        assert "looks like TOML" in result.stderr
+
+    def test_existing_toml_diffed_as_toml(self, tmp_path: Path) -> None:
+        output = tmp_path / "prek.toml"
+        args = ["--lang", "py", "--format", "toml", "--output", str(output)]
+        assert runner.invoke(app, args).exit_code == 0
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0
+        assert "No changes" in result.output
+
+
+class TestCatalogErrors:
+    @staticmethod
+    def _catalog(root: Path, **metadata: str) -> Path:
+        for lang_id, text in metadata.items():
+            lang_dir = root / "lang" / lang_id
+            lang_dir.mkdir(parents=True)
+            (lang_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+            (lang_dir / "metadata.yaml").write_text(text, encoding="utf-8")
+        return root
+
+    @pytest.mark.parametrize("command", [["--lang", "a"], ["list"]])
+    def test_malformed_metadata_exits_cleanly(
+        self, tmp_path: Path, command: list[str]
+    ) -> None:
+        catalog = self._catalog(tmp_path, a="key: [unclosed bracket")
+        result = runner.invoke(
+            app,
+            [*command, "--presets", str(catalog), "--output", str(tmp_path / "o")]
+            if command[0] != "list"
+            else [*command, "--presets", str(catalog)],
+        )
+        assert result.exit_code == 1
+        assert "Failed to parse metadata YAML" in result.stderr
+        assert "preset YAML" not in result.stderr
+
+    @pytest.mark.parametrize("command", [["--lang", "a"], ["list"]])
+    def test_conflicting_metadata_exits_cleanly(
+        self, tmp_path: Path, command: list[str]
+    ) -> None:
+        catalog = self._catalog(tmp_path, a="aliases: [dup]\n", b="aliases: [dup]\n")
+        result = runner.invoke(
+            app,
+            [*command, "--presets", str(catalog), "--output", str(tmp_path / "o")]
+            if command[0] != "list"
+            else [*command, "--presets", str(catalog)],
+        )
+        assert result.exit_code == 1
+        assert "claimed by both" in result.stderr
+
+    def test_unreadable_metadata_exits_cleanly(self, tmp_path: Path) -> None:
+        catalog = self._catalog(tmp_path, a="fullname: A\n")
+        (catalog / "lang" / "a" / "metadata.yaml").write_bytes(b"\xff\xfe\x00bad")
+        result = runner.invoke(app, ["list", "--presets", str(catalog)])
+        assert result.exit_code == 1
+        assert "Failed to read metadata file" in result.stderr
+
+
+def _hint_args(stderr: str) -> list[str]:
+    """Return the arguments of the ``Try: pc-init ...`` command in a force hint."""
+    line = next(ln for ln in stderr.splitlines() if ln.strip().startswith("Try:"))
+    command = shlex.split(line.split("Try:", 1)[1])
+    assert command[0] == "pc-init"
+    return command[1:]
+
+
+class TestForceHintReproducesTheRun:
+    """The suggested --force command must do what the original run intended."""
+
+    @pytest.fixture(autouse=True)
+    def isolated_cwd(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+        """Run in an empty directory: a regressed hint would write to the default."""
+        workdir = tmp_path / "cwd"
+        workdir.mkdir()
+        monkeypatch.chdir(workdir)
+        return workdir
+
+    def test_overwrites_the_given_output_not_the_default(
+        self, tmp_path: Path, isolated_cwd: Path
+    ) -> None:
+        workdir = isolated_cwd
+        output = tmp_path / "my config.yaml"
+        output.write_text("# stale\n", encoding="utf-8")
+
+        first = runner.invoke(app, ["--lang", "py", "--output", str(output)])
+        assert first.exit_code == 1
+        second = runner.invoke(app, _hint_args(first.stderr))
+
+        assert second.exit_code == 0, second.output
+        assert "ruff-check" in output.read_text(encoding="utf-8")
+        assert not (workdir / ".pre-commit-config.yaml").exists()
+
+    def test_keeps_the_custom_catalog(self, tmp_path: Path) -> None:
+        catalog = tmp_path / "catalog"
+        (catalog / "lang" / "x").mkdir(parents=True)
+        (catalog / "lang" / "x" / "preset.yaml").write_text("repos: []\n")
+        output = tmp_path / "out.yaml"
+        output.write_text("# stale\n", encoding="utf-8")
+        args = ["--lang", "x", "--presets", str(catalog), "--output", str(output)]
+
+        first = runner.invoke(app, args)
+        assert first.exit_code == 1
+        second = runner.invoke(app, _hint_args(first.stderr))
+
+        assert second.exit_code == 0, second.output
+        assert "# stale" not in output.read_text(encoding="utf-8")
+
+    def test_keeps_recommended(self, tmp_path: Path) -> None:
+        expected = tmp_path / "expected.yaml"
+        base = ["--lang", "go", "--framework", "react", "--recommended"]
+        assert runner.invoke(app, [*base, "--output", str(expected)]).exit_code == 0
+        output = tmp_path / "out.yaml"
+        output.write_text("# stale\n", encoding="utf-8")
+
+        first = runner.invoke(app, [*base, "--output", str(output)])
+        assert first.exit_code == 1
+        second = runner.invoke(app, _hint_args(first.stderr))
+
+        assert second.exit_code == 0, second.output
+        assert output.read_text(encoding="utf-8") == expected.read_text(
+            encoding="utf-8"
+        )
+
+    def test_hint_is_unchanged_when_no_extra_options_were_used(
+        self, isolated_cwd: Path
+    ) -> None:
+        (isolated_cwd / ".pre-commit-config.yaml").write_text("# stale\n")
+        result = runner.invoke(app, ["--lang", "py"])
+        assert result.exit_code == 1
+        assert "Try: pc-init --lang=py --force\n" in result.stderr + "\n"
+
+
+class TestForceHintQuotingAndSecrets:
+    @pytest.fixture(autouse=True)
+    def isolated_cwd(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+        workdir = tmp_path / "cwd"
+        workdir.mkdir()
+        monkeypatch.chdir(workdir)
+        return workdir
+
+    @staticmethod
+    def _rerun_with_stale_output(tmp_path: Path, args: list[str]) -> str:
+        output = tmp_path / "out.yaml"
+        output.write_text("# stale\n", encoding="utf-8")
+        result = runner.invoke(app, [*args, "--output", str(output)])
+        assert result.exit_code == 1, result.output
+        return result.stderr
+
+    @pytest.mark.parametrize(
+        ("url", "shown"),
+        [
+            (
+                "https://user:ghp_SECRET@example.com/org/p.git",
+                "https://***@example.com/org/p.git",
+            ),
+            (
+                "https://ghp_SECRET@example.com/org/p.git",
+                "https://***@example.com/org/p.git",
+            ),
+            (
+                "ssh://user:ghp_SECRET@example.com/org/p.git",
+                "ssh://***@example.com/org/p.git",
+            ),
+            (
+                "http://ghp_SECRET@example.com/org/p.git",
+                "http://***@example.com/org/p.git",
+            ),
+            (
+                "https://user:p@ssSECRET@example.com/org/p.git",
+                "https://***@example.com/org/p.git",
+            ),
+            ("https://example.com/org/p.git", "https://example.com/org/p.git"),
+            ("git@example.com:org/p.git", "git@example.com:org/p.git"),
+            ("ssh://git@example.com/org/p.git", "ssh://git@example.com/org/p.git"),
+        ],
+    )
+    def test_presets_url_credentials_are_redacted(
+        self, tmp_path: Path, tmp_preset_dir: Path, url: str, shown: str
+    ) -> None:
+        @contextmanager
+        def fake_fetch(_url: str) -> Generator[Path]:
+            yield tmp_preset_dir
+
+        with patch("pc_init.fetcher.fetch_preset_repo", fake_fetch):
+            stderr = self._rerun_with_stale_output(
+                tmp_path, ["--lang", "py", "--presets", url]
+            )
+
+        assert "SECRET" not in stderr
+        assert f"--presets={shown}" in _hint_args(stderr)
+
+    def test_values_that_need_quoting_survive_a_round_trip(
+        self, tmp_path: Path
+    ) -> None:
+        catalog = tmp_path / "my catalog"
+        lang_dir = catalog / "lang" / "my lang"
+        lang_dir.mkdir(parents=True)
+        (lang_dir / "preset.yaml").write_text("repos: []\n", encoding="utf-8")
+        output = tmp_path / "out dir" / "cfg.yaml"
+        output.parent.mkdir()
+        output.write_text("# stale\n", encoding="utf-8")
+        args = ["--lang", "my lang", "--presets", str(catalog), "--output", str(output)]
+
+        first = runner.invoke(app, args)
+        assert first.exit_code == 1, first.output
+        hint = _hint_args(first.stderr)
+        assert "--lang=my lang" in hint
+        second = runner.invoke(app, hint)
+
+        assert second.exit_code == 0, second.output
+        assert "# stale" not in output.read_text(encoding="utf-8")
+
+    def test_hint_lists_each_option_once_in_a_stable_order(
+        self, tmp_path: Path, tmp_preset_dir: Path
+    ) -> None:
+        output = tmp_path / "out dir" / "prek.toml"
+        output.parent.mkdir()
+        output.write_text("# stale\n", encoding="utf-8")
+        first = runner.invoke(
+            app,
+            [
+                "--lang", "py",
+                "--framework", "react",
+                "--profile", "legacy",
+                "--format", "toml",
+                "--recommended",
+                "--presets", str(tmp_preset_dir),
+                "--output", str(output),
+            ],
+        )  # fmt: skip
+        assert first.exit_code == 1, first.output
+        assert _hint_args(first.stderr) == [
+            "--lang=py",
+            "--framework=react",
+            "--profile=legacy",
+            "--format=toml",
+            "--recommended",
+            f"--presets={tmp_preset_dir}",
+            f"--output={output}",
+            "--force",
+        ]
+
+
+@pytest.fixture(scope="module")
+def js_config(tmp_path_factory: pytest.TempPathFactory) -> str:
+    output = tmp_path_factory.mktemp("js") / "js.yaml"
+    assert runner.invoke(app, ["--lang", "js", "--output", str(output)]).exit_code == 0
+    return output.read_text(encoding="utf-8")
+
+
+class TestTypescriptIsJavascript:
+    """TypeScript is covered by the js preset; ``ts`` / ``typescript`` are aliases."""
+
+    @pytest.mark.parametrize("alias", ["ts", "typescript", "javascript"])
+    def test_lang_alias_generates_js_preset(
+        self, tmp_path: Path, js_config: str, alias: str
+    ) -> None:
+        output = tmp_path / "alias.yaml"
+        result = runner.invoke(app, ["--lang", alias, "--output", str(output)])
+        assert result.exit_code == 0, result.output
+        assert output.read_text(encoding="utf-8") == js_config

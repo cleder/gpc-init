@@ -11,7 +11,7 @@ lint = [
     "pyrefly>=1.1.1",
     "ruff",
     "rumdl>=0.0.129",
-    "ryl>=0.21.0",
+    "ryl>=0.30.0",
 ]
 test = [
     "complexipy>=5.6.1,<6.0.0",
@@ -42,9 +42,10 @@ classifiers = [
 ]
 dependencies = [
     "pyyaml>=6.0",
+    "tomli-w>=1.0",
     "typer>=0.26.7",
 ]
-description = "Generate .pre-commit-config.yaml from language and framework presets"
+description = "Generate .pre-commit-config.yaml or prek.toml from language and framework presets"
 keywords = [
     "cli",
     "code-quality",
@@ -56,10 +57,10 @@ license = "GPL-3.0-only"
 name = "pc-init"
 readme = "README.md"
 requires-python = ">=3.13"
-version = "0.8.1"
+version = "0.9.0"
 
 [project.scripts]
-pc-init = "gpc_init.cli:entry_point"
+pc-init = "pc_init.cli:entry_point"
 
 [project.urls]
 "Bug Tracker" = "https://github.com/cleder/gpc-init/issues"
@@ -69,8 +70,11 @@ Repository = "https://github.com/cleder/gpc-init"
 
 [tool.mutmut]
 also_copy = [
-    "gpc_init/framework",
-    "gpc_init/lang",
+    "framework",
+    "lang",
+    "pc_init/framework",
+    "pc_init/lang",
+    "scripts",
 ]
 do_not_mutate_patterns = [
     "logger\\.\\w+",
@@ -80,13 +84,13 @@ pytest_add_cli_args_test_selection = [
     "tests/",
 ]
 source_paths = [
-    "gpc_init/",
+    "pc_init/",
 ]
 type_check_command = [
+    "pyrefly",
+    "check",
     "--output-format=json",
     "--use-ignore-files=false",
-    "check",
-    "pyrefly",
 ]
 
 [tool.pyrefly]
@@ -123,7 +127,7 @@ select = [
 ]
 
 [tool.ruff.lint.extend-per-file-ignores]
-"gpc_init/cli.py" = [
+"pc_init/cli.py" = [
     "ARG001",
     "FBT001",
     "FBT002",
@@ -166,15 +170,24 @@ reflow = true
 reflow-mode = "sentence-per-line"
 
 [tool.setuptools.package-data]
-gpc_init = [
+pc_init = [
     "framework/**/*.yaml",
     "lang/**/*.yaml",
 ]
 
 [tool.setuptools.packages.find]
 include = [
-    "gpc_init*",
+    "pc_init*",
 ]
+
+[tool.tomlsort]
+all = true
+spaces_indent_inline_array = 4
+trailing_comma_inline_array = true
+
+# Argument order matters here, so this array must not be sorted.
+[tool.tomlsort.overrides."tool.mutmut.type_check_command"]
+inline_arrays = false
 
 [tool.ty.analysis]
 strict-literal-narrowing = true

@@ -1,8 +1,11 @@
-"""Unit tests for gpc_init/renderer.py."""
+"""Unit tests for pc_init/renderer.py."""
+
+import tomllib
+from typing import Any, ClassVar
 
 import yaml
 
-from gpc_init.renderer import render_yaml
+from pc_init.renderer import OutputFormat, render, render_toml, render_yaml
 
 
 class TestRenderYaml:
@@ -222,3 +225,52 @@ class TestRenderYaml:
         assert len(content_lines) == 2, (
             "width=4096 must fold a ~4099-char line into 2 content lines"
         )
+
+
+class TestRenderToml:
+    DATA: ClassVar[dict[str, Any]] = {
+        "repos": [
+            {
+                "hooks": [{"args": ["--fix"], "name": "Ruff", "id": "ruff-check"}],
+                "rev": "v1.0.0",
+                "repo": "https://github.com/astral-sh/ruff-pre-commit",
+            }
+        ]
+    }
+
+    def test_round_trips_to_same_data(self) -> None:
+        assert tomllib.loads(render_toml(self.DATA)) == self.DATA
+
+    def test_repo_and_hook_key_order(self) -> None:
+        out = render_toml(self.DATA)
+        assert out.index("repo =") < out.index("rev =") < out.index("[[repos.hooks]]")
+        hook = out.split("[[repos.hooks]]")[1]
+        assert hook.index("id =") < hook.index("name =") < hook.index("args =")
+
+    def test_uses_array_of_tables(self) -> None:
+        out = render_toml(self.DATA)
+        assert "[[repos]]" in out
+        assert "[[repos.hooks]]" in out
+
+    def test_dispatcher_selects_format(self) -> None:
+        assert render(self.DATA, OutputFormat.TOML) == render_toml(self.DATA)
+        assert render(self.DATA, OutputFormat.YAML) == render_yaml(self.DATA)
+
+    def test_default_filenames(self) -> None:
+        assert OutputFormat.TOML.default_filename == "prek.toml"
+        assert OutputFormat.YAML.default_filename == ".pre-commit-config.yaml"
+
+
+class TestRenderTomlNulls:
+    def test_none_values_are_omitted(self) -> None:
+        data = {
+            "repos": [
+                {
+                    "repo": "local",
+                    "hooks": [{"id": "x", "files": None, "args": ["a", None]}],
+                }
+            ]
+        }
+        assert tomllib.loads(render_toml(data)) == {
+            "repos": [{"repo": "local", "hooks": [{"id": "x", "args": ["a"]}]}]
+        }

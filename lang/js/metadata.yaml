@@ -1,11 +1,15 @@
 ---
-fullname: JavaScript
+fullname: JavaScript / TypeScript
 icon: "🟨"
 extensions:
   - .js
   - .mjs
   - .cjs
   - .jsx
+  - .ts
+  - .tsx
 filenames: []
 aliases:
   - javascript
+  - ts
+  - typescript

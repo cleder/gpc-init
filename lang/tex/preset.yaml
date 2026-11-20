@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/cmhughes/latexindent.pl.git
-    rev: V4.0.2
+    rev: V4.0.3
     hooks:
       - id: latexindent
         description: Run latexindent.pl (get dependencies using CPAN)

@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/bitflight-devops/skilllint
-    rev: v1.19.8
+    rev: v1.23.1
     hooks:
       - id: skilllint
         description: >-
@@ -15,7 +15,18 @@ repos:
           fix application for paths containing `failing-examples/` (skilllint also guards
           fixtures). Review `git diff` before committing.
   - repo: https://github.com/hermes-labs-ai/lintlang
-    rev: v0.6.0
+    rev: v0.8.3
     hooks:
       - id: lintlang
         args: [AGENTS.md]
+  - repo: https://github.com/ScienceIsNeato/slop-mop
+    rev: v2.18.1  # use the latest release tag
+    hooks:
+      - id: slopmop-swab    # quick gates on every commit
+        description: >-
+          Run slop-mop's swab-level quality gates — the fast, every-commit
+          validation suite. Skips with a warning if the repo is not onboarded.
+      - id: slopmop-scour   # full PR-readiness suite on push
+        description: >-
+          Run slop-mop's scour-level quality gates — the comprehensive, PR-readiness
+          validation suite. Skips with a warning if the repo is not onboarded.

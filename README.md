@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml/badge.svg?branch=main)](https://github.com/cleder/gpc-init/actions/workflows/test-build-publish.yml) [![codecov](https://codecov.io/gh/cleder/gpc-init/graph/badge.svg?token=3enkN1Q8JM)](https://codecov.io/gh/cleder/gpc-init) [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit) [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff) [![pyrefly](https://img.shields.io/badge/type_checker-pyrefly-blue)](https://github.com/facebook/pyrefly) [![ty](https://img.shields.io/badge/type_checker-ty-blue)](https://github.com/astral-sh/ty) [![zuban](https://img.shields.io/badge/type_checker-zuban-blue)](https://github.com/zubanls/zubanls-python) [![GPLv3 License](https://img.shields.io/pypi/l/pc-init)](https://opensource.org/license/gpl-3-0/) [![Python Version](https://img.shields.io/pypi/pyversions/pc-init)](https://www.python.org/) [![PyPI - Version](https://img.shields.io/pypi/v/pc-init)](https://pypi.org/project/pc-init/) [![Status](https://img.shields.io/pypi/status/pc-init)](https://pypi.org/project/pc-init/) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/pc-init?period=monthly&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads%2Fmonth)](https://pepy.tech/projects/pc-init)
 
-Generate a [pre-commit](https://pre-commit.com/) or [prek](https://github.com/j178/prek/) `.pre-commit-config.yaml` for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
+Generate a [pre-commit](https://pre-commit.com/) or [prek](https://github.com/j178/prek/) `.pre-commit-config.yaml` (or a prek-only `prek.toml`) for your project from curated language and framework presets — so you get the right linters, formatters, and quality tools wired up with a single command instead of copying configs between repos.
 Works with [prek](https://github.com/j178/prek/) and [pre-commit](https://pre-commit.com/)
 
 ## Motivation
@@ -67,8 +67,7 @@ Options:
                      (repeatable, or comma-delimited: --framework=react,django).
                      Run `pc-init list` to see supported values from the
                      active catalog.
-  --force            Overwrite existing .pre-commit-config.yaml without
-                     prompting.
+  --force            Overwrite an existing output file without prompting.
   --detect           Auto-detect languages and frameworks from the current
                      directory and merge them with any explicitly supplied
                      --lang/--framework values.
@@ -76,7 +75,13 @@ Options:
                      baseline (repeatable, or comma-delimited:
                      --profile=legacy,experimental). preset hooks are always
                      included. Supported: legacy, experimental.
-  --output     TEXT  Output file path.  [default: .pre-commit-config.yaml]
+  --output     TEXT  Output file path. Defaults to .pre-commit-config.yaml,
+                     or prek.toml with --format toml. A .toml/.yaml/.yml
+                     extension that contradicts --format is an error.
+  --format     [yaml|toml]
+                     Output format: yaml (.pre-commit-config.yaml) or toml
+                     (prek.toml). The toml format is read by prek only; plain
+                     pre-commit cannot read it.  [default: yaml]
   --presets    TEXT  Preset catalog to use. Accepts a local directory path or
                      a git repository URL (https://, git@, git://, ssh://).
                      The directory / repo root must contain lang/ and
@@ -99,7 +104,7 @@ pc-init list
 
 ```text
 Languages:
-  cpp, css, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, pyx, r, rb, rs, rst, sh, sql, swift, tex, tf, toml, ts, yaml
+  cpp, css, csv, docker, env, go, groovy, img, js, kt, lua, make, md, nb, proto, py, pyx, r, rb, rs, rst, sh, sql, swift, tex, tf, toml, yaml
 
 Frameworks:
   ansible, behave, django, git, k8s, nika, react, skill, sphinx
@@ -122,16 +127,16 @@ pc-init list --presets https://github.com/org/my-presets
 | ID | Language |
 |----|----------|
 | `py` | Python |
-| `js` | JavaScript |
+| `js` | JavaScript / TypeScript |
 | `go` | Go |
 | `rs` | Rust |
 | `sh` | Shell / Bash |
-| `ts` | TypeScript |
 | `nb` | Jupyter Notebooks |
 | `md` | Markdown |
 | `img` | Images |
 | `docker` | Docker |
 | `sql` | SQL |
+| `csv` | CSV |
 | `tf` | Terraform |
 | `toml` | TOML |
 | `yaml` | YAML |
@@ -150,7 +155,7 @@ pc-init list --presets https://github.com/org/my-presets
 | `rst` | reStructuredText |
 | `tex` | LaTeX |
 
-Language aliases `python`, `javascript`, `typescript`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, `kotlin`, and `cython` are also accepted.
+Language aliases `python`, `javascript`, `typescript`, `ts`, `rust`, `ruby`, `golang`, `shell`, `bash`, `image`, `notebook`, `jupyter`, `dockerfile`, `makefile`, `terraform`, `c`, `c++`, `kotlin`, and `cython` are also accepted.
 
 **Frameworks** — pass as `--framework`:
 
@@ -198,8 +203,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | Extension(s) | Language |
 |---|---|
 | `.py`, `.pyi` | `py` |
-| `.js`, `.mjs`, `.cjs`, `.jsx` | `js` |
-| `.ts`, `.tsx` | `ts` |
+| `.js`, `.mjs`, `.cjs`, `.jsx`, `.ts`, `.tsx` | `js` |
 | `.go` | `go` |
 | `.rs` | `rs` |
 | `.rb` | `rb` |
@@ -210,6 +214,7 @@ Run with --force to overwrite '.pre-commit-config.yaml'.
 | `.css`, `.scss`, `.sass` | `css` |
 | `.sh`, `.bash` | `sh` |
 | `.sql` | `sql` |
+| `.csv` | `csv` |
 | `.tf`, `.tfvars` | `tf` |
 | `.md`, `.markdown` | `md` |
 | `.ipynb` | `nb` |
@@ -246,11 +251,13 @@ Some framework presets declare the languages they are typically used with.
 If none of your `--lang` selections match, `pc-init` prints an informational note and a ready-to-run command that adds the missing languages:
 
 ```text
-Note: preset 'react' recommends adding: --lang=js,ts
-      Try: pc-init --lang=go,js,ts --framework=react
+Note: preset 'react' recommends adding: --lang=js,css
+      Try: pc-init --lang=go,js,css --framework=react --force
 ```
 
-The suggested command preserves your existing `--lang` values so it is safe to run with `--force` — no hooks you already selected will be removed.
+The suggested command repeats your whole run (`--framework`, `--profile`, `--format`, `--presets`, `--output`, `--recommended`) and adds the missing languages, so no hooks you already selected are removed.
+It ends in `--force` because it overwrites the file that was just generated, with no diff.
+Credentials in a `--presets` URL are hidden in the hint; add them back before running it.
 
 Pass `--recommended` to apply all suggestions automatically in a single run:
 

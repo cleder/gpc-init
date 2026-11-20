@@ -5,7 +5,7 @@ yaml = [
     ".yamllint",
 ]
 
-[rules]
+[lint.rules]
 anchors = "enable"
 braces = "enable"
 brackets = "enable"
@@ -25,20 +25,29 @@ octal-values = "disable"
 quoted-strings = "disable"
 trailing-spaces = "enable"
 
-[rules.commas]
+[lint.rules.commas]
 level = "error"
 max-spaces-before = 0
 min-spaces-after = 0
 max-spaces-after = 1
 
-[rules.comments]
+[lint.rules.comments]
+level = "warning"
+min-spaces-from-content = 1
+
+[lint.rules.comments-indentation]
 level = "warning"
 
-[rules.comments-indentation]
+[lint.rules.document-start]
 level = "warning"
 
-[rules.document-start]
+[lint.rules.truthy]
 level = "warning"
 
-[rules.truthy]
-level = "warning"
+# Keep `ryl format` compatible with yamlfmt (the legacy YAML formatter in the
+# yaml preset): leave quoting alone, use a single space before inline comments
+# and collapse runs of blank lines.
+[format]
+quote-style = "preserve"
+comment-spacing = 1
+max-blank-lines = 1

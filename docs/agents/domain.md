@@ -20,7 +20,7 @@ Single-context repo:
 ├── CONTEXT.md
 ├── .claude/docs/adr/
 │   └── 0001-hook-profile-categories.md
-└── gpc_init/
+└── pc_init/
 ```
 
 This repo is single-context — there is no `CONTEXT-MAP.md`.
