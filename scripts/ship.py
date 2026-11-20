@@ -34,13 +34,18 @@ def successful_run(runs: list[dict[str, str]], sha: str) -> bool:
 
 def out(*args: str) -> str:
     """Run a command in the repository root and return its output."""
-    return subprocess.run(  # noqa: S603
+    result = subprocess.run(  # noqa: S603
         args,
         cwd=ROOT,
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
-    ).stdout.strip()
+    )
+    if result.returncode:
+        detail = (result.stderr or result.stdout).strip()
+        msg = f"{' '.join(args[:3])}: {detail}"
+        raise ShipError(msg)
+    return result.stdout.strip()
 
 
 def run(*args: str) -> None:

@@ -1,6 +1,7 @@
 """Tests for the pure helpers of scripts/release.py and scripts/ship.py."""
 
 import importlib.util
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -74,3 +75,13 @@ def test_successful_run_needs_matching_sha_and_success() -> None:
     assert not ship.successful_run(runs, "aaa")
     assert not ship.successful_run(runs, "ccc")
     assert not ship.successful_run(runs, "zzz")
+
+
+def test_ship_out_returns_stdout() -> None:
+    assert ship.out("echo", "hello") == "hello"
+
+
+def test_ship_out_reports_the_command_error() -> None:
+    code = "import sys; sys.stderr.write('boom'); sys.exit(1)"
+    with pytest.raises(ship.ShipError, match="boom"):
+        ship.out(sys.executable, "-c", code)

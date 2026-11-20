@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Bug Fixes
+
+- `just release` runs every pre-commit hook on all files before committing, so a bumped hook cannot reformat files after the tag; `just ship` shows the real error when a `gh` or `git` command fails; the preset revision check in `validate-presets` skips `tests/fixtures`, whose pins are asserted by the tests.
+
 ## [0.9.0]
 
 ### Enhancements

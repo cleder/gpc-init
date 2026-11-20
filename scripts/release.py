@@ -68,6 +68,18 @@ def run(*args: str) -> None:
     subprocess.run(args, cwd=ROOT, check=True)  # noqa: S603
 
 
+def apply_hooks() -> None:
+    """
+    Run every hook on all files so bumped hook versions cannot reformat later.
+
+    Formatters edit files on the first run; the second run must then be clean.
+    Without this, a hook bump (for example a new rumdl) makes pre-commit.ci
+    push an autofix commit after the release has been tagged.
+    """
+    subprocess.run(["prek", "run", "--all-files"], cwd=ROOT, check=False)  # noqa: S607
+    run("prek", "run", "--all-files")
+
+
 def check_preconditions(version: str) -> None:
     """Raise ReleaseError unless a release of ``version`` can be started."""
     wanted = parse_version(version)
@@ -111,6 +123,7 @@ def main(argv: list[str]) -> int:
         )
         run("uv", "lock")
         run(sys.executable, str(changelog), "promote", version)
+        apply_hooks()
         run(sys.executable, str(changelog), "check", version)
         run("git", "add", "-u")
         run("git", "commit", "-m", f"Release {version}")
