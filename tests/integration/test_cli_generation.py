@@ -3113,7 +3113,30 @@ class TestRecommendationAdvice:
         assert result.exit_code == 0, result.output
         assert "s3cret-token" not in result.output
         assert "--presets=https://***@example.com/org/catalog.git" in result.stdout
-        assert "credentials are hidden" in result.stdout
+        assert (
+            "      (the --presets credentials are hidden; add them back)"
+            in result.stdout.splitlines()
+        )
+
+    def test_try_command_adds_a_recommended_framework(self, tmp_path: Path) -> None:
+        """A lang that recommends a framework gets it added to the suggestion."""
+        catalog = tmp_path / "catalog"
+        (catalog / "lang" / "x").mkdir(parents=True)
+        (catalog / "lang" / "x" / "preset.yaml").write_text(
+            "recommended:\n  framework: [f]\nrepos: []\n", encoding="utf-8"
+        )
+        (catalog / "framework" / "f").mkdir(parents=True)
+        (catalog / "framework" / "f" / "preset.yaml").write_text(
+            "repos: []\n", encoding="utf-8"
+        )
+        result = runner.invoke(
+            app,
+            ["--lang", "x", "--presets", str(catalog), "--output", str(tmp_path / "o")],
+        )
+        assert result.exit_code == 0, result.output
+        suggested = _hint_args(result.stdout)
+        assert "--lang=x" in suggested
+        assert "--framework=f" in suggested
 
     def test_try_command_does_not_mention_credentials_when_there_are_none(
         self, tmp_path: Path
