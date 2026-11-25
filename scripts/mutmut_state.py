@@ -46,6 +46,7 @@ CLASS_SEPARATOR = "ǁ"
 FNV_OFFSET = 0x811C9DC5
 FNV_PRIME = 0x01000193
 MASK_32 = 0xFFFFFFFF
+MUTANT = re.compile(r"^(?P<module>.+)\.(?P<base>[^.]+)__mutmut_(?P<number>\d+)$")
 CITATION = re.compile(r"(?P<path>[\w@~./+-]+\.\w+):(?P<line>\d+)")
 
 OUTCOMES = ("suspected_bug", "dead_code", "test_design", "equivalent", "missing_test")
@@ -93,20 +94,22 @@ class MutantRef:
 
 def parse_mutant(name: str) -> MutantRef:
     """Split ``pkg.mod.x_fn__mutmut_3`` or ``pkg.mod.xǁClassǁfn__mutmut_3``."""
-    module, _, tail = name.rpartition(".")
-    base, separator, number = tail.rpartition("__mutmut_")
-    if not (module and separator and number.isdigit()):
-        msg = f"not a mutmut mutant name: {name}"
-        raise StateError(msg)
+    match = MUTANT.match(name)
+    if match is None:
+        raise _not_a_mutant(name)
+    base, number = match["base"], int(match["number"])
     if base.startswith(f"x{CLASS_SEPARATOR}"):
         _, class_name, *function = base.split(CLASS_SEPARATOR)
         return MutantRef(
-            module, class_name, CLASS_SEPARATOR.join(function), int(number)
+            match["module"], class_name, CLASS_SEPARATOR.join(function), number
         )
     if base.startswith("x_"):
-        return MutantRef(module, None, base[2:], int(number))
-    msg = f"not a mutmut mutant name: {name}"
-    raise StateError(msg)
+        return MutantRef(match["module"], None, base[2:], number)
+    raise _not_a_mutant(name)
+
+
+def _not_a_mutant(name: str) -> StateError:
+    return StateError(f"not a mutmut mutant name: {name}")
 
 
 def mutant_sort_key(name: str) -> tuple[str, str, str, int]:
@@ -115,23 +118,23 @@ def mutant_sort_key(name: str) -> tuple[str, str, str, int]:
     return (ref.module, ref.class_name or "", ref.function, ref.number)
 
 
+def _scope(tree: ast.Module, class_name: str | None) -> list[ast.stmt]:
+    """Return the statements a function is looked up in: the module or one class."""
+    if class_name is None:
+        return tree.body
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            return node.body
+    return []
+
+
 def function_hash(source: str, class_name: str | None, function: str) -> str | None:
     """Hash one function's syntax tree, so layout and comments do not matter."""
     try:
         tree = ast.parse(source)
     except SyntaxError:
         return None
-    scope: list[ast.stmt] = tree.body
-    if class_name is not None:
-        classes = [
-            node
-            for node in scope
-            if isinstance(node, ast.ClassDef) and node.name == class_name
-        ]
-        if not classes:
-            return None
-        scope = classes[0].body
-    for node in scope:
+    for node in _scope(tree, class_name):
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and (
             node.name == function
         ):
@@ -168,14 +171,18 @@ class Context:
     config_hash: str
 
 
+def _is_positive_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
 def _positive(table: Mapping[str, Any], key: str) -> int | None:
     value = table.get(key)
     if value is None:
         return None
-    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+    if not _is_positive_int(value):
         msg = f"[tool.mutmut-workflow] {key} must be a positive integer"
         raise StateError(msg)
-    return value
+    return cast("int", value)
 
 
 def load_context(root: Path, *, mutmut_version: str, today: str) -> Context:
@@ -277,19 +284,23 @@ def _resolve(ctx: Context, name: str) -> Path:
     return path if path.is_absolute() else ctx.root / path
 
 
+def _unchanged(ctx: Context, name: str, recorded: str) -> bool:
+    path = _resolve(ctx, name)
+    return path.is_file() and blob_hash(path) == recorded
+
+
 def is_current(ctx: Context, record: Record, current_hash: str | None) -> bool:
     """Return whether the record is valid for the code, mutmut and settings now."""
-    if current_hash is None or record.function_hash != current_hash:
-        return False
-    if record.mutmut_version != ctx.mutmut_version:
-        return False
-    if record.config_hash != ctx.config_hash:
-        return False
-    for name, recorded in record.dependencies.items():
-        path = _resolve(ctx, name)
-        if not path.is_file() or blob_hash(path) != recorded:
-            return False
-    return True
+    same_key = (
+        current_hash is not None
+        and record.function_hash == current_hash
+        and record.mutmut_version == ctx.mutmut_version
+        and record.config_hash == ctx.config_hash
+    )
+    return same_key and all(
+        _unchanged(ctx, name, recorded)
+        for name, recorded in record.dependencies.items()
+    )
 
 
 class Store:
@@ -442,49 +453,17 @@ def _dependencies(
     return {p: blob_hash(_resolve(ctx, p)) for p in paths}
 
 
-def _new_record(
-    ctx: Context,
-    analysis: Analysis,
-    status: str,
-    key: str,
-    dependencies: dict[str, str],
-) -> Record:
+def _new_record(ctx: Context, analysis: Analysis, key: str) -> Record:
     return Record(
         mutant=analysis.mutant,
-        status=status,
+        status="open",
         function_hash=key,
         mutmut_version=ctx.mutmut_version,
         config_hash=ctx.config_hash,
-        dependencies=dependencies,
         last_reason=analysis.reason,
         evidence=list(analysis.evidence),
         summary=analysis.summary,
     )
-
-
-def _attempt(
-    store: Store,
-    analysis: Analysis,
-    key: str,
-    reason: str,
-) -> None:
-    """Count one failed attempt and park the mutant at the budget."""
-    ctx = store.ctx
-    existing = store.current(analysis.mutant)
-    record = existing or _new_record(ctx, analysis, "open", key, {})
-    record.attempts += 1
-    record.last_reason = reason
-    record.summary = analysis.summary or record.summary
-    record.history.append(
-        {
-            "date": ctx.today,
-            "reason": reason,
-            "test_file": analysis.test_file,
-            "test_name": analysis.test_name,
-        },
-    )
-    record.status = "parked" if record.attempts >= ctx.settings.max_attempts else "open"
-    store.put(record)
 
 
 def _validate_counts(sent: list[str], run: Run) -> None:
@@ -516,81 +495,106 @@ class _Findings:
     config_problems: set[str] = field(default_factory=set)
 
 
-def _store_verdict(
-    store: Store,
-    analysis: Analysis,
-    key: str,
-    findings: _Findings,
-) -> None:
-    status = analysis.outcome
-    try:
-        dependencies = _dependencies(
-            store.ctx,
-            analysis,
-            cited_required=status in {"equivalent", "suspected_bug"},
+class _Pass:
+    """One recording pass: applies the analyses of a run to the stored state."""
+
+    def __init__(self, store: Store, run: Run) -> None:
+        """Start with no findings."""
+        self.store = store
+        self.run = run
+        self.findings = _Findings()
+
+    def apply(self) -> _Findings:
+        """Apply every analysis, then forget the mutants that are now killed."""
+        for analysis in sorted(
+            self.run.analyses, key=lambda a: mutant_sort_key(a.mutant)
+        ):
+            self._one(analysis)
+        self.findings.unresolved.update(self.run.unanalyzed)
+        for name in self.run.gaps:
+            if self.run.status.get(name) == "killed":
+                self.store.delete(name)
+        return self.findings
+
+    def _reject(self, analysis: Analysis, why: str) -> None:
+        self.findings.rejected.append(
+            {"mutant": analysis.mutant, "outcome": analysis.outcome, "why": why},
         )
-    except StateError as error:
-        findings.rejected.append(
-            {"mutant": analysis.mutant, "outcome": status, "why": str(error)},
-        )
-        findings.unresolved.add(analysis.mutant)
-        return
-    store.put(_new_record(store.ctx, analysis, status, key, dependencies))
+        self.findings.unresolved.add(analysis.mutant)
 
-
-def _missing_test(
-    store: Store,
-    analysis: Analysis,
-    key: str,
-    run: Run,
-    findings: _Findings,
-) -> None:
-    name = analysis.mutant
-    if name in run.config_problems:
-        findings.config_problems.add(name)
-    elif name in run.write_failures:
-        _attempt(store, analysis, key, run.write_failures[name])
-    elif name not in run.written or not run.verify_ok:
-        findings.unresolved.add(name)
-    else:
-        outcome = run.status.get(name)
-        if outcome == "survived":
-            reason = f"test {analysis.test_name} written; the mutant still survives"
-            _attempt(store, analysis, key, reason)
-        elif outcome == "no tests" or outcome is None:
-            findings.unresolved.add(name)
-
-
-def _apply(store: Store, run: Run) -> _Findings:
-    findings = _Findings(config_problems=set())
-    for analysis in sorted(run.analyses, key=lambda a: mutant_sort_key(a.mutant)):
+    def _one(self, analysis: Analysis) -> None:
         if analysis.outcome not in OUTCOMES:
             msg = f"unknown outcome {analysis.outcome!r} for {analysis.mutant}"
             raise StateError(msg)
         if analysis.outcome == "dead_code":
-            findings.dead_code.append(
+            self.findings.dead_code.append(
                 {"mutant": analysis.mutant, "reason": analysis.reason},
             )
-            continue
-        key = current_function_hash(store.ctx, parse_mutant(analysis.mutant))
+            return
+        key = current_function_hash(self.store.ctx, parse_mutant(analysis.mutant))
         if key is None:
-            findings.rejected.append(
-                {
-                    "mutant": analysis.mutant,
-                    "outcome": analysis.outcome,
-                    "why": "the mutant's function was not found in its source",
-                },
-            )
-            findings.unresolved.add(analysis.mutant)
+            self._reject(analysis, "the mutant's function was not found in its source")
         elif analysis.outcome == "missing_test":
-            _missing_test(store, analysis, key, run, findings)
+            self._missing_test(analysis, key)
         else:
-            _store_verdict(store, analysis, key, findings)
-    findings.unresolved.update(run.unanalyzed)
-    for name in run.gaps:
-        if run.status.get(name) == "killed":
-            store.delete(name)
-    return findings
+            self._verdict(analysis, key)
+
+    def _verdict(self, analysis: Analysis, key: str) -> None:
+        """Store an equivalent, suspected_bug or test_design verdict, or reject it."""
+        try:
+            dependencies = _dependencies(
+                self.store.ctx,
+                analysis,
+                cited_required=analysis.outcome in {"equivalent", "suspected_bug"},
+            )
+        except StateError as error:
+            self._reject(analysis, str(error))
+            return
+        record = _new_record(self.store.ctx, analysis, key)
+        record.status = analysis.outcome
+        record.dependencies = dependencies
+        self.store.put(record)
+
+    def _missing_test(self, analysis: Analysis, key: str) -> None:
+        name = analysis.mutant
+        if name in self.run.config_problems:
+            self.findings.config_problems.add(name)
+        elif name in self.run.write_failures:
+            self._attempt(analysis, key, self.run.write_failures[name])
+        else:
+            self._verified(analysis, key)
+
+    def _verified(self, analysis: Analysis, key: str) -> None:
+        """Judge a mutant a test was written for by what Verify saw."""
+        name = analysis.mutant
+        if name not in self.run.written or not self.run.verify_ok:
+            self.findings.unresolved.add(name)
+            return
+        outcome = self.run.status.get(name)
+        if outcome == "survived":
+            reason = f"test {analysis.test_name} written; the mutant still survives"
+            self._attempt(analysis, key, reason)
+        elif outcome in {None, "no tests"}:
+            self.findings.unresolved.add(name)
+
+    def _attempt(self, analysis: Analysis, key: str, reason: str) -> None:
+        """Count one failed attempt and park the mutant at the budget."""
+        ctx = self.store.ctx
+        record = self.store.current(analysis.mutant) or _new_record(ctx, analysis, key)
+        record.attempts += 1
+        record.last_reason = reason
+        record.summary = analysis.summary or record.summary
+        record.history.append(
+            {
+                "date": ctx.today,
+                "reason": reason,
+                "test_file": analysis.test_file,
+                "test_name": analysis.test_name,
+            },
+        )
+        parked = record.attempts >= ctx.settings.max_attempts
+        record.status = "parked" if parked else "open"
+        self.store.put(record)
 
 
 def _records_with(store: Store, gaps: list[str], status: str) -> list[Record]:
@@ -603,10 +607,45 @@ def record(ctx: Context, run: Run) -> dict[str, Any]:
     store = Store(ctx)
     split = _triage(store, run.gaps)
     _validate_counts(split.to_analyze, run)
-    findings = _apply(store, run)
+    findings = _Pass(store, run).apply()
     summary = _summary(store, run, split, findings)
     store.flush()
     return summary
+
+
+def _killed(run: Run, gaps: list[str]) -> list[str]:
+    return [g for g in gaps if run.status.get(g) == "killed"]
+
+
+def _other(run: Run, gaps: list[str]) -> list[dict[str, str]]:
+    states = {g: run.status.get(g, "survived") for g in gaps}
+    return [
+        {"mutant": g, "status": s}
+        for g, s in states.items()
+        if s not in {"killed", *GAP_STATUSES}
+    ]
+
+
+def _still(run: Run, gaps: list[str]) -> list[str]:
+    return [g for g in gaps if run.status.get(g, "survived") in GAP_STATUSES]
+
+
+def _row(record: Record) -> dict[str, Any]:
+    return {"mutant": record.mutant, "reason": record.last_reason}
+
+
+def _parked_row(record: Record) -> dict[str, Any]:
+    return {
+        "mutant": record.mutant,
+        "attempts": record.attempts,
+        "last_reason": record.last_reason,
+        "summary": record.summary,
+        "history": record.history,
+    }
+
+
+def _bug_row(record: Record) -> dict[str, Any]:
+    return {**_row(record), "evidence": record.evidence}
 
 
 def _summary(
@@ -616,47 +655,21 @@ def _summary(
     findings: _Findings,
 ) -> dict[str, Any]:
     gaps = sorted(set(run.gaps), key=mutant_sort_key)
-    killed = [g for g in gaps if run.status.get(g) == "killed"]
-    other = [
-        {"mutant": g, "status": run.status[g]}
-        for g in gaps
-        if run.status.get(g, "survived") not in {"killed", *GAP_STATUSES}
-    ]
-    still = [
-        g
-        for g in gaps
-        if run.status.get(g, "survived") in GAP_STATUSES and g not in killed
-    ]
+    still = _still(run, gaps)
 
     def listed(status: str) -> list[Record]:
         return _records_with(store, still, status)
 
     return {
-        "killed": killed,
-        "equivalent": [
-            {"mutant": r.mutant, "reason": r.last_reason} for r in listed("equivalent")
-        ],
-        "parked": [
-            {
-                "mutant": r.mutant,
-                "attempts": r.attempts,
-                "last_reason": r.last_reason,
-                "summary": r.summary,
-                "history": r.history,
-            }
-            for r in listed("parked")
-        ],
+        "killed": _killed(run, gaps),
+        "equivalent": [_row(r) for r in listed("equivalent")],
+        "parked": [_parked_row(r) for r in listed("parked")],
         "deferred": split.deferred,
-        "suspected_bugs": [
-            {"mutant": r.mutant, "reason": r.last_reason, "evidence": r.evidence}
-            for r in listed("suspected_bug")
-        ],
+        "suspected_bugs": [_bug_row(r) for r in listed("suspected_bug")],
         "dead_code": findings.dead_code,
-        "test_design": [
-            {"mutant": r.mutant, "reason": r.last_reason} for r in listed("test_design")
-        ],
+        "test_design": [_row(r) for r in listed("test_design")],
         "unresolved": sorted(findings.unresolved, key=mutant_sort_key),
-        "other": other,
+        "other": _other(run, gaps),
         "still_surviving": still,
         "rejected": findings.rejected,
         "config_problems": sorted(findings.config_problems, key=mutant_sort_key),
@@ -761,7 +774,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         text = "" if sys.stdin.isatty() else sys.stdin.read()
-        payload = json.loads(text) if text.strip() else {}
+        payload: dict[str, Any] = json.loads(text) if text.strip() else {}
         today = datetime.now(UTC).date().isoformat()
         out = run_command(args.command, args.root, payload, today=today)
     except (StateError, KeyError, TypeError, ValueError) as error:

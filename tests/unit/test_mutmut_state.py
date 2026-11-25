@@ -94,7 +94,7 @@ def _run(
 def _attempt(root: Path, mutant: str, status: str = "survived") -> dict[str, Any]:
     """One pass in which a test was written for `mutant` and Verify saw `status`."""
     ctx = _ctx(root)
-    return ms.record(
+    summary: dict[str, Any] = ms.record(
         ctx,
         _run(
             [mutant],
@@ -103,6 +103,7 @@ def _attempt(root: Path, mutant: str, status: str = "survived") -> dict[str, Any
             status={mutant: status},
         ),
     )
+    return summary
 
 
 # ─── hashing and parsing ──────────────────────────────────────────────────────
