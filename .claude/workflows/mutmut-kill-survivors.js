@@ -24,14 +24,27 @@ const GAP_STATUSES = ['survived', 'no tests']
 // ─── Deterministic helpers ────────────────────────────────────────────────────
 // Agents run commands and relay their output; this code decides what that output means.
 
-// FNV-1a 32 over the sorted names joined by "\n". LIST_SNIPPET computes the same value in
-// Python. There is no `crypto` in the workflow sandbox, hence a checksum this small.
+// UTF-8 bytes of a string, as Python's str.encode() gives them. mutmut names the mutants of a
+// class method "pkg.mod.xǁClassǁmethod__mutmut_1", and ǁ (U+01C1) is not ASCII.
+function utf8Bytes(text) {
+  const out = []
+  for (const ch of text) {
+    const c = ch.codePointAt(0)
+    if (c < 0x80) out.push(c)
+    else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63))
+    else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63))
+    else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63))
+  }
+  return out
+}
+
+// FNV-1a 32 over the UTF-8 bytes of the sorted names joined by "\n". LIST_SNIPPET computes the
+// same value in Python. There is no `crypto` in the workflow sandbox, hence a checksum this small.
+// Sorting by UTF-16 unit equals Python's sort by code point for names outside the astral planes.
 function fnv1a32(names) {
   let h = 0x811c9dc5
-  for (const ch of [...names].sort().join('\n')) {
-    const c = ch.charCodeAt(0)
-    if (c > 127) throw new Error(`fnv1a32: non-ASCII character in a mutant name: ${ch}`)
-    h = Math.imul(h ^ c, 0x01000193) >>> 0
+  for (const b of utf8Bytes([...names].sort().join('\n'))) {
+    h = Math.imul(h ^ b, 0x01000193) >>> 0
   }
   return h
 }
@@ -46,7 +59,7 @@ def fnv(names):
     return h
 by = {}
 for line in sys.stdin:
-    m = re.match(r"^\s+(\S+): (.+?)\s*$", line)
+    m = re.match(r"^\s+(\S+__mutmut_\d+): (.+?)\s*$", line)
     if m:
         by.setdefault(m.group(2), []).append(m.group(1))
 groups = [{"status": s, "count": len(n), "checksum": fnv(n), "names": sorted(n)} for s, n in sorted(by.items())]
@@ -137,6 +150,15 @@ function versionAtLeast(version, min) {
   return true
 }
 
+// A project-relative path without a leading "./": agents sometimes return the absolute path
+// that `find ${project}/...` prints.
+function relativeTo(root, file) {
+  let f = file.trim()
+  const prefix = root.replace(/\/+$/, '') + '/'
+  if (f.startsWith(prefix)) f = f.slice(prefix.length)
+  return f.replace(/^\.\//, '')
+}
+
 // Is `file` under one of mutmut's test selection entries (a directory, a file, or a node id)?
 function inSelection(file, selection) {
   const f = file.replace(/^\.\//, '')
@@ -165,6 +187,31 @@ function assertMutmutRan(step, report) {
   }
 }
 
+// Every return has these keys. still_surviving counts unkilled mutants that are not known to be
+// equivalent, so it means the same thing whichever phase the run ended in.
+function report({
+  startedWith, killed = [], equivalents = [], other = [], testsWritten = 0, unkilled = [],
+  newGaps = [], configProblems = [], noTestProposed = [], unanalyzed = [], contradictions = [],
+}) {
+  const known = new Set(equivalents.map((e) => e.name))
+  const open = unkilled.filter((n) => !known.has(n))
+  return {
+    status: 'complete',
+    started_with: startedWith,
+    killed,
+    equivalent_mutants: equivalents,
+    other,
+    tests_written: testsWritten,
+    still_surviving: open.length,
+    remaining_survivors: open,
+    new_gaps: newGaps,
+    config_problems: configProblems.map((a) => ({ name: a.mutant_name, test_file: a.test_file })),
+    no_test_proposed: noTestProposed,
+    unanalyzed,
+    contradictions,
+  }
+}
+
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const PREFLIGHT_SCHEMA = {
@@ -180,10 +227,7 @@ const PREFLIGHT_SCHEMA = {
     repeat_session_output: { type: 'string' },
     random_order: { type: 'string', enum: ['passed', 'failed', 'unavailable'] },
   },
-  required: [
-    'project', 'mutmut_bin', 'pytest_bin', 'mutmut_version', 'test_selection',
-    'missing_also_copy', 'repeat_session_exit_code', 'random_order',
-  ],
+  required: ['project', 'mutmut_bin', 'pytest_bin', 'mutmut_version', 'test_selection', 'missing_also_copy'],
 }
 
 const LISTING_PROPERTIES = {
@@ -292,6 +336,10 @@ Step 2 — Version. Run "<mutmut_bin> --version" and report its output as mutmut
 Step 3 — Configuration. Run this and copy its JSON into test_selection and missing_also_copy:
   <python_bin> -c '${CONFIG_SNIPPET}'
 
+Cheap checks first: if the version in step 2 is older than 3.8.1, or step 3 reports a
+  non-empty missing_also_copy or an empty test_selection, STOP here and leave
+  repeat_session_exit_code and random_order out: the slow steps below are not needed.
+
 Step 4 — Repeated sessions. mutmut runs the selected tests twice in one process (a stats
   session, then a clean session). Run them twice in one process, using the test_selection
   entries from step 3 in place of <selection>:
@@ -317,6 +365,12 @@ if (preflight.missing_also_copy.length > 0) {
     `Preflight: the tests import ${preflight.missing_also_copy.join(', ')}, which mutmut does not copy into mutants/. Add them to also_copy in [tool.mutmut].`,
   )
 }
+if (preflight.test_selection.length === 0) {
+  throw new Error('Preflight: [tool.mutmut] has no pytest_add_cli_args_test_selection, so no proposed test file can be checked against it.')
+}
+if (preflight.repeat_session_exit_code === undefined) {
+  throw new Error('Preflight: the repeated test session was not run.')
+}
 if (preflight.repeat_session_exit_code !== 0) {
   throw new Error(
     `Preflight: the selected tests fail when run twice in one process (exit ${preflight.repeat_session_exit_code}), as mutmut runs them. Fix that first.\n${preflight.repeat_session_output || ''}`,
@@ -326,9 +380,6 @@ if (preflight.random_order === 'failed') {
   log('Preflight warning: the selected tests fail in random order. Mutants may be falsely killed or survive depending on order.')
 } else if (preflight.random_order === 'unavailable') {
   log('Preflight: no random-order plugin installed; order dependence was not checked.')
-}
-if (preflight.test_selection.length === 0) {
-  throw new Error('Preflight: [tool.mutmut] has no pytest_add_cli_args_test_selection, so no proposed test file can be checked against it.')
 }
 
 const project = PROJECT || preflight.project
@@ -341,7 +392,7 @@ const testSelection = preflight.test_selection
 phase('Discover')
 
 // The listing command: its stdout carries the counts and checksums the script verifies.
-const listCommand = `cd ${project} && ${mutmutBin} results --all true 2>&1 | python3 -c '${LIST_SNIPPET}'`
+const listCommand = `cd ${project} && ${mutmutBin} results --all true 2>/dev/null | python3 -c '${LIST_SNIPPET}'`
 
 const discovery = await agent(
   `You are a mutation testing assistant. Run mutmut for real and list its results.
@@ -368,7 +419,7 @@ const noTestsAtStart = new Set(namesWith(discovery, ['no tests']))
 
 if (gaps.length === 0) {
   log(`No surviving mutants out of ${discovery.total} — mutation score is 100%.`)
-  return { status: 'complete', killed: 0, equivalent: 0, remaining: 0 }
+  return report({ startedWith: 0 })
 }
 
 log(`Found ${gaps.length} unkilled mutants (${gaps.length - noTestsAtStart.size} survived, ${noTestsAtStart.size} with no tests) in ${project}`)
@@ -413,12 +464,11 @@ if (cachedEquivalents.length > 0) {
 
 if (survivorsToAnalyze.length === 0) {
   log('All unkilled mutants are cached equivalents — nothing to analyze.')
-  return {
-    status: 'complete',
-    tests_written: 0,
-    equivalent: cachedEquivalents.length,
-    equivalent_mutants: cachedEquivalents.map((e) => ({ name: e.mutant_name, reason: e.equivalent_reason })),
-  }
+  return report({
+    startedWith: gaps.length,
+    equivalents: cachedEquivalents.map((e) => ({ name: e.mutant_name, reason: e.equivalent_reason })),
+    unkilled: gaps,
+  })
 }
 
 // ─── Phase 3: Analyze ─────────────────────────────────────────────────────────
@@ -483,7 +533,8 @@ STEP 4 — Classify each mutant:
   → where one test can kill several of this function's mutants, give the same test_method_name
     and test_code to each of them.
 
-Return one entry per mutant listed above, with mutant_name copied exactly.`,
+Return one entry per mutant listed above, with mutant_name copied exactly.
+source_file and test_file are paths relative to the project root (tests/unit/test_x.py), never absolute.`,
     { label: `analyze:${key}`, schema: FUNCTION_ANALYSIS_SCHEMA, phase: 'Analyze' },
   ) }),
 )).filter(Boolean)
@@ -507,7 +558,11 @@ for (const { key, names, run } of analysisRuns) {
   }
   try {
     assertPartition(`Analyze ${key}`, names, run.analyses.map((a) => a.mutant_name))
-    analyses.push(...run.analyses)
+    analyses.push(...run.analyses.map((a) => ({
+      ...a,
+      source_file: relativeTo(project, a.source_file),
+      test_file: a.test_file ? relativeTo(project, a.test_file) : a.test_file,
+    })))
   } catch (err) {
     unanalyzed.push(...names)
     log(`${err.message} Its ${names.length} mutant(s) are retried next run.`)
@@ -515,7 +570,10 @@ for (const { key, names, run } of analysisRuns) {
 }
 
 const equivalent = analyses.filter((a) => a.is_equivalent)
-const proposed = analyses.filter((a) => !a.is_equivalent && a.test_code && a.test_file)
+const notEquivalent = analyses.filter((a) => !a.is_equivalent)
+const proposed = notEquivalent.filter((a) => a.test_code && a.test_file)
+// Not equivalent, yet no usable test came back: reported, and retried next run.
+const noTestProposed = notEquivalent.filter((a) => !(a.test_code && a.test_file)).map((a) => a.mutant_name)
 
 // A test file outside mutmut's selection is never run against a mutant, so it cannot kill
 // one however good it is. That is a configuration problem, not a failed attempt.
@@ -558,14 +616,14 @@ const allEquivalents = [
 ]
 
 if (actionable.length === 0) {
-  return {
-    status: 'complete',
-    tests_written: 0,
-    equivalent: allEquivalents.length,
-    equivalent_mutants: allEquivalents,
-    config_problems: configProblems.map((a) => ({ name: a.mutant_name, test_file: a.test_file })),
+  return report({
+    startedWith: gaps.length,
+    equivalents: allEquivalents,
+    unkilled: gaps,
+    configProblems,
+    noTestProposed,
     unanalyzed,
-  }
+  })
 }
 
 // ─── Phase 4: Write ───────────────────────────────────────────────────────────
@@ -628,15 +686,15 @@ const targeted = [...new Set(writeResults.flatMap((r) => r.mutants_targeted))]
 
 if (targeted.length === 0) {
   log('No test was written, so there is nothing to verify.')
-  return {
-    status: 'complete',
-    tests_written: totalWritten,
-    equivalent: allEquivalents.length,
-    equivalent_mutants: allEquivalents,
-    config_problems: configProblems.map((a) => ({ name: a.mutant_name, test_file: a.test_file })),
+  return report({
+    startedWith: gaps.length,
+    equivalents: allEquivalents,
+    testsWritten: totalWritten,
+    unkilled: gaps,
+    configProblems,
+    noTestProposed,
     unanalyzed,
-    still_surviving: gaps.length - allEquivalents.length,
-  }
+  })
 }
 
 // ─── Phase 5: Verify ──────────────────────────────────────────────────────────
@@ -711,16 +769,16 @@ if (contradictions.length > 0) {
 
 log(`Started: ${gaps.length}  |  Killed: ${killed.length}  |  Equivalent: ${allEquivalents.length} (${cachedEquivalents.length} cached)  |  Other: ${other.length}  |  Still unkilled: ${remaining.length}`)
 
-return {
-  started_with: gaps.length,
+return report({
+  startedWith: gaps.length,
   killed,
-  equivalent_mutants: allEquivalents,
+  equivalents: allEquivalents,
   other,
-  tests_written: totalWritten,
-  still_surviving: remaining.length,
-  remaining_survivors: remaining,
-  new_gaps: newGaps,
-  config_problems: configProblems.map((a) => ({ name: a.mutant_name, test_file: a.test_file })),
+  testsWritten: totalWritten,
+  unkilled: remaining,
+  newGaps,
+  configProblems,
+  noTestProposed,
   unanalyzed,
   contradictions,
-}
+})
