@@ -719,9 +719,37 @@ def migrate_v1(ctx: Context) -> tuple[int, int]:
 # ─── command line ─────────────────────────────────────────────────────────────
 
 
+def _field[T](payload: Mapping[str, Any], key: str, kind: type[T]) -> T:
+    """Return a request field of one type, or raise naming the field."""
+    if key not in payload:
+        msg = f"missing field: {key}"
+        raise StateError(msg)
+    value = payload[key]
+    if not isinstance(value, kind) or (kind is int and isinstance(value, bool)):
+        msg = f"field {key} must be a {kind.__name__}"
+        raise StateError(msg)
+    return value
+
+
+def _strings(value: object, key: str) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        msg = f"field {key} must be a list of strings"
+        raise StateError(msg)
+    return value
+
+
+def _string_map(value: object, key: str) -> dict[str, str]:
+    if not isinstance(value, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in value.items()
+    ):
+        msg = f"field {key} must be an object of strings"
+        raise StateError(msg)
+    return value
+
+
 def _checked(payload: Mapping[str, Any], key: str) -> list[str]:
-    names = cast("list[str]", payload[key])
-    if fnv1a32(names) != payload[f"{key}_checksum"]:
+    names = _strings(_field(payload, key, list), key)
+    if fnv1a32(names) != _field(payload, f"{key}_checksum", int):
         msg = f"checksum mismatch for {key}: the relayed list differs from its source"
         raise StateError(msg)
     return names
@@ -731,16 +759,45 @@ def _listed(names: list[str]) -> dict[str, Any]:
     return {"names": names, "checksum": fnv1a32(names)}
 
 
+def _analysis_from(item: object) -> Analysis:
+    """Build one analysis from a request entry, refusing anything unexpected."""
+    if not isinstance(item, dict):
+        msg = "field analyses must contain objects"
+        raise StateError(msg)
+    try:
+        analysis = Analysis(**item)
+    except TypeError as error:
+        msg = f"analysis entry is not valid: {error}"
+        raise StateError(msg) from error
+    for key in ("mutant", "outcome", "reason", "summary", "test_file", "test_name"):
+        if not isinstance(getattr(analysis, key), str):
+            msg = f"analysis field {key} must be a string"
+            raise StateError(msg)
+    for key in ("evidence", "depends_on"):
+        if not isinstance(getattr(analysis, key), list) or not all(
+            isinstance(v, str) for v in getattr(analysis, key)
+        ):
+            msg = f"analysis field {key} must be a list of strings"
+            raise StateError(msg)
+    return analysis
+
+
 def _run_from(payload: Mapping[str, Any]) -> Run:
     return Run(
         gaps=_checked(payload, "gaps"),
-        analyses=[Analysis(**a) for a in payload["analyses"]],
-        written=list(payload["written"]),
-        write_failures=dict(payload["write_failures"]),
-        config_problems=list(payload["config_problems"]),
-        unanalyzed=list(payload["unanalyzed"]),
-        verify_ok=bool(payload["verify_ok"]),
-        status=dict(payload["status"]),
+        analyses=[_analysis_from(a) for a in _field(payload, "analyses", list)],
+        written=_strings(_field(payload, "written", list), "written"),
+        write_failures=_string_map(
+            _field(payload, "write_failures", dict),
+            "write_failures",
+        ),
+        config_problems=_strings(
+            _field(payload, "config_problems", list),
+            "config_problems",
+        ),
+        unanalyzed=_strings(_field(payload, "unanalyzed", list), "unanalyzed"),
+        verify_ok=_field(payload, "verify_ok", bool),
+        status=_string_map(_field(payload, "status", dict), "status"),
     )
 
 
@@ -752,7 +809,7 @@ def run_command(
     today: str,
 ) -> dict[str, Any]:
     """Run one command on a decoded request and return the decoded response."""
-    version = str(payload.get("mutmut_version", ""))
+    version = _field(payload, "mutmut_version", str)
     ctx = load_context(root, mutmut_version=version, today=today)
     if command == "triage":
         split = triage(ctx, _checked(payload, "gaps"))
