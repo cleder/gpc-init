@@ -389,3 +389,25 @@ class TestMetadataFileEncoding:
         Catalog.load(tmp_path)
 
         assert captured_encodings == ["utf-8"]
+
+
+class TestBundledCatalogRevConsistency:
+    """Merging keys repos by (repo, rev), so differing revs would duplicate hooks."""
+
+    def test_each_repo_is_pinned_to_one_rev_across_bundled_presets(self) -> None:
+        catalog = Catalog.load()
+        presets = {
+            "lang/common": catalog.common_preset(),
+            **{f"lang/{i}": catalog.lang_preset(i) for i in catalog.lang_ids},
+            **{
+                f"framework/{i}": catalog.framework_preset(i)
+                for i in catalog.framework_ids
+            },
+        }
+        revs: dict[str, dict[str, list[str]]] = {}
+        for name, preset in presets.items():
+            for entry in preset.get("repos", []):
+                by_rev = revs.setdefault(entry["repo"], {})
+                by_rev.setdefault(str(entry.get("rev")), []).append(name)
+        conflicts = {repo: by_rev for repo, by_rev in revs.items() if len(by_rev) > 1}
+        assert not conflicts, f"repos pinned at more than one rev: {conflicts}"
