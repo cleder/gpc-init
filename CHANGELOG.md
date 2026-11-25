@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- The `mutmut-kill-survivors` workflow no longer reports stale results or miscounts kills: Verify re-runs the targeted mutants and then one fresh run, mutants with no tests are collected, only mutants mutmut reports as `killed` count as killed, relayed mutant lists carry a checksum, proposed tests outside mutmut's test selection are refused, and a preflight stops the run on an old mutmut, a failing repeated test session or a missing `also_copy` entry.
+  The `mutmut` dev dependency now requires 3.8.1 or newer, and `[tool.mutmut]` copies `CHANGELOG.md` into `mutants/`, without which the stats run failed in `test_changelog_section.py`.
 - `just release` runs every pre-commit hook on all files before committing, so a bumped hook cannot reformat files after the tag; `just ship` shows the real error when a `gh` or `git` command fails; the preset revision check in `validate-presets` skips `tests/fixtures`, whose pins are asserted by the tests.
 
 ## [0.9.0]
