@@ -241,6 +241,7 @@ uv run ruff check pc_init tests
 uv run ruff format pc_init tests
 uv run pyrefly check pc_init tests
 uv run ty check pc_init tests
+uv run zuban check pc_init tests
 ```
 
 ## Submitting a pull request

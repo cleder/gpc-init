@@ -26,4 +26,5 @@ The following checks apply only when `pc_init/` or `tests/` are changed.
 - [ ] `uv run ruff format pc_init tests` passes
 - [ ] `uv run pyrefly check pc_init tests` passes
 - [ ] `uv run ty check pc_init tests` passes
+- [ ] `uv run zuban check pc_init tests` passes
 - [ ] `uv run complexipy pc_init` passes

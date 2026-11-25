@@ -35,6 +35,7 @@ test:
     uv run ruff format pc_init tests
     uv run pyrefly check pc_init tests
     uv run ty check pc_init tests
+    uv run zuban check pc_init tests
 
 # Fail if a preset references a non-https, archived or missing hook repo.
 check-archived:

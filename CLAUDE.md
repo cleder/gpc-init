@@ -21,7 +21,10 @@ See `docs/agents/domain.md`.
 
 - Behavior changes are test-first with `pytest`: write the test, watch it fail, then make it pass.
 - Type errors block merge.
-  Run both `ty` and `pyrefly` (both are pre-commit hooks; `ty` is skipped on pre-commit.ci, so run it locally), and give new public functions explicit signatures.
+  Three type checkers gate CI: `ty`, `pyrefly` and `zuban`.
+  Run all three locally: `uv run ty check pc_init tests`, `uv run pyrefly check pc_init tests` and `uv run zuban check pc_init tests`.
+  `ty` and `pyrefly` are pre-commit hooks (`ty` is skipped on pre-commit.ci); `zuban` is not a hook here, only CI runs it, so a pre-commit pass does not cover it.
+  Give new public functions explicit signatures.
 - Generation stays deterministic and offline: same Generation request and Catalog, same output (ADR 0003).
 - New hooks follow "Adding hooks" below.
 
