@@ -1,7 +1,6 @@
 """Fixtures shared by the tests of scripts/mutmut_state.py."""
 
 import importlib.util
-from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -69,31 +68,28 @@ def root(tmp_path: Path) -> Path:
     return tmp_path
 
 
-@pytest.fixture
-def make_ctx(ms: ModuleType) -> Callable[..., Any]:
-    """Return a factory for the helper's context."""
+class StateHarness:
+    """The helper module, a project and the factories the tests build requests with."""
 
-    def make(root: Path, version: str = "3.8.1") -> Any:
-        return ms.load_context(root, mutmut_version=version, today="2026-11-25")
+    def __init__(self, ms: ModuleType, root: Path) -> None:
+        """Bind the helper module and the project it runs against."""
+        self.ms = ms
+        self.root = root
 
-    return make
+    def ctx(self, version: str = "3.8.1") -> Any:
+        """Return the helper's context for this project."""
+        return self.ms.load_context(
+            self.root,
+            mutmut_version=version,
+            today="2026-11-25",
+        )
 
+    def analysis(self, mutant: str, outcome: str, **kwargs: object) -> Any:
+        """Return one analysis verdict."""
+        return self.ms.Analysis(mutant=mutant, outcome=outcome, **kwargs)
 
-@pytest.fixture
-def make_analysis(ms: ModuleType) -> Callable[..., Any]:
-    """Return a factory for one analysis verdict."""
-
-    def make(mutant: str, outcome: str, **kwargs: object) -> Any:
-        return ms.Analysis(mutant=mutant, outcome=outcome, **kwargs)
-
-    return make
-
-
-@pytest.fixture
-def make_run(ms: ModuleType) -> Callable[..., Any]:
-    """Return a factory for one workflow pass, with quiet defaults."""
-
-    def make(gaps: list[str], analyses: list[Any], **kwargs: object) -> Any:
+    def run(self, gaps: list[str], analyses: list[Any], **kwargs: object) -> Any:
+        """Return one workflow pass, with quiet defaults."""
         values: dict[str, object] = {
             "gaps": gaps,
             "analyses": analyses,
@@ -105,37 +101,24 @@ def make_run(ms: ModuleType) -> Callable[..., Any]:
             "status": {},
         }
         values.update(kwargs)
-        return ms.Run(**values)
+        return self.ms.Run(**values)
 
-    return make
-
-
-@pytest.fixture
-def attempt(
-    ms: ModuleType,
-    make_ctx: Callable[..., Any],
-    make_analysis: Callable[..., Any],
-    make_run: Callable[..., Any],
-) -> Callable[..., dict[str, Any]]:
-    """Return a function that runs one pass writing a test for one mutant."""
-
-    def run(root: Path, mutant: str, status: str = "survived") -> dict[str, Any]:
-        summary: dict[str, Any] = ms.record(
-            make_ctx(root),
-            make_run(
-                [mutant],
-                [
-                    make_analysis(
-                        mutant,
-                        "missing_test",
-                        test_file="tests/t.py",
-                        test_name="t",
-                    ),
-                ],
-                written=[mutant],
-                status={mutant: status},
-            ),
+    def attempt(self, mutant: str, status: str = "survived") -> dict[str, Any]:
+        """Run one pass in which a test was written for `mutant`."""
+        analysis = self.analysis(
+            mutant,
+            "missing_test",
+            test_file="tests/t.py",
+            test_name="t",
+        )
+        summary: dict[str, Any] = self.ms.record(
+            self.ctx(),
+            self.run([mutant], [analysis], written=[mutant], status={mutant: status}),
         )
         return summary
 
-    return run
+
+@pytest.fixture
+def state(ms: ModuleType, root: Path) -> StateHarness:
+    """Return the harness for a fresh project."""
+    return StateHarness(ms, root)

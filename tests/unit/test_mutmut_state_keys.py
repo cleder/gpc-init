@@ -40,7 +40,7 @@ def test_parse_mutant_reads_function_and_method_names(ms: Any) -> None:
 
 
 def test_function_hash_ignores_comments_and_layout_but_not_code(
-    ms: Any, module_source: str
+    module_source: str, ms: Any
 ) -> None:
     base = ms.function_hash(module_source, None, "fn")
     assert base
@@ -51,7 +51,7 @@ def test_function_hash_ignores_comments_and_layout_but_not_code(
 
 
 def test_function_hash_is_unaffected_by_edits_to_other_functions(
-    ms: Any, module_source: str
+    module_source: str, ms: Any
 ) -> None:
     base = ms.function_hash(module_source, None, "fn")
     edited = module_source.replace("return y * 2", "return y * 3")
@@ -59,7 +59,7 @@ def test_function_hash_is_unaffected_by_edits_to_other_functions(
 
 
 def test_function_hash_finds_methods_and_returns_none_for_unknown_names(
-    ms: Any, module_source: str
+    module_source: str, ms: Any
 ) -> None:
     assert ms.function_hash(module_source, "Box", "put")
     assert ms.function_hash(module_source, None, "missing") is None
@@ -76,32 +76,28 @@ def test_config_hash_ignores_test_selection_and_changes_with_mutation_settings(
     assert ms.config_hash({**cfg, "do_not_mutate_patterns": ["x"]}) != base
 
 
-def test_budgets_default_when_the_workflow_table_is_absent(
-    root: Path, make_ctx: Any
-) -> None:
-    (root / "pyproject.toml").write_text("[tool.mutmut]\n", encoding="utf-8")
-    ctx = make_ctx(root)
+def test_budgets_default_when_the_workflow_table_is_absent(state: Any) -> None:
+    (state.root / "pyproject.toml").write_text("[tool.mutmut]\n", encoding="utf-8")
+    ctx = state.ctx()
     assert ctx.settings.max_attempts == 2
     assert ctx.settings.max_mutants_per_pass is None
 
 
-def test_budgets_are_read_from_the_workflow_table(
-    root: Path, pyproject: str, make_ctx: Any
-) -> None:
-    (root / "pyproject.toml").write_text(
+def test_budgets_are_read_from_the_workflow_table(pyproject: str, state: Any) -> None:
+    (state.root / "pyproject.toml").write_text(
         pyproject.replace("= 2", "= 3") + "max_mutants_per_pass = 5\n",
         encoding="utf-8",
     )
-    ctx = make_ctx(root)
+    ctx = state.ctx()
     assert ctx.settings.max_attempts == 3
     assert ctx.settings.max_mutants_per_pass == 5
 
 
 def test_changing_a_budget_does_not_change_the_config_hash(
-    root: Path, pyproject: str, make_ctx: Any
+    pyproject: str, state: Any
 ) -> None:
-    before = make_ctx(root).config_hash
-    (root / "pyproject.toml").write_text(
+    before = state.ctx().config_hash
+    (state.root / "pyproject.toml").write_text(
         pyproject.replace("= 2", "= 9"), encoding="utf-8"
     )
-    assert make_ctx(root).config_hash == before
+    assert state.ctx().config_hash == before
