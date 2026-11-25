@@ -1,0 +1,66 @@
+{
+  "module": "pc_init.merger",
+  "records": [
+    {
+      "attempts": 0,
+      "config_hash": "a5cd1439699d340970bce234900b29907012cb24a2968e818e7afd9a1fb13a0a",
+      "dependencies": {},
+      "evidence": [
+        "migrated from .mutmut-equivalents.json"
+      ],
+      "function_hash": "89837bf36acd13e6d5afca04a12c02a53be79d782d458f36b2067e3d45e84c8c",
+      "history": [],
+      "last_reason": "The default value supplied to .get(\"repos\", ...) is only used when the \"repos\" key is absent from merged. In that scenario the original returns [] and the mutant returns None, but both are falsy under Python's truthiness rules, so the very next line `if not repos: return dict(merged)` takes the identical branch in both cases. `repos` is never referenced again after that guard (the subsequent `for repo in repos` loop is unreachable whenever the key was missing), so there is no input for which the mutant produces a different observable result than the original. The mutation is behaviorally equivalent and cannot be killed by any test.",
+      "mutant": "pc_init.merger.x_filter_by_category__mutmut_3",
+      "mutmut_version": "3.8.1",
+      "status": "equivalent",
+      "summary": ""
+    },
+    {
+      "attempts": 0,
+      "config_hash": "a5cd1439699d340970bce234900b29907012cb24a2968e818e7afd9a1fb13a0a",
+      "dependencies": {},
+      "evidence": [
+        "migrated from .mutmut-equivalents.json"
+      ],
+      "function_hash": "89837bf36acd13e6d5afca04a12c02a53be79d782d458f36b2067e3d45e84c8c",
+      "history": [],
+      "last_reason": "The only use of `repos` immediately after the .get() call is `if not repos: return dict(merged)`. Both None and [] are falsy, so this guard behaves identically for a missing \"repos\" key regardless of which default is used. If the \"repos\" key is present, the default argument is never consulted at all. Since `repos` is only ever iterated later inside the branch where it is already known to be truthy (and thus a real list in both mutant and original, because \"repos\" must be present and non-empty for that path to be reached), there is no reachable input for which the mutant's behavior differs from the original's. Hence no test can distinguish them \u2014 the mutant is equivalent.",
+      "mutant": "pc_init.merger.x_filter_by_category__mutmut_5",
+      "mutmut_version": "3.8.1",
+      "status": "equivalent",
+      "summary": ""
+    },
+    {
+      "attempts": 0,
+      "config_hash": "a5cd1439699d340970bce234900b29907012cb24a2968e818e7afd9a1fb13a0a",
+      "dependencies": {},
+      "evidence": [
+        "migrated from .mutmut-equivalents.json"
+      ],
+      "function_hash": "c763d9d1a265df8b14e8248630c3a24c0ce5e4898412e9b1d6a5c3f93c3dab57",
+      "history": [],
+      "last_reason": "`non_repo` is only ever consumed by `_deep_merge_top_level(result, non_repo)`, and that function independently guards against the \"repos\" key itself: `for key, value in higher.items(): if key == \"repos\": continue`. So even when the mutant lets \"repos\" slip into `non_repo`, `_deep_merge_top_level` drops it again before it can affect `result`. The two exclusions are redundant with each other by construction, so no input can make the mutant's output differ from the original's. Verified empirically: applied the mutation locally and ran merge_presets with overlapping \"repos\" entries across two layers (plus a \"recommended\" key) \u2014 output was byte-identical to the unmutated version. No test can distinguish this mutant from the original.",
+      "mutant": "pc_init.merger.x_merge_presets__mutmut_21",
+      "mutmut_version": "3.8.1",
+      "status": "equivalent",
+      "summary": ""
+    },
+    {
+      "attempts": 0,
+      "config_hash": "a5cd1439699d340970bce234900b29907012cb24a2968e818e7afd9a1fb13a0a",
+      "dependencies": {},
+      "evidence": [
+        "migrated from .mutmut-equivalents.json"
+      ],
+      "function_hash": "c763d9d1a265df8b14e8248630c3a24c0ce5e4898412e9b1d6a5c3f93c3dab57",
+      "history": [],
+      "last_reason": "This has no observable effect because `_deep_merge_top_level` (the function `non_repo` is passed into) already unconditionally skips the \"repos\" key itself: its loop does `if key == \"repos\": continue` before ever writing into the merged result, regardless of what the caller passed in. So whether or not \"repos\" survives the `non_repo` filtering is irrelevant \u2014 `_deep_merge_top_level` will drop it either way, and the actual repos merging is handled entirely by the separate `merged_repos`/`_merge_repos` logic. I verified this empirically: reimplementing merge_presets with the mutated set literal (`{\"REPOS\", ...}`) and comparing its output against the real `merge_presets` on inputs where layers contain both 'repos' and other keys produces byte-identical results. Since no test can observe a behavioral difference, the mutant is equivalent and the exclusion of 'repos' in `non_repo` is redundant/dead code relative to `_deep_merge_top_level`'s own guard.",
+      "mutant": "pc_init.merger.x_merge_presets__mutmut_22",
+      "mutmut_version": "3.8.1",
+      "status": "equivalent",
+      "summary": ""
+    }
+  ],
+  "version": 2
+}
