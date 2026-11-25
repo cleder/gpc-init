@@ -213,3 +213,9 @@ repos:
       - id: auto-walrus
         description: "Automatically use the walrus operator"
         category: experimental
+  - repo: https://github.com/Apakottur/unref-pre-commit
+    rev: v0.5.1
+    hooks:
+      - id: unref
+        description: "An extremely fast Python dead code finder, written in Rust"
+        category: experimental
