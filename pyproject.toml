@@ -95,9 +95,6 @@ type_check_command = [
 
 [tool.pyrefly]
 preset = "strict"
-project_excludes = [
-    "specs/**",
-]
 
 [tool.pytest.ini_options]
 testpaths = [

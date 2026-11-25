@@ -218,9 +218,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# speckit
-.specify/templates/
-
 # various tools
 .rumdl_cache/
 .pyscn/
