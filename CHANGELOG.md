@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - Add `unref` (experimental) to the `py` preset, by @Apakottur.
 
+### Changed
+
+- `just test`, `CONTRIBUTING.md`, the pull request checklist and `CLAUDE.md` now name `zuban` next to `ty` and `pyrefly`: CI already ran it as the third type checker, but a local `just test` and the pre-commit hooks did not.
+
 ### Bug Fixes
 
 - The `mutmut-kill-survivors` workflow no longer reports stale results or miscounts kills: Verify re-runs the targeted mutants and then one fresh run, mutants with no tests are collected, only mutants mutmut reports as `killed` count as killed, relayed mutant lists carry a checksum, proposed tests outside mutmut's test selection are refused, and a preflight stops the run on an old mutmut, a failing repeated test session or a missing `also_copy` entry.
