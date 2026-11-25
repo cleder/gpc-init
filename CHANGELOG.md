@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Enhancements
 
 - The `mutmut-kill-survivors` workflow writes tests that carry their reason: each test gets a docstring with the business rule the mutation breaks (and its ticket or ADR when there is one), and the Write prompt now forbids patching out the function under test, asserting on log or message text, comparing default values and hard-coded ids.
-  A survivor whose analysis cannot state a business rule is stored as `low_value`, reported separately, and gets no test and no attempt.
+  A survivor whose analysis cannot state a business rule still gets a test, written after the ones that have a rule, and the test's docstring says that no business rule could be found.
 - The `mutmut-kill-survivors` workflow remembers what it tried: `scripts/mutmut_state.py` counts attempts per mutant across runs and parks a mutant after `max_attempts_per_mutant` failed tests (default 2, in `[tool.mutmut-workflow]`, with an optional `max_mutants_per_pass`).
   Each mutant gets one outcome (`suspected_bug`, `dead_code`, `test_design`, `equivalent` or `missing_test`), and only a missing test costs an attempt.
   State moves from `.mutmut-equivalents.json` to one file per module in `.mutmut-analysis/`, keyed by function hash, mutmut version, mutation settings and hashed dependencies, so a parked mutant reopens when any of them changes.

@@ -210,7 +210,7 @@ function assertMutmutRan(step, report) {
 // ordering, deferral and the summary. Agents run it by exact command and relay its JSON;
 // this script checks what comes back.
 const HELPER = 'scripts/mutmut_state.py'
-const TRIAGE_LISTS = ['equivalent', 'test_design', 'low_value', 'suspected_bug', 'parked', 'deferred', 'to_analyze']
+const TRIAGE_LISTS = ['equivalent', 'test_design', 'suspected_bug', 'parked', 'deferred', 'to_analyze']
 const OUTCOMES = ['suspected_bug', 'dead_code', 'test_design', 'equivalent', 'missing_test']
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -329,7 +329,6 @@ const RECORD_SCHEMA = {
     suspected_bugs: OBJECTS,
     dead_code: OBJECTS,
     test_design: OBJECTS,
-    low_value: OBJECTS,
     unresolved: NAMES,
     other: OBJECTS,
     still_surviving: NAMES,
@@ -590,11 +589,11 @@ STEP 4 — For missing_test only, state the business rule the mutation breaks:
   business_rule is one or two lines in the project's own domain language: what goes wrong, and
   for whom, if this behaviour breaks. Take it from CONTEXT.md, the ADRs in .claude/docs/adr/, or
   the issue that asked for the behaviour; put that ticket key or ADR path in source (optional).
-  A test name restated is not a rule. If you cannot state a rule, leave business_rule empty:
-  the mutant is low value (log wording, a label, an internal detail nobody relies on) and no
-  test will be written for it.
+  A test name restated is not a rule. If you cannot state a rule, leave business_rule empty
+  (log wording, a label, an internal detail nobody relies on). The mutant still gets a test,
+  but with lower priority, and its docstring will say that no business rule could be found.
 
-STEP 5 — For missing_test with a rule, find the test file:
+STEP 5 — For every missing_test, with or without a rule, find the test file:
   mutmut only runs tests in its test selection: ${JSON.stringify(testSelection)}.
   The test file you choose MUST be inside that selection. If a test file that exercises
   this function lives outside it, say so in mutation_summary and still name that file:
@@ -652,7 +651,7 @@ source_file and test_file are paths relative to the project root (tests/unit/tes
   // selection is never run against a mutant, so it cannot kill one however good it is:
   // that is a configuration problem, not a failed attempt.
   const proposed = analyses.filter(
-    (a) => a.outcome === 'missing_test' && (a.business_rule || '').trim() && a.test_code && a.test_file,
+    (a) => a.outcome === 'missing_test' && a.test_code && a.test_file,
   )
   configProblems = proposed.filter((a) => !inSelection(a.test_file, testSelection)).map((a) => a.mutant_name)
   actionable = proposed.filter((a) => inSelection(a.test_file, testSelection))
@@ -661,6 +660,10 @@ source_file and test_file are paths relative to the project root (tests/unit/tes
   for (const a of analyses) counts[a.outcome] = (counts[a.outcome] || 0) + 1
   const noRule = analyses.filter((a) => a.outcome === 'missing_test' && !(a.business_rule || '').trim()).length
   log(`Outcomes: ${JSON.stringify(counts)}  |  ${noRule} without a business rule  |  ${configProblems.length} outside the test selection`)
+}
+
+function hasRule(a) {
+  return (a.business_rule || '').trim() ? 1 : 0
 }
 
 // ─── Phase 4: Write ───────────────────────────────────────────────────────────
@@ -675,7 +678,9 @@ if (actionable.length > 0) {
   // Group by test file so no two agents edit the same file concurrently. Several mutants of
   // one function may share one test: write it once.
   const byTestFile = {}
-  for (const analysis of actionable) {
+  // Mutants with a stated rule come first; those without one are written last.
+  const ruleFirst = [...actionable].sort((x, y) => hasRule(y) - hasRule(x))
+  for (const analysis of ruleFirst) {
     const key = analysis.test_file
     if (!byTestFile[key]) byTestFile[key] = []
     byTestFile[key].push(analysis)
@@ -693,7 +698,7 @@ Tests to add
 ${group.map((a, i) => `
 ### ${i + 1}. ${a.mutant_name}
 Mutation: ${a.mutation_summary}
-Business rule: ${(a.business_rule || '').trim()}
+Business rule: ${(a.business_rule || '').trim() || '(none found: lower priority)'}
 Source of the rule: ${(a.source || '').trim() || '(none)'}
 Method name: ${a.test_method_name}
 
@@ -710,7 +715,9 @@ Instructions
    Entries that share a method name and code are one test: add it once.
 3. Add any missing imports at the top of the file.
    Give each test a docstring that states its Business rule above in one or two lines, in
-   the project's domain language: what goes wrong, and for whom, if it breaks. If a Source of
+   the project's domain language: what goes wrong, and for whom, if it breaks. Where the
+   Business rule is "(none found: lower priority)", write the test last and make its docstring
+   say exactly that no business rule could be found for this behaviour; do not invent one. If a Source of
    the rule is given, cite it next to the rule, never instead of it. A docstring that only
    restates the test name says nothing.
    Rules for the tests you write:
@@ -892,7 +899,7 @@ assertPartition('Record', gaps, [
 log(
   `Started: ${gaps.length}  |  Killed: ${recorded.killed.length}  |  Parked: ${recorded.parked.length}  |  ` +
   `Equivalent: ${recorded.equivalent.length}  |  Suspected bugs: ${recorded.suspected_bugs.length}  |  ` +
-  `Dead code: ${recorded.dead_code.length}  |  Low value: ${recorded.low_value.length}  |  ` +
+  `Dead code: ${recorded.dead_code.length}  |  ` +
   `Deferred: ${recorded.deferred.length}  |  ` +
   `Still unkilled: ${recorded.still_surviving.length}`,
 )

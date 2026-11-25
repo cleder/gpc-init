@@ -58,7 +58,6 @@ OUTCOMES = ("suspected_bug", "dead_code", "test_design", "equivalent", "missing_
 LISTS = (
     "equivalent",
     "test_design",
-    "low_value",
     "suspected_bug",
     "parked",
     "deferred",
@@ -370,7 +369,6 @@ class Triage:
 
     equivalent: list[str] = field(default_factory=list)
     test_design: list[str] = field(default_factory=list)
-    low_value: list[str] = field(default_factory=list)
     suspected_bug: list[str] = field(default_factory=list)
     parked: list[str] = field(default_factory=list)
     deferred: list[str] = field(default_factory=list)
@@ -568,21 +566,9 @@ class _Pass:
         record.dependencies = dependencies
         self.store.put(record)
 
-    def _low_value(self, analysis: Analysis, key: str) -> None:
-        """Store a mutant whose change has no business rule; no test is written."""
-        why = "no business rule could be stated for the behaviour this mutation changes"
-        if analysis.reason:
-            why = f"{why}: {analysis.reason}"
-        record = _new_record(self.store.ctx, analysis, key)
-        record.status = "low_value"
-        record.last_reason = why
-        self.store.put(record)
-
     def _missing_test(self, analysis: Analysis, key: str) -> None:
         name = analysis.mutant
-        if not analysis.business_rule.strip():
-            self._low_value(analysis, key)
-        elif name in self.run.config_problems:
+        if name in self.run.config_problems:
             self.findings.config_problems.add(name)
         elif name in self.run.write_failures:
             self._attempt(analysis, key, self.run.write_failures[name])
@@ -693,7 +679,6 @@ def _summary(
         "suspected_bugs": [_bug_row(r) for r in listed("suspected_bug")],
         "dead_code": findings.dead_code,
         "test_design": [_row(r) for r in listed("test_design")],
-        "low_value": [_row(r) for r in listed("low_value")],
         "unresolved": sorted(findings.unresolved, key=mutant_sort_key),
         "other": _other(run, gaps),
         "still_surviving": still,
