@@ -94,6 +94,9 @@ type_check_command = [
     "--use-ignore-files=false",
 ]
 
+[tool.mutmut-workflow]
+max_attempts_per_mutant = 2
+
 [tool.pyrefly]
 preset = "strict"
 

@@ -4,10 +4,11 @@ export const meta = {
   phases: [
     { title: 'Preflight', detail: 'Check mutmut version, repeated test sessions and also_copy before anything is counted' },
     { title: 'Discover', detail: 'Run mutmut and list survivors and mutants without tests, with checksums' },
-    { title: 'Cache', detail: 'Skip re-analysis of equivalent mutants whose source file is unchanged' },
-    { title: 'Analyze', detail: 'Classify the uncached mutants of each function: missing test vs equivalent' },
+    { title: 'Triage', detail: 'The state helper splits the mutants: known, parked, deferred, to analyse' },
+    { title: 'Analyze', detail: 'Give each mutant of a function one outcome: bug, dead code, test design, equivalent or missing test' },
     { title: 'Write', detail: 'Add tests grouped by test file' },
     { title: 'Verify', detail: 'Re-run the targeted mutants, then one fresh full run, and report the delta' },
+    { title: 'Record', detail: 'The state helper counts attempts, parks, persists and builds the summary' },
   ],
 }
 
@@ -189,30 +190,12 @@ function assertMutmutRan(step, report) {
   }
 }
 
-// Every return has these keys. still_surviving counts unkilled mutants that are not known to be
-// equivalent, so it means the same thing whichever phase the run ended in.
-function report({
-  startedWith, killed = [], equivalents = [], other = [], testsWritten = 0, unkilled = [],
-  newGaps = [], configProblems = [], noTestProposed = [], unanalyzed = [], contradictions = [],
-}) {
-  const known = new Set(equivalents.map((e) => e.name))
-  const open = unkilled.filter((n) => !known.has(n))
-  return {
-    status: 'complete',
-    started_with: startedWith,
-    killed,
-    equivalent_mutants: equivalents,
-    other,
-    tests_written: testsWritten,
-    still_surviving: open.length,
-    remaining_survivors: open,
-    new_gaps: newGaps,
-    config_problems: configProblems.map((a) => ({ name: a.mutant_name, test_file: a.test_file })),
-    no_test_proposed: noTestProposed,
-    unanalyzed,
-    contradictions,
-  }
-}
+// The state helper (scripts/mutmut_state.py) owns keying, counting, parking, reopening,
+// ordering, deferral and the summary. Agents run it by exact command and relay its JSON;
+// this script checks what comes back.
+const HELPER = 'scripts/mutmut_state.py'
+const TRIAGE_LISTS = ['equivalent', 'test_design', 'suspected_bug', 'parked', 'deferred', 'to_analyze']
+const OUTCOMES = ['suspected_bug', 'dead_code', 'test_design', 'equivalent', 'missing_test']
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -222,6 +205,7 @@ const PREFLIGHT_SCHEMA = {
     project: { type: 'string' },
     mutmut_bin: { type: 'string' },
     pytest_bin: { type: 'string' },
+    python_bin: { type: 'string' },
     mutmut_version: { type: 'string' },
     test_selection: { type: 'array', items: { type: 'string' } },
     missing_also_copy: { type: 'array', items: { type: 'string' } },
@@ -229,7 +213,7 @@ const PREFLIGHT_SCHEMA = {
     repeat_session_output: { type: 'string' },
     random_order: { type: 'string', enum: ['passed', 'failed', 'unavailable'] },
   },
-  required: ['project', 'mutmut_bin', 'pytest_bin', 'mutmut_version', 'test_selection', 'missing_also_copy'],
+  required: ['project', 'mutmut_bin', 'pytest_bin', 'python_bin', 'mutmut_version', 'test_selection', 'missing_also_copy'],
 }
 
 const LISTING_PROPERTIES = {
@@ -255,25 +239,20 @@ const DISCOVERY_SCHEMA = {
   required: ['run_exit_code', 'total', 'groups'],
 }
 
-const CACHE_LOAD_SCHEMA = {
+const LISTED_NAMES = {
+  type: 'object',
+  properties: { names: { type: 'array', items: { type: 'string' } }, checksum: { type: 'number' } },
+  required: ['names', 'checksum'],
+}
+
+// The helper prints {"error": ...} and exits 1 on a bad request; the agent relays only that.
+const TRIAGE_SCHEMA = {
   type: 'object',
   properties: {
-    cached_equivalents: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          mutant_name: { type: 'string' },
-          source_file: { type: 'string' },
-          file_hash: { type: 'string' },
-          equivalent_reason: { type: 'string' },
-        },
-        required: ['mutant_name', 'source_file', 'file_hash', 'equivalent_reason'],
-      },
-    },
-    survivors_to_analyze: { type: 'array', items: { type: 'string' } },
+    error: { type: 'string' },
+    ...Object.fromEntries(TRIAGE_LISTS.map((name) => [name, LISTED_NAMES])),
   },
-  required: ['cached_equivalents', 'survivors_to_analyze'],
+  required: [],
 }
 
 const ANALYSIS_ITEM_SCHEMA = {
@@ -282,13 +261,15 @@ const ANALYSIS_ITEM_SCHEMA = {
     mutant_name: { type: 'string' },
     source_file: { type: 'string' },
     test_file: { type: 'string' },
-    is_equivalent: { type: 'boolean' },
-    equivalent_reason: { type: 'string' },
+    outcome: { type: 'string', enum: OUTCOMES },
+    reason: { type: 'string' },
+    evidence: { type: 'array', items: { type: 'string' } },
+    depends_on: { type: 'array', items: { type: 'string' } },
     mutation_summary: { type: 'string' },
     test_method_name: { type: 'string' },
     test_code: { type: 'string' },
   },
-  required: ['mutant_name', 'source_file', 'is_equivalent', 'mutation_summary'],
+  required: ['mutant_name', 'source_file', 'outcome', 'mutation_summary'],
 }
 
 const FUNCTION_ANALYSIS_SCHEMA = {
@@ -316,6 +297,47 @@ const TARGETED_VERIFY_SCHEMA = {
 
 const FRESH_VERIFY_SCHEMA = TARGETED_VERIFY_SCHEMA
 
+const OBJECTS = { type: 'array', items: { type: 'object' } }
+const NAMES = { type: 'array', items: { type: 'string' } }
+
+const RECORD_SCHEMA = {
+  type: 'object',
+  properties: {
+    error: { type: 'string' },
+    killed: NAMES,
+    equivalent: OBJECTS,
+    parked: OBJECTS,
+    deferred: NAMES,
+    suspected_bugs: OBJECTS,
+    dead_code: OBJECTS,
+    test_design: OBJECTS,
+    unresolved: NAMES,
+    other: OBJECTS,
+    still_surviving: NAMES,
+    rejected: OBJECTS,
+    config_problems: NAMES,
+  },
+  required: [],
+}
+
+// The command an agent runs for one helper call. The request goes in on stdin through a
+// quoted heredoc, so the shell leaves every character alone.
+function helperPrompt(project, pythonBin, command, request) {
+  return `Run the state helper and report what it prints.
+
+  cd ${project} && ${pythonBin} ${HELPER} ${command} --root . <<'JSON'
+${JSON.stringify(request)}
+JSON
+
+Its stdout is one JSON object. Copy it into the result exactly as printed: do not drop,
+reorder, merge or edit any name, count, checksum or text. If it prints {"error": ...}
+(exit code 1), report only that text as "error". Do not retry and do not fix anything.`
+}
+
+function assertHelper(step, result) {
+  if (result.error) throw new Error(`${step}: the state helper refused the request: ${result.error}`)
+}
+
 // ─── Phase 0: Preflight ───────────────────────────────────────────────────────
 // A problem here is the environment's fault, not the model's: stop before anything is
 // analysed, written or counted.
@@ -331,7 +353,7 @@ Use it as <project>. Run every later command from <project>.
 Step 1 — Find the mutmut and pytest binaries (use the first that exists):
   <project>/.venv/bin/mutmut, <project>/venv/bin/mutmut, then "which mutmut"
   <project>/.venv/bin/pytest, <project>/venv/bin/pytest, then "which pytest"
-  Also find the Python of the same environment: <project>/.venv/bin/python, <project>/venv/bin/python, then python3 (call it <python_bin>).
+  Also find the Python of the same environment: <project>/.venv/bin/python, <project>/venv/bin/python, then python3 (call it <python_bin> and report its path as python_bin).
 
 Step 2 — Version. Run "<mutmut_bin> --version" and report its output as mutmut_version.
 
@@ -387,6 +409,8 @@ if (preflight.random_order === 'failed') {
 const project = PROJECT || preflight.project
 const mutmutBin = preflight.mutmut_bin
 const pytestBin = preflight.pytest_bin
+const pythonBin = preflight.python_bin
+const mutmutVersionText = mutmutVersion.join('.')
 const testSelection = preflight.test_selection
 
 // ─── Phase 1: Discover ────────────────────────────────────────────────────────
@@ -421,77 +445,74 @@ const noTestsAtStart = new Set(namesWith(discovery, ['no tests']))
 
 if (gaps.length === 0) {
   log(`No surviving mutants out of ${discovery.total} — mutation score is 100%.`)
-  return report({ startedWith: 0 })
+  return { status: 'complete', started_with: 0, killed: [], still_surviving: [] }
 }
 
 log(`Found ${gaps.length} unkilled mutants (${gaps.length - noTestsAtStart.size} survived, ${noTestsAtStart.size} with no tests) in ${project}`)
 
-// ─── Phase 2: Cache ───────────────────────────────────────────────────────────
 
-phase('Cache')
+// ─── Phase 2: Triage ──────────────────────────────────────────────────────────
+// The helper splits the unkilled mutants by what the stored state says about them. A
+// record is valid only while the mutant's function, the mutmut version, the mutation
+// settings and every file its verdict rests on are unchanged.
 
-const cacheCheck = await agent(
-  `Load the equivalents cache and identify which unkilled mutants still need analysis.
+phase('Triage')
 
-Cache file: ${project}/.mutmut-equivalents.json
-All unkilled mutants: ${JSON.stringify(gaps)}
-
-Steps:
-1. Try to read ${project}/.mutmut-equivalents.json.
-   If the file does not exist or cannot be parsed, set cached_equivalents = [] and
-   survivors_to_analyze = all unkilled mutants — do not error.
-2. Parse the JSON array. For each cache entry whose mutant_name appears in the list:
-   a. Run: cd ${project} && git hash-object <entry.source_file>
-   b. If the hash matches entry.file_hash exactly: file is unchanged → include in cached_equivalents.
-   c. If the hash differs, the command errors, or the source file is missing: discard from cache.
-3. survivors_to_analyze = all unkilled mutants NOT covered by a valid (still-matching) cache entry.
-
-Every mutant must end up in exactly one of the two results: do not drop or duplicate any.
-
-Return cached_equivalents (valid cache hits) and survivors_to_analyze (need fresh analysis).`,
-  { schema: CACHE_LOAD_SCHEMA, phase: 'Cache' },
+const triaged = await agent(
+  helperPrompt(project, pythonBin, 'triage', {
+    mutmut_version: mutmutVersionText,
+    gaps,
+    gaps_checksum: fnv1a32(gaps),
+  }),
+  { schema: TRIAGE_SCHEMA, phase: 'Triage' },
 )
 
-const cachedEquivalents = cacheCheck.cached_equivalents
-const survivorsToAnalyze = [...cacheCheck.survivors_to_analyze].sort()
-
-assertPartition('Cache', gaps, [
-  ...cachedEquivalents.map((e) => e.mutant_name),
-  ...survivorsToAnalyze,
-])
-
-if (cachedEquivalents.length > 0) {
-  log(`Cache: ${cachedEquivalents.length} equivalent mutant(s) skipped (source file unchanged)`)
+assertHelper('Triage', triaged)
+for (const name of TRIAGE_LISTS) {
+  const listed = triaged[name]
+  if (!listed || fnv1a32(listed.names) !== listed.checksum) {
+    throw new Error(`Triage: the "${name}" list is missing or its checksum does not match its names.`)
+  }
 }
+assertPartition('Triage', gaps, TRIAGE_LISTS.flatMap((name) => triaged[name].names))
 
-if (survivorsToAnalyze.length === 0) {
-  log('All unkilled mutants are cached equivalents — nothing to analyze.')
-  return report({
-    startedWith: gaps.length,
-    equivalents: cachedEquivalents.map((e) => ({ name: e.mutant_name, reason: e.equivalent_reason })),
-    unkilled: gaps,
-  })
-}
+// The helper's order (module, function, mutant number) is kept: it is the stable order
+// the pass budget cuts at.
+const toAnalyze = triaged.to_analyze.names
+
+log(
+  `Triage: ${toAnalyze.length} to analyse  |  ${triaged.equivalent.names.length} equivalent  |  ` +
+  `${triaged.test_design.names.length} test design  |  ${triaged.suspected_bug.names.length} suspected bug  |  ` +
+  `${triaged.parked.names.length} parked  |  ${triaged.deferred.names.length} deferred`,
+)
+
+const statusAtStart = statusByName(discovery)
+
+let analyses = []
+let unanalyzed = []
+let configProblems = []
+let actionable = []
 
 // ─── Phase 3: Analyze ─────────────────────────────────────────────────────────
 // One agent per function: it sees all of that function's mutants, so one test can kill
-// several of them.
+// several of them. Each mutant gets exactly one outcome.
 
-phase('Analyze')
+if (toAnalyze.length > 0) {
+  phase('Analyze')
 
-const byFunction = new Map()
-for (const name of survivorsToAnalyze) {
-  const key = functionKey(name)
-  if (!byFunction.has(key)) byFunction.set(key, [])
-  byFunction.get(key).push(name)
-}
+  const byFunction = new Map()
+  for (const name of toAnalyze) {
+    const key = functionKey(name)
+    if (!byFunction.has(key)) byFunction.set(key, [])
+    byFunction.get(key).push(name)
+  }
 
-log(`Analyzing ${survivorsToAnalyze.length} uncached mutant(s) in ${byFunction.size} function(s)`)
+  log(`Analyzing ${toAnalyze.length} mutant(s) in ${byFunction.size} function(s)`)
 
-const analysisRuns = (await pipeline(
-  [...byFunction.entries()],
-  async ([key, names]) => ({ key, names, run: await agent(
-    `Analyze the unkilled mutmut mutants of one function, "${key}", in the project at ${project}.
+  const analysisRuns = (await pipeline(
+    [...byFunction.entries()],
+    async ([key, names]) => ({ key, names, run: await agent(
+      `Analyze the unkilled mutmut mutants of one function, "${key}", in the project at ${project}.
 
 Mutants (all of them need one entry in "analyses", none may be left out):
 ${names.map((n) => `  ${n}  [${noTestsAtStart.has(n) ? 'no tests: no test reaches this function' : 'survived'}]`).join('\n')}
@@ -505,7 +526,22 @@ STEP 2 — Identify the source file:
     "src.utils.x_helper__mutmut_1"     →  source_file = "src/utils.py"
   Derive the path from the mutant name, then read the mutated function in ${project}/<source_file>.
 
-STEP 3 — Find the test file:
+STEP 3 — Give each mutant ONE outcome. Take the first that fits, in this order:
+  1. suspected_bug — the mutant's behaviour is MORE correct than the original code.
+     You must trace a real production caller where the original misbehaves and cite it in
+     evidence as "path:line". "The mutant looks reasonable" is not enough. No test is written.
+  2. dead_code — no production code calls this function. Say what you searched in reason.
+  3. test_design — the mutant survives because of how the existing tests are written, not
+     because a test is missing: the only covering test patches out the mutated call, or the
+     compared values are None or the default on both sides, or a fixture hides the difference.
+     Say which, in reason; cite it in evidence as "path:line".
+  4. equivalent — no test can observe the change. Cite the proof in evidence as "path:line"
+     (library source, compiled SQL, the callers) and list in depends_on every other file the
+     verdict rests on. A verdict without a real "path:line" is rejected.
+  5. missing_test — the mutation exposes behaviour that should be tested but isn't.
+  Never choose equivalent to avoid writing a test.
+
+STEP 4 — For missing_test only, find the test file:
   mutmut only runs tests in its test selection: ${JSON.stringify(testSelection)}.
   The test file you choose MUST be inside that selection. If a test file that exercises
   this function lives outside it, say so in mutation_summary and still name that file:
@@ -518,133 +554,83 @@ STEP 3 — Find the test file:
   (e.g. tests/unit/test_<module>.py).
   Read the test file to understand the existing structure, fixtures, and naming style.
   A "no tests" mutant needs a test that actually calls this function.
-
-STEP 4 — Classify each mutant:
-  EQUIVALENT mutant: the mutation cannot be detected by any test because the change
-  does not alter observable behaviour (e.g. changing a default arg callers always override,
-  reordering commutative ops, modifying an internal string no test checks).
-  → set is_equivalent=true, explain in equivalent_reason, leave test fields empty.
-
-  MISSING TEST: the mutation exposes behaviour that should be tested but isn't.
-  → set is_equivalent=false
-  → write a pytest test method (test_method_name + test_code) that:
+  Write a pytest test method (test_method_name + test_code) that:
       • PASSES against the original code
       • would FAIL if the mutated line were applied
-  → follow the style of the existing tests exactly
-  → keep the test minimal — test one thing
-  → where one test can kill several of this function's mutants, give the same test_method_name
-    and test_code to each of them.
+  Follow the style of the existing tests exactly and keep the test minimal — test one thing.
+  Where one test can kill several of this function's mutants, give the same test_method_name
+  and test_code to each of them.
 
 Return one entry per mutant listed above, with mutant_name copied exactly.
 source_file and test_file are paths relative to the project root (tests/unit/test_x.py), never absolute.`,
-    { label: `analyze:${key}`, schema: FUNCTION_ANALYSIS_SCHEMA, phase: 'Analyze' },
-  ) }),
-)).filter(Boolean)
+      { label: `analyze:${key}`, schema: FUNCTION_ANALYSIS_SCHEMA, phase: 'Analyze' },
+    ) }),
+  )).filter(Boolean)
 
-// An analysis that does not cover exactly its function's mutants is an analysis failure:
-// nothing from it is used, and its mutants are retried next run.
-const analyses = []
-const unanalyzed = []
-const analyzedKeys = new Set(analysisRuns.map((r) => r.key))
-for (const [key, names] of byFunction) {
-  if (!analyzedKeys.has(key)) {
-    unanalyzed.push(...names)
-    log(`Analysis of ${key} did not return; its ${names.length} mutant(s) are retried next run.`)
+  // An analysis that does not cover exactly its function's mutants is an analysis failure:
+  // nothing from it is used, and its mutants are retried next run.
+  const analyzedKeys = new Set(analysisRuns.map((r) => r.key))
+  for (const [key, names] of byFunction) {
+    if (!analyzedKeys.has(key)) {
+      unanalyzed.push(...names)
+      log(`Analysis of ${key} did not return; its ${names.length} mutant(s) are retried next run.`)
+    }
   }
-}
-for (const { key, names, run } of analysisRuns) {
-  if (!run) {
-    unanalyzed.push(...names)
-    log(`Analysis of ${key} failed; its ${names.length} mutant(s) are retried next run.`)
-    continue
+  for (const { key, names, run } of analysisRuns) {
+    if (!run) {
+      unanalyzed.push(...names)
+      log(`Analysis of ${key} failed; its ${names.length} mutant(s) are retried next run.`)
+      continue
+    }
+    try {
+      assertPartition(`Analyze ${key}`, names, run.analyses.map((a) => a.mutant_name))
+      analyses.push(...run.analyses.map((a) => ({
+        ...a,
+        source_file: relativeTo(project, a.source_file),
+        test_file: a.test_file ? relativeTo(project, a.test_file) : a.test_file,
+      })))
+    } catch (err) {
+      unanalyzed.push(...names)
+      log(`${err.message} Its ${names.length} mutant(s) are retried next run.`)
+    }
   }
-  try {
-    assertPartition(`Analyze ${key}`, names, run.analyses.map((a) => a.mutant_name))
-    analyses.push(...run.analyses.map((a) => ({
-      ...a,
-      source_file: relativeTo(project, a.source_file),
-      test_file: a.test_file ? relativeTo(project, a.test_file) : a.test_file,
-    })))
-  } catch (err) {
-    unanalyzed.push(...names)
-    log(`${err.message} Its ${names.length} mutant(s) are retried next run.`)
-  }
-}
 
-const equivalent = analyses.filter((a) => a.is_equivalent)
-const notEquivalent = analyses.filter((a) => !a.is_equivalent)
-const proposed = notEquivalent.filter((a) => a.test_code && a.test_file)
-// Not equivalent, yet no usable test came back: reported, and retried next run.
-const noTestProposed = notEquivalent.filter((a) => !(a.test_code && a.test_file)).map((a) => a.mutant_name)
+  // Only missing_test outcomes with a test get written. A test file outside mutmut's
+  // selection is never run against a mutant, so it cannot kill one however good it is:
+  // that is a configuration problem, not a failed attempt.
+  const proposed = analyses.filter((a) => a.outcome === 'missing_test' && a.test_code && a.test_file)
+  configProblems = proposed.filter((a) => !inSelection(a.test_file, testSelection)).map((a) => a.mutant_name)
+  actionable = proposed.filter((a) => inSelection(a.test_file, testSelection))
 
-// A test file outside mutmut's selection is never run against a mutant, so it cannot kill
-// one however good it is. That is a configuration problem, not a failed attempt.
-const configProblems = proposed.filter((a) => !inSelection(a.test_file, testSelection))
-const actionable = proposed.filter((a) => inSelection(a.test_file, testSelection))
-
-if (configProblems.length > 0) {
-  log(`${configProblems.length} proposed test(s) are outside the test selection ${JSON.stringify(testSelection)} and are not written.`)
-}
-log(`${actionable.length} need tests  |  ${equivalent.length} newly equivalent  |  ${cachedEquivalents.length} cache hit(s)`)
-
-// Save updated equivalents cache (merge kept entries + newly found)
-if (equivalent.length > 0 || cachedEquivalents.length > 0) {
-  await agent(
-    `Update the equivalents cache at ${project}/.mutmut-equivalents.json.
-
-Previously cached entries (already have file_hash — keep as-is unless superseded):
-${JSON.stringify(cachedEquivalents, null, 2)}
-
-Newly classified equivalents (compute file_hash for each):
-${JSON.stringify(equivalent.map((a) => ({ mutant_name: a.mutant_name, source_file: a.source_file, equivalent_reason: a.equivalent_reason })), null, 2)}
-
-Steps:
-1. For each entry in "newly classified equivalents", compute the git blob hash:
-   cd ${project} && git hash-object <source_file>
-   Add the output as the "file_hash" field.
-2. Build the merged array: previously cached entries + new entries.
-   If the same mutant_name appears in both, the new entry wins.
-3. Write the merged array as pretty-printed JSON (2-space indent, keys sorted
-   alphabetically within each object) to ${project}/.mutmut-equivalents.json.
-   Use Python: python3 -c "import json,sys; d=json.load(open('.mutmut-equivalents.json')); open('.mutmut-equivalents.json','w').write(json.dumps(d,indent=2,sort_keys=True,ensure_ascii=True)+'\\n')"
-   Run this command from ${project} after writing the file to guarantee correct formatting.`,
-    { phase: 'Analyze' },
-  )
-}
-
-const allEquivalents = [
-  ...equivalent.map((a) => ({ name: a.mutant_name, reason: a.equivalent_reason })),
-  ...cachedEquivalents.map((e) => ({ name: e.mutant_name, reason: e.equivalent_reason })),
-]
-
-if (actionable.length === 0) {
-  return report({
-    startedWith: gaps.length,
-    equivalents: allEquivalents,
-    unkilled: gaps,
-    configProblems,
-    noTestProposed,
-    unanalyzed,
-  })
+  const counts = {}
+  for (const a of analyses) counts[a.outcome] = (counts[a.outcome] || 0) + 1
+  log(`Outcomes: ${JSON.stringify(counts)}  |  ${configProblems.length} outside the test selection`)
 }
 
 // ─── Phase 4: Write ───────────────────────────────────────────────────────────
 
-phase('Write')
+let totalWritten = 0
+let targeted = []
+const writeFailures = {}
 
-// Group by test file so no two agents edit the same file concurrently. Several mutants of
-// one function may share one test: write it once.
-const byTestFile = {}
-for (const analysis of actionable) {
-  const key = analysis.test_file
-  if (!byTestFile[key]) byTestFile[key] = []
-  byTestFile[key].push(analysis)
-}
+if (actionable.length > 0) {
+  phase('Write')
 
-const writeResults = (await parallel(
-  Object.entries(byTestFile).map(([testFile, group]) => () =>
-    agent(
-      `Add tests to ${project}/${testFile} to kill ${group.length} surviving mutant(s).
+  // Group by test file so no two agents edit the same file concurrently. Several mutants of
+  // one function may share one test: write it once.
+  const byTestFile = {}
+  for (const analysis of actionable) {
+    const key = analysis.test_file
+    if (!byTestFile[key]) byTestFile[key] = []
+    byTestFile[key].push(analysis)
+  }
+
+  const writeRuns = await parallel(
+    Object.entries(byTestFile).map(([testFile, group]) => async () => ({
+      testFile,
+      group,
+      result: await agent(
+        `Add tests to ${project}/${testFile} to kill ${group.length} surviving mutant(s).
 
 Tests to add
 ============
@@ -669,34 +655,33 @@ Instructions
    The tests MUST PASS against the original (unmutated) code.
    If a test fails to collect (syntax/import error), fix it.
    If a test fails at runtime, the test logic is wrong — revise it once, then skip it
-   and note it in the notes field rather than writing a broken test.
+   and say in the notes field why it failed, rather than writing a broken test.
 5. Report how many tests were successfully written (tests_written) and which
    mutant names they target (mutants_targeted): every mutant of an entry whose test you wrote.`,
-      { label: `write:${testFile}`, schema: WRITE_SCHEMA, phase: 'Write' },
-    ),
-  ),
-)).filter(Boolean)
+        { label: `write:${testFile}`, schema: WRITE_SCHEMA, phase: 'Write' },
+      ),
+    })),
+  )
 
-const totalWritten = writeResults.reduce((sum, r) => sum + r.tests_written, 0)
-log(`Wrote ${totalWritten} tests across ${writeResults.length} file(s)`)
+  const finished = writeRuns.filter((r) => r && r.result)
+  totalWritten = finished.reduce((sum, r) => sum + r.result.tests_written, 0)
+  log(`Wrote ${totalWritten} tests across ${finished.length} file(s)`)
 
-// Only mutants the Write agents claim a test for, and that were really sent to them.
-const actionableNames = new Set(actionable.map((a) => a.mutant_name))
-const targeted = [...new Set(writeResults.flatMap((r) => r.mutants_targeted))]
-  .filter((n) => actionableNames.has(n))
-  .sort()
+  // Only mutants the Write agents claim a test for, and that were really sent to them.
+  const actionableNames = new Set(actionable.map((a) => a.mutant_name))
+  targeted = [...new Set(finished.flatMap((r) => r.result.mutants_targeted))]
+    .filter((n) => actionableNames.has(n))
+    .sort()
 
-if (targeted.length === 0) {
-  log('No test was written, so there is nothing to verify.')
-  return report({
-    startedWith: gaps.length,
-    equivalents: allEquivalents,
-    testsWritten: totalWritten,
-    unkilled: gaps,
-    configProblems,
-    noTestProposed,
-    unanalyzed,
-  })
+  // A proposed test that could not be made to pass is an attempt. A Write agent that never
+  // came back is not: that is the infrastructure's failure, and the mutant is retried.
+  for (const { group, result } of finished) {
+    for (const a of group) {
+      if (!targeted.includes(a.mutant_name)) {
+        writeFailures[a.mutant_name] = (result.notes || '').trim() || 'the proposed test could not be made to pass'
+      }
+    }
+  }
 }
 
 // ─── Phase 5: Verify ──────────────────────────────────────────────────────────
@@ -705,13 +690,25 @@ if (targeted.length === 0) {
 // mutants/mutmut-stats.json is gone, so the plain "mutmut run" of Discover would report the
 // same survivors again. mutmut copies tests/ into mutants/ on every run.
 // Step B is one fresh full run: the final word, and a check on step A.
+// A Verify that fails or whose lists do not check out counts nothing: the pass is still
+// recorded (verdicts are kept, no attempt is counted) and says why.
 
-phase('Verify')
+const verify = {
+  ok: true,
+  error: null,
+  status: Object.fromEntries(gaps.map((n) => [n, statusAtStart.get(n)])),
+  newGaps: [],
+  contradictions: [],
+}
 
-const targetedGlobs = [...new Set(targeted.map((n) => `${functionKey(n)}__mutmut_*`))].sort()
+if (targeted.length > 0) {
+  phase('Verify')
 
-const targetedRun = await agent(
-  `Re-run only the mutants of the functions that just got new tests, in ${project}.
+  try {
+    const targetedGlobs = [...new Set(targeted.map((n) => `${functionKey(n)}__mutmut_*`))].sort()
+
+    const targetedRun = await agent(
+      `Re-run only the mutants of the functions that just got new tests, in ${project}.
 
 Steps:
   1. cd ${project} && rm -f mutants/mutmut-stats.json
@@ -721,16 +718,16 @@ Steps:
   3. ${listCommand}
      Its stdout is one JSON object with "total" and "groups". Copy it into total and groups
      exactly as printed: do not drop, reorder, merge or edit any name, count or checksum.`,
-  { schema: TARGETED_VERIFY_SCHEMA, phase: 'Verify', label: 'verify:targeted' },
-)
+      { schema: TARGETED_VERIFY_SCHEMA, phase: 'Verify', label: 'verify:targeted' },
+    )
 
-assertMutmutRan('Verify (targeted)', targetedRun)
-verifyListing('Verify (targeted)', targetedRun)
+    assertMutmutRan('Verify (targeted)', targetedRun)
+    verifyListing('Verify (targeted)', targetedRun)
 
-const targetedStatus = statusByName(targetedRun)
+    const targetedStatus = statusByName(targetedRun)
 
-const freshRun = await agent(
-  `Run mutmut from scratch in ${project} and list the results.
+    const freshRun = await agent(
+      `Run mutmut from scratch in ${project} and list the results.
 
 Steps:
   1. cd ${project} && rm -rf mutants
@@ -739,48 +736,85 @@ Steps:
   3. ${listCommand}
      Its stdout is one JSON object with "total" and "groups". Copy it into total and groups
      exactly as printed: do not drop, reorder, merge or edit any name, count or checksum.`,
-  { schema: FRESH_VERIFY_SCHEMA, phase: 'Verify', label: 'verify:fresh' },
+      { schema: FRESH_VERIFY_SCHEMA, phase: 'Verify', label: 'verify:fresh' },
+    )
+
+    assertMutmutRan('Verify (fresh)', freshRun)
+    verifyListing('Verify (fresh)', freshRun)
+
+    // Per mutant, from the fresh run alone: the helper counts "killed" only if mutmut says so.
+    const freshStatus = statusByName(freshRun)
+    verify.status = Object.fromEntries(gaps.map((n) => [n, freshStatus.get(n) || 'missing from the fresh run']))
+    const gapSet = new Set(gaps)
+    verify.newGaps = namesWith(freshRun, GAP_STATUSES).filter((n) => !gapSet.has(n)).sort()
+
+    // The targeted run and the fresh run must agree on what the new tests killed.
+    verify.contradictions = targeted
+      .filter((n) => targetedStatus.get(n) === 'killed' && freshStatus.get(n) !== 'killed')
+      .map((n) => ({ name: n, targeted: 'killed', fresh: freshStatus.get(n) || 'missing' }))
+    if (verify.contradictions.length > 0) {
+      log(`${verify.contradictions.length} mutant(s) were killed in the targeted run but not in the fresh run; the fresh run wins.`)
+    }
+  } catch (err) {
+    verify.ok = false
+    verify.error = err.message
+    log(`Verify failed, so no attempt is counted this pass: ${err.message}`)
+  }
+}
+
+// ─── Phase 6: Record ──────────────────────────────────────────────────────────
+// The helper counts attempts, parks mutants at the budget, writes the state files and
+// builds the summary. Agents proposed; this is where the decisions are made.
+
+phase('Record')
+
+const recorded = await agent(
+  helperPrompt(project, pythonBin, 'record', {
+    mutmut_version: mutmutVersionText,
+    gaps,
+    gaps_checksum: fnv1a32(gaps),
+    analyses: analyses.map((a) => ({
+      mutant: a.mutant_name,
+      outcome: a.outcome,
+      evidence: a.evidence || [],
+      depends_on: a.depends_on || [],
+      reason: a.reason || '',
+      summary: a.mutation_summary || '',
+      test_file: a.test_file || '',
+      test_name: a.test_method_name || '',
+    })),
+    written: targeted,
+    write_failures: writeFailures,
+    config_problems: configProblems,
+    unanalyzed,
+    verify_ok: verify.ok,
+    status: verify.status,
+  }),
+  { schema: RECORD_SCHEMA, phase: 'Record' },
 )
 
-assertMutmutRan('Verify (fresh)', freshRun)
-verifyListing('Verify (fresh)', freshRun)
+assertHelper('Record', recorded)
 
-const freshStatus = statusByName(freshRun)
-const stillGap = new Set(namesWith(freshRun, GAP_STATUSES))
+// Every unkilled mutant ends up killed, still surviving or in another state, exactly once.
+assertPartition('Record', gaps, [
+  ...recorded.killed,
+  ...recorded.still_surviving,
+  ...recorded.other.map((o) => o.mutant),
+])
 
-// Per mutant, from the fresh run alone: killed only if mutmut says "killed".
-// Anything that is neither killed nor a gap (timeout, suspicious, segfault, ...) is "other".
-const killed = []
-const other = []
-for (const name of gaps) {
-  const status = freshStatus.get(name)
-  if (status === 'killed') killed.push(name)
-  else if (!stillGap.has(name)) other.push({ name, status: status || 'missing from the fresh run' })
+log(
+  `Started: ${gaps.length}  |  Killed: ${recorded.killed.length}  |  Parked: ${recorded.parked.length}  |  ` +
+  `Equivalent: ${recorded.equivalent.length}  |  Suspected bugs: ${recorded.suspected_bugs.length}  |  ` +
+  `Dead code: ${recorded.dead_code.length}  |  Deferred: ${recorded.deferred.length}  |  ` +
+  `Still unkilled: ${recorded.still_surviving.length}`,
+)
+
+return {
+  status: 'complete',
+  started_with: gaps.length,
+  tests_written: totalWritten,
+  ...recorded,
+  new_gaps: verify.newGaps,
+  contradictions: verify.contradictions,
+  verify_error: verify.error,
 }
-const remaining = gaps.filter((n) => stillGap.has(n))
-const newGaps = [...stillGap].filter((n) => !gaps.includes(n)).sort()
-
-// The targeted run and the fresh run must agree on what the new tests killed.
-const contradictions = targeted
-  .filter((n) => targetedStatus.get(n) === 'killed' && freshStatus.get(n) !== 'killed')
-  .map((n) => ({ name: n, targeted: 'killed', fresh: freshStatus.get(n) || 'missing' }))
-
-if (contradictions.length > 0) {
-  log(`${contradictions.length} mutant(s) were killed in the targeted run but not in the fresh run; the fresh run wins.`)
-}
-
-log(`Started: ${gaps.length}  |  Killed: ${killed.length}  |  Equivalent: ${allEquivalents.length} (${cachedEquivalents.length} cached)  |  Other: ${other.length}  |  Still unkilled: ${remaining.length}`)
-
-return report({
-  startedWith: gaps.length,
-  killed,
-  equivalents: allEquivalents,
-  other,
-  testsWritten: totalWritten,
-  unkilled: remaining,
-  newGaps,
-  configProblems,
-  noTestProposed,
-  unanalyzed,
-  contradictions,
-})

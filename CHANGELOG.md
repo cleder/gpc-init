@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Enhancements
 
+- The `mutmut-kill-survivors` workflow remembers what it tried: `scripts/mutmut_state.py` counts attempts per mutant across runs and parks a mutant after `max_attempts_per_mutant` failed tests (default 2, in `[tool.mutmut-workflow]`, with an optional `max_mutants_per_pass`).
+  Each mutant gets one outcome (`suspected_bug`, `dead_code`, `test_design`, `equivalent` or `missing_test`), and only a missing test costs an attempt.
+  State moves from `.mutmut-equivalents.json` to one file per module in `.mutmut-analysis/`, keyed by function hash, mutmut version, mutation settings and hashed dependencies, so a parked mutant reopens when any of them changes.
 - Add `unref` (experimental) to the `py` preset, by @Apakottur.
 
 ### Bug Fixes
