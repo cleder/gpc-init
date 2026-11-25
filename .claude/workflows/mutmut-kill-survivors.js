@@ -87,21 +87,23 @@ for f in root.joinpath("tests").rglob("*.py"):
 local = {m for m in imported if (root / m).is_dir() or (root / (m + ".py")).is_file()}
 print(json.dumps({"selection": selection, "missing_also_copy": sorted(local - copied)}))`
 
-// Throws unless every group's count and checksum match its names and the groups add up.
-function verifyListing(step, listing) {
-  let sum = 0
-  for (const g of listing.groups) {
-    if (g.names.length !== g.count) {
-      throw new Error(`${step}: status "${g.status}" claims ${g.count} mutants but lists ${g.names.length}; the relayed list is incomplete.`)
-    }
-    if (new Set(g.names).size !== g.names.length) {
-      throw new Error(`${step}: status "${g.status}" lists a mutant twice.`)
-    }
-    if (fnv1a32(g.names) !== g.checksum) {
-      throw new Error(`${step}: checksum mismatch for status "${g.status}"; the relayed list differs from the command output.`)
-    }
-    sum += g.count
+// Throws unless one group's count, uniqueness and checksum match its names.
+function verifyGroup(step, g) {
+  if (g.names.length !== g.count) {
+    throw new Error(`${step}: status "${g.status}" claims ${g.count} mutants but lists ${g.names.length}; the relayed list is incomplete.`)
   }
+  if (new Set(g.names).size !== g.names.length) {
+    throw new Error(`${step}: status "${g.status}" lists a mutant twice.`)
+  }
+  if (fnv1a32(g.names) !== g.checksum) {
+    throw new Error(`${step}: checksum mismatch for status "${g.status}"; the relayed list differs from the command output.`)
+  }
+}
+
+// Throws unless every group checks out and the groups add up to the reported total.
+function verifyListing(step, listing) {
+  for (const g of listing.groups) verifyGroup(step, g)
+  const sum = listing.groups.reduce((acc, g) => acc + g.count, 0)
   if (sum !== listing.total) {
     throw new Error(`${step}: groups add up to ${sum} mutants but the listing reports ${listing.total}.`)
   }
