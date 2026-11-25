@@ -136,6 +136,22 @@ function assertPartition(step, expected, parts) {
   }
 }
 
+// Map the mutant names an agent relayed back onto the full names they were sent. Agents shorten
+// what they copy ("x_f__mutmut_1" for "pkg.mod.x_f__mutmut_1"), so a name also matches when it is
+// the unique tail of a full name. Anything that matches nothing is returned, not dropped.
+function resolveNames(returned, universe) {
+  const known = new Set(universe)
+  const resolved = new Set()
+  const unknown = []
+  for (const name of returned) {
+    const tails = universe.filter((u) => u.endsWith(`.${name}`))
+    if (known.has(name)) resolved.add(name)
+    else if (tails.length === 1) resolved.add(tails[0])
+    else unknown.push(name)
+  }
+  return { names: [...resolved].sort(), unknown }
+}
+
 // "pkg.mod.x_func__mutmut_3" → "pkg.mod.x_func": one function, many mutants.
 function functionKey(mutantName) {
   return mutantName.replace(/__mutmut_\d+$/, '')
@@ -561,7 +577,9 @@ STEP 3 — Give each mutant ONE outcome. Take the first that fits, in this order
      Say which, in reason; cite it in evidence as "path:line".
   4. equivalent — no test can observe the change. Cite the proof in evidence as "path:line"
      (library source, compiled SQL, the callers) and list in depends_on every other file the
-     verdict rests on. A verdict without a real "path:line" is rejected.
+     verdict rests on. Every path must be an exact path to a file that exists: no wildcards or
+     globs (find a library file with: <python> -c "import yaml; print(yaml.__file__)").
+     A verdict without a real "path:line", or naming a file that does not exist, is rejected.
   5. missing_test — the mutation exposes behaviour that should be tested but isn't.
   Never choose equivalent to avoid writing a test.
 
@@ -681,7 +699,8 @@ Instructions
    If a test fails at runtime, the test logic is wrong — revise it once, then skip it
    and say in the notes field why it failed, rather than writing a broken test.
 5. Report how many tests were successfully written (tests_written) and which
-   mutant names they target (mutants_targeted): every mutant of an entry whose test you wrote.`,
+   mutant names they target (mutants_targeted): every mutant of an entry whose test you wrote,
+   each copied exactly as listed above, with its full dotted prefix.`,
         { label: `write:${testFile}`, schema: WRITE_SCHEMA, phase: 'Write' },
       ),
     })),
@@ -691,11 +710,14 @@ Instructions
   totalWritten = finished.reduce((sum, r) => sum + r.result.tests_written, 0)
   log(`Wrote ${totalWritten} tests across ${finished.length} file(s)`)
 
-  // Only mutants the Write agents claim a test for, and that were really sent to them.
-  const actionableNames = new Set(actionable.map((a) => a.mutant_name))
-  targeted = [...new Set(finished.flatMap((r) => r.result.mutants_targeted))]
-    .filter((n) => actionableNames.has(n))
-    .sort()
+  // Only mutants the Write agents claim a test for, and that were really sent to them. A name
+  // that cannot be matched is reported: dropping it silently would skip its Verify.
+  const sent = actionable.map((a) => a.mutant_name)
+  const claimed = resolveNames(finished.flatMap((r) => r.result.mutants_targeted), sent)
+  targeted = claimed.names
+  if (claimed.unknown.length > 0) {
+    log(`Write returned ${claimed.unknown.length} mutant name(s) that match none sent: ${claimed.unknown.slice(0, 3).join(', ')}`)
+  }
 
   // A proposed test that could not be made to pass is an attempt. A Write agent that never
   // came back is not: that is the infrastructure's failure, and the mutant is retried.
