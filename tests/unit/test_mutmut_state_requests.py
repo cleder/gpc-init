@@ -106,3 +106,30 @@ def test_a_triage_request_needs_a_list_of_names(state: Any) -> None:
             {"mutmut_version": "3.8.1", "gaps": [FN1, 2], "gaps_checksum": 1},
             today="2026-11-25",
         )
+
+
+def _signed(state: Any, body: str) -> str:
+    return f"#fnv1a32 {state.ms.fnv1a32([body])}\n{body}"
+
+
+def test_a_signed_request_is_decoded(state: Any) -> None:
+    text = _signed(state, '{"gaps": ["é"], "written": []}')
+    assert state.ms.decode_request(text) == {"gaps": ["é"], "written": []}
+
+
+def test_a_request_altered_in_transit_is_refused(state: Any) -> None:
+    text = _signed(state, '{"written": ["a", "b"]}')
+    altered = text.replace('"a", "b"', "")
+    with pytest.raises(state.ms.StateError, match="checksum"):
+        state.ms.decode_request(altered)
+
+
+@pytest.mark.parametrize("text", ['{"gaps": []}', "", "#fnv1a32 x\n{}"])
+def test_an_unsigned_request_is_refused(state: Any, text: str) -> None:
+    with pytest.raises(state.ms.StateError, match="checksum"):
+        state.ms.decode_request(text)
+
+
+def test_a_trailing_newline_after_the_body_is_not_an_alteration(state: Any) -> None:
+    text = _signed(state, '{"a": 1}') + "\n"
+    assert state.ms.decode_request(text) == {"a": 1}

@@ -321,21 +321,48 @@ const RECORD_SCHEMA = {
 }
 
 // The command an agent runs for one helper call. The request goes in on stdin through a
-// quoted heredoc, so the shell leaves every character alone.
+// quoted heredoc, so the shell leaves every character alone. An agent that relays it has to
+// copy it, and agents shorten what they copy, so the first line signs the second: the helper
+// refuses any request that differs from what was signed, whatever the difference.
 function helperPrompt(project, pythonBin, command, request) {
+  const body = JSON.stringify(request)
   return `Run the state helper and report what it prints.
 
+The request below is two lines: a checksum line and one line of JSON. The checksum covers
+that JSON line exactly, so copy BOTH lines character for character: do not shorten, reorder,
+reformat or summarise anything, even a long list. The helper refuses any difference.
+
   cd ${project} && ${pythonBin} ${HELPER} ${command} --root . <<'JSON'
-${JSON.stringify(request)}
+#fnv1a32 ${fnv1a32([body])}
+${body}
 JSON
 
 Its stdout is one JSON object. Copy it into the result exactly as printed: do not drop,
 reorder, merge or edit any name, count, checksum or text. If it prints {"error": ...}
-(exit code 1), report only that text as "error". Do not retry and do not fix anything.`
+(exit code 1), report only that text as "error". Do not fix anything.`
 }
 
-function assertHelper(step, result) {
-  if (result.error) throw new Error(`${step}: the state helper refused the request: ${result.error}`)
+// A refused request writes nothing, so asking again is safe. Retry with the reason: most
+// refusals are a relay that was not copied exactly.
+async function callHelper(step, command, request, schema) {
+  const attempts = 3
+  let note = ''
+  let error = ''
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const result = await agent(
+      helperPrompt(project, pythonBin, command, request) + note,
+      { schema, phase: step, label: `${command}:${attempt}` },
+    )
+    if (!result.error) return result
+    error = result.error
+    log(`${step}: the helper refused attempt ${attempt} of ${attempts}: ${error}`)
+    note = `
+
+Your previous attempt was refused with: ${error}
+The request above is correct as printed. A refusal means it was not copied exactly, so copy
+the checksum line and the whole JSON line again, character for character, and run it again.`
+  }
+  throw new Error(`${step}: the state helper refused the request ${attempts} times: ${error}`)
 }
 
 // ─── Phase 0: Preflight ───────────────────────────────────────────────────────
@@ -458,16 +485,13 @@ log(`Found ${gaps.length} unkilled mutants (${gaps.length - noTestsAtStart.size}
 
 phase('Triage')
 
-const triaged = await agent(
-  helperPrompt(project, pythonBin, 'triage', {
-    mutmut_version: mutmutVersionText,
-    gaps,
-    gaps_checksum: fnv1a32(gaps),
-  }),
-  { schema: TRIAGE_SCHEMA, phase: 'Triage' },
+const triaged = await callHelper(
+  'Triage',
+  'triage',
+  { mutmut_version: mutmutVersionText, gaps, gaps_checksum: fnv1a32(gaps) },
+  TRIAGE_SCHEMA,
 )
 
-assertHelper('Triage', triaged)
 for (const name of TRIAGE_LISTS) {
   const listed = triaged[name]
   if (!listed || fnv1a32(listed.names) !== listed.checksum) {
@@ -768,8 +792,14 @@ Steps:
 
 phase('Record')
 
-const recorded = await agent(
-  helperPrompt(project, pythonBin, 'record', {
+// Free text is cut short: it is only for the report, and every extra character is one more an
+// agent has to copy.
+const brief = (text, max) => (text && text.length > max ? `${text.slice(0, max - 1)}…` : text || '')
+
+const recorded = await callHelper(
+  'Record',
+  'record',
+  {
     mutmut_version: mutmutVersionText,
     gaps,
     gaps_checksum: fnv1a32(gaps),
@@ -778,8 +808,8 @@ const recorded = await agent(
       outcome: a.outcome,
       evidence: a.evidence || [],
       depends_on: a.depends_on || [],
-      reason: a.reason || '',
-      summary: a.mutation_summary || '',
+      reason: brief(a.reason, 300),
+      summary: brief(a.mutation_summary, 160),
       test_file: a.test_file || '',
       test_name: a.test_method_name || '',
     })),
@@ -789,11 +819,10 @@ const recorded = await agent(
     unanalyzed,
     verify_ok: verify.ok,
     status: verify.status,
-  }),
-  { schema: RECORD_SCHEMA, phase: 'Record' },
+  },
+  RECORD_SCHEMA,
 )
 
-assertHelper('Record', recorded)
 
 // Every unkilled mutant ends up killed, still surviving or in another state, exactly once.
 assertPartition('Record', gaps, [

@@ -6,9 +6,13 @@ The workflow's agents propose tests and verdicts; this script decides what count
 as an attempt, which mutants are parked, which stay known and which reopen. It is
 plain deterministic code with a small JSON-in/JSON-out command line::
 
-    mutmut_state.py triage  < request.json   split the unkilled mutants
-    mutmut_state.py record  < request.json   count attempts, park, persist, summarise
-    mutmut_state.py migrate                  one-off: .mutmut-equivalents.json -> v2
+    mutmut_state.py triage  < request   split the unkilled mutants
+    mutmut_state.py record  < request   count attempts, park, persist, summarise
+    mutmut_state.py migrate < request   one-off: .mutmut-equivalents.json -> v2
+
+A request is a line ``#fnv1a32 <n>`` followed by one line of JSON. ``n`` is the
+checksum of that JSON text, so a request an agent retyped differently is refused
+instead of being read as something else.
 
 State lives in ``.mutmut-analysis/<dotted.module>.json``, one file per module. A
 record is keyed by the mutant's function hash, the mutmut version and the hash of
@@ -47,6 +51,7 @@ FNV_OFFSET = 0x811C9DC5
 FNV_PRIME = 0x01000193
 MASK_32 = 0xFFFFFFFF
 MUTANT = re.compile(r"^(?P<module>.+)\.(?P<base>[^.]+)__mutmut_(?P<number>\d+)$")
+SIGNATURE = re.compile(r"^#fnv1a32 (?P<sum>\d+)\n")
 CITATION = re.compile(r"(?P<path>[\w@~./+-]+\.\w+):(?P<line>\d+)")
 
 OUTCOMES = ("suspected_bug", "dead_code", "test_design", "equivalent", "missing_test")
@@ -833,6 +838,21 @@ def run_command(
     raise StateError(msg)
 
 
+def decode_request(text: str) -> dict[str, Any]:
+    """Check the request's checksum line and decode its JSON body."""
+    match = SIGNATURE.match(text)
+    if match is None:
+        msg = "request checksum missing: the first line must be '#fnv1a32 <number>'"
+        raise StateError(msg)
+    body = text[match.end() :].rstrip("\n")
+    if fnv1a32([body]) != int(match["sum"]):
+        msg = "request checksum mismatch: the request was altered in transit"
+        raise StateError(msg)
+    request = json.loads(body)
+    _require(isinstance(request, dict), "the request must be a JSON object")
+    return cast("dict[str, Any]", request)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Read a JSON request on stdin, print the JSON response."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
@@ -840,8 +860,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     args = parser.parse_args(argv)
     try:
-        text = "" if sys.stdin.isatty() else sys.stdin.read()
-        payload: dict[str, Any] = json.loads(text) if text.strip() else {}
+        payload = decode_request("" if sys.stdin.isatty() else sys.stdin.read())
         today = datetime.now(UTC).date().isoformat()
         out = run_command(args.command, args.root, payload, today=today)
     except (StateError, KeyError, TypeError, ValueError) as error:
