@@ -58,6 +58,7 @@ OUTCOMES = ("suspected_bug", "dead_code", "test_design", "equivalent", "missing_
 LISTS = (
     "equivalent",
     "test_design",
+    "low_value",
     "suspected_bug",
     "parked",
     "deferred",
@@ -229,6 +230,8 @@ class Record:
     last_reason: str = ""
     evidence: list[str] = field(default_factory=list)
     summary: str = ""
+    business_rule: str = ""
+    source: str = ""
 
 
 def _state_path(root: Path, module: str) -> Path:
@@ -367,6 +370,7 @@ class Triage:
 
     equivalent: list[str] = field(default_factory=list)
     test_design: list[str] = field(default_factory=list)
+    low_value: list[str] = field(default_factory=list)
     suspected_bug: list[str] = field(default_factory=list)
     parked: list[str] = field(default_factory=list)
     deferred: list[str] = field(default_factory=list)
@@ -409,6 +413,8 @@ class Analysis:
     summary: str = ""
     test_file: str = ""
     test_name: str = ""
+    business_rule: str = ""
+    source: str = ""
 
 
 @dataclass
@@ -468,6 +474,8 @@ def _new_record(ctx: Context, analysis: Analysis, key: str) -> Record:
         last_reason=analysis.reason,
         evidence=list(analysis.evidence),
         summary=analysis.summary,
+        business_rule=analysis.business_rule.strip(),
+        source=analysis.source.strip(),
     )
 
 
@@ -560,9 +568,21 @@ class _Pass:
         record.dependencies = dependencies
         self.store.put(record)
 
+    def _low_value(self, analysis: Analysis, key: str) -> None:
+        """Store a mutant whose change has no business rule; no test is written."""
+        why = "no business rule could be stated for the behaviour this mutation changes"
+        if analysis.reason:
+            why = f"{why}: {analysis.reason}"
+        record = _new_record(self.store.ctx, analysis, key)
+        record.status = "low_value"
+        record.last_reason = why
+        self.store.put(record)
+
     def _missing_test(self, analysis: Analysis, key: str) -> None:
         name = analysis.mutant
-        if name in self.run.config_problems:
+        if not analysis.business_rule.strip():
+            self._low_value(analysis, key)
+        elif name in self.run.config_problems:
             self.findings.config_problems.add(name)
         elif name in self.run.write_failures:
             self._attempt(analysis, key, self.run.write_failures[name])
@@ -673,6 +693,7 @@ def _summary(
         "suspected_bugs": [_bug_row(r) for r in listed("suspected_bug")],
         "dead_code": findings.dead_code,
         "test_design": [_row(r) for r in listed("test_design")],
+        "low_value": [_row(r) for r in listed("low_value")],
         "unresolved": sorted(findings.unresolved, key=mutant_sort_key),
         "other": _other(run, gaps),
         "still_surviving": still,
@@ -724,7 +745,16 @@ def migrate_v1(ctx: Context) -> tuple[int, int]:
 # ─── command line ─────────────────────────────────────────────────────────────
 
 
-ANALYSIS_STRINGS = ("mutant", "outcome", "reason", "summary", "test_file", "test_name")
+ANALYSIS_STRINGS = (
+    "mutant",
+    "outcome",
+    "reason",
+    "summary",
+    "test_file",
+    "test_name",
+    "business_rule",
+    "source",
+)
 ANALYSIS_LISTS = ("evidence", "depends_on")
 
 

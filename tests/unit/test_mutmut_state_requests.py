@@ -85,7 +85,14 @@ def test_a_missing_field_is_named(state: Any, payload: dict[str, Any]) -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    [("colour", "red"), ("evidence", "path:1"), ("depends_on", [1]), ("reason", 5)],
+    [
+        ("colour", "red"),
+        ("evidence", "path:1"),
+        ("depends_on", [1]),
+        ("reason", 5),
+        ("business_rule", 5),
+        ("source", ["ISSUE-1"]),
+    ],
 )
 def test_an_analysis_with_a_bad_field_is_refused(
     state: Any,
