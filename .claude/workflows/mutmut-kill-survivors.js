@@ -279,6 +279,8 @@ const ANALYSIS_ITEM_SCHEMA = {
     test_file: { type: 'string' },
     outcome: { type: 'string', enum: OUTCOMES },
     reason: { type: 'string' },
+    business_rule: { type: 'string' },
+    source: { type: 'string' },
     evidence: { type: 'array', items: { type: 'string' } },
     depends_on: { type: 'array', items: { type: 'string' } },
     mutation_summary: { type: 'string' },
@@ -583,7 +585,15 @@ STEP 3 — Give each mutant ONE outcome. Take the first that fits, in this order
   5. missing_test — the mutation exposes behaviour that should be tested but isn't.
   Never choose equivalent to avoid writing a test.
 
-STEP 4 — For missing_test only, find the test file:
+STEP 4 — For missing_test only, state the business rule the mutation breaks:
+  business_rule is one or two lines in the project's own domain language: what goes wrong, and
+  for whom, if this behaviour breaks. Take it from CONTEXT.md, the ADRs in .claude/docs/adr/, or
+  the issue that asked for the behaviour; put that ticket key or ADR path in source (optional).
+  A test name restated is not a rule. If you cannot state a rule, leave business_rule empty
+  (log wording, a label, an internal detail nobody relies on). The mutant still gets a test,
+  but with lower priority, and its docstring will say that no business rule could be found.
+
+STEP 5 — For every missing_test, with or without a rule, find the test file:
   mutmut only runs tests in its test selection: ${JSON.stringify(testSelection)}.
   The test file you choose MUST be inside that selection. If a test file that exercises
   this function lives outside it, say so in mutation_summary and still name that file:
@@ -640,13 +650,20 @@ source_file and test_file are paths relative to the project root (tests/unit/tes
   // Only missing_test outcomes with a test get written. A test file outside mutmut's
   // selection is never run against a mutant, so it cannot kill one however good it is:
   // that is a configuration problem, not a failed attempt.
-  const proposed = analyses.filter((a) => a.outcome === 'missing_test' && a.test_code && a.test_file)
+  const proposed = analyses.filter(
+    (a) => a.outcome === 'missing_test' && a.test_code && a.test_file,
+  )
   configProblems = proposed.filter((a) => !inSelection(a.test_file, testSelection)).map((a) => a.mutant_name)
   actionable = proposed.filter((a) => inSelection(a.test_file, testSelection))
 
   const counts = {}
   for (const a of analyses) counts[a.outcome] = (counts[a.outcome] || 0) + 1
-  log(`Outcomes: ${JSON.stringify(counts)}  |  ${configProblems.length} outside the test selection`)
+  const noRule = analyses.filter((a) => a.outcome === 'missing_test' && !(a.business_rule || '').trim()).length
+  log(`Outcomes: ${JSON.stringify(counts)}  |  ${noRule} without a business rule  |  ${configProblems.length} outside the test selection`)
+}
+
+function hasRule(a) {
+  return (a.business_rule || '').trim() ? 1 : 0
 }
 
 // ─── Phase 4: Write ───────────────────────────────────────────────────────────
@@ -661,7 +678,9 @@ if (actionable.length > 0) {
   // Group by test file so no two agents edit the same file concurrently. Several mutants of
   // one function may share one test: write it once.
   const byTestFile = {}
-  for (const analysis of actionable) {
+  // Mutants with a stated rule come first; those without one are written last.
+  const ruleFirst = [...actionable].sort((x, y) => hasRule(y) - hasRule(x))
+  for (const analysis of ruleFirst) {
     const key = analysis.test_file
     if (!byTestFile[key]) byTestFile[key] = []
     byTestFile[key].push(analysis)
@@ -679,6 +698,8 @@ Tests to add
 ${group.map((a, i) => `
 ### ${i + 1}. ${a.mutant_name}
 Mutation: ${a.mutation_summary}
+Business rule: ${(a.business_rule || '').trim() || '(none found: lower priority)'}
+Source of the rule: ${(a.source || '').trim() || '(none)'}
 Method name: ${a.test_method_name}
 
 \`\`\`python
@@ -693,6 +714,26 @@ Instructions
    exactly matching the indentation and naming conventions already present.
    Entries that share a method name and code are one test: add it once.
 3. Add any missing imports at the top of the file.
+   Give each test a docstring that states its Business rule above in one or two lines, in
+   the project's domain language: what goes wrong, and for whom, if it breaks. Where the
+   Business rule is "(none found: lower priority)", write the test last and make its docstring
+   say exactly that no business rule could be found for this behaviour; do not invent one. If a Source of
+   the rule is given, cite it next to the rule, never instead of it. A docstring that only
+   restates the test name says nothing.
+   Rules for the tests you write:
+   - Assert on what someone relies on: a return value, a stored row, a published event, the
+     response. Not log wording, message text or metric labels, unless something outside the
+     code reads them.
+   - Never patch out the function under test or the call whose result is checked. Patch the
+     boundary below it (the external client, the clock) and prefer a fake to a mock.
+   - Compare distinct, non-default values: a field that is None or the default on both sides
+     passes whatever the code does.
+   - Take ids from fixtures, never literals: a hard-coded row exists only if another test
+     created it first.
+   - Leave nothing process-wide behind (connection pools, registered collectors): mutmut runs
+     the selected tests twice in one process.
+   - One behaviour per test, named for the scenario, arrange/act/assert, no branches; use
+     parametrize for variations, with one rule docstring for the whole parametrized test.
 4. Run: cd ${project} && ${pytestBin} ${testFile} -x -q
    The tests MUST PASS against the original (unmutated) code.
    If a test fails to collect (syntax/import error), fix it.
@@ -832,6 +873,8 @@ const recorded = await callHelper(
       depends_on: a.depends_on || [],
       reason: brief(a.reason, 300),
       summary: brief(a.mutation_summary, 160),
+      business_rule: brief(a.business_rule, 300),
+      source: brief(a.source, 120),
       test_file: a.test_file || '',
       test_name: a.test_method_name || '',
     })),
@@ -856,7 +899,8 @@ assertPartition('Record', gaps, [
 log(
   `Started: ${gaps.length}  |  Killed: ${recorded.killed.length}  |  Parked: ${recorded.parked.length}  |  ` +
   `Equivalent: ${recorded.equivalent.length}  |  Suspected bugs: ${recorded.suspected_bugs.length}  |  ` +
-  `Dead code: ${recorded.dead_code.length}  |  Deferred: ${recorded.deferred.length}  |  ` +
+  `Dead code: ${recorded.dead_code.length}  |  ` +
+  `Deferred: ${recorded.deferred.length}  |  ` +
   `Still unkilled: ${recorded.still_surviving.length}`,
 )
 

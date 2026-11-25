@@ -229,6 +229,8 @@ class Record:
     last_reason: str = ""
     evidence: list[str] = field(default_factory=list)
     summary: str = ""
+    business_rule: str = ""
+    source: str = ""
 
 
 def _state_path(root: Path, module: str) -> Path:
@@ -409,6 +411,8 @@ class Analysis:
     summary: str = ""
     test_file: str = ""
     test_name: str = ""
+    business_rule: str = ""
+    source: str = ""
 
 
 @dataclass
@@ -468,6 +472,8 @@ def _new_record(ctx: Context, analysis: Analysis, key: str) -> Record:
         last_reason=analysis.reason,
         evidence=list(analysis.evidence),
         summary=analysis.summary,
+        business_rule=analysis.business_rule.strip(),
+        source=analysis.source.strip(),
     )
 
 
@@ -724,7 +730,16 @@ def migrate_v1(ctx: Context) -> tuple[int, int]:
 # ─── command line ─────────────────────────────────────────────────────────────
 
 
-ANALYSIS_STRINGS = ("mutant", "outcome", "reason", "summary", "test_file", "test_name")
+ANALYSIS_STRINGS = (
+    "mutant",
+    "outcome",
+    "reason",
+    "summary",
+    "test_file",
+    "test_name",
+    "business_rule",
+    "source",
+)
 ANALYSIS_LISTS = ("evidence", "depends_on")
 
 

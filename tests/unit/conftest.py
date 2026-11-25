@@ -85,7 +85,9 @@ class StateHarness:
         )
 
     def analysis(self, mutant: str, outcome: str, **kwargs: object) -> Any:
-        """Return one analysis verdict."""
+        """Return one analysis verdict; a missing test states a rule by default."""
+        if outcome == "missing_test":
+            kwargs.setdefault("business_rule", "a blocked app must stay blocked")
         return self.ms.Analysis(mutant=mutant, outcome=outcome, **kwargs)
 
     def run(self, gaps: list[str], analyses: list[Any], **kwargs: object) -> Any:
