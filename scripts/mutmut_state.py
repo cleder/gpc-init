@@ -719,32 +719,48 @@ def migrate_v1(ctx: Context) -> tuple[int, int]:
 # ─── command line ─────────────────────────────────────────────────────────────
 
 
+ANALYSIS_STRINGS = ("mutant", "outcome", "reason", "summary", "test_file", "test_name")
+ANALYSIS_LISTS = ("evidence", "depends_on")
+
+
+def _require(ok: object, message: str) -> None:
+    if not ok:
+        raise StateError(message)
+
+
+def _is_kind(value: object, kind: type) -> bool:
+    """Return whether the value has the type; a bool is not an int here."""
+    if kind is int:
+        return isinstance(value, int) and not isinstance(value, bool)
+    return isinstance(value, kind)
+
+
+def _is_strings(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(v, str) for v in value)
+
+
+def _is_string_map(value: object) -> bool:
+    if not isinstance(value, dict):
+        return False
+    return _is_strings(list(value)) and _is_strings(list(value.values()))
+
+
 def _field[T](payload: Mapping[str, Any], key: str, kind: type[T]) -> T:
     """Return a request field of one type, or raise naming the field."""
-    if key not in payload:
-        msg = f"missing field: {key}"
-        raise StateError(msg)
+    _require(key in payload, f"missing field: {key}")
     value = payload[key]
-    if not isinstance(value, kind) or (kind is int and isinstance(value, bool)):
-        msg = f"field {key} must be a {kind.__name__}"
-        raise StateError(msg)
+    _require(_is_kind(value, kind), f"field {key} must be a {kind.__name__}")
     return value
 
 
 def _strings(value: object, key: str) -> list[str]:
-    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
-        msg = f"field {key} must be a list of strings"
-        raise StateError(msg)
-    return value
+    _require(_is_strings(value), f"field {key} must be a list of strings")
+    return cast("list[str]", value)
 
 
 def _string_map(value: object, key: str) -> dict[str, str]:
-    if not isinstance(value, dict) or not all(
-        isinstance(k, str) and isinstance(v, str) for k, v in value.items()
-    ):
-        msg = f"field {key} must be an object of strings"
-        raise StateError(msg)
-    return value
+    _require(_is_string_map(value), f"field {key} must be an object of strings")
+    return cast("dict[str, str]", value)
 
 
 def _checked(payload: Mapping[str, Any], key: str) -> list[str]:
@@ -761,24 +777,18 @@ def _listed(names: list[str]) -> dict[str, Any]:
 
 def _analysis_from(item: object) -> Analysis:
     """Build one analysis from a request entry, refusing anything unexpected."""
-    if not isinstance(item, dict):
-        msg = "field analyses must contain objects"
-        raise StateError(msg)
+    _require(isinstance(item, dict), "field analyses must contain objects")
     try:
-        analysis = Analysis(**item)
+        analysis = Analysis(**cast("dict[str, Any]", item))
     except TypeError as error:
         msg = f"analysis entry is not valid: {error}"
         raise StateError(msg) from error
-    for key in ("mutant", "outcome", "reason", "summary", "test_file", "test_name"):
-        if not isinstance(getattr(analysis, key), str):
-            msg = f"analysis field {key} must be a string"
-            raise StateError(msg)
-    for key in ("evidence", "depends_on"):
-        if not isinstance(getattr(analysis, key), list) or not all(
-            isinstance(v, str) for v in getattr(analysis, key)
-        ):
-            msg = f"analysis field {key} must be a list of strings"
-            raise StateError(msg)
+    for key in ANALYSIS_STRINGS:
+        message = f"analysis field {key} must be a string"
+        _require(isinstance(getattr(analysis, key), str), message)
+    for key in ANALYSIS_LISTS:
+        message = f"analysis field {key} must be a list of strings"
+        _require(_is_strings(getattr(analysis, key)), message)
     return analysis
 
 
